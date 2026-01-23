@@ -90,4 +90,4 @@ jobs:
           echo "API_BASE_URL_EMULATOR=http://localhost:8080" >> .env
 
       - name: Expo doctor
-        run: npx expo-doctor || npx expo doctor
+        run: npx expo-doctor
