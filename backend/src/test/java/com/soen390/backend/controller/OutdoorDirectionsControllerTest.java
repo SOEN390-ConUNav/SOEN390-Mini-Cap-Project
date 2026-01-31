@@ -1,5 +1,6 @@
 package com.soen390.backend.controller;
 
+import com.soen390.backend.config.RestTemplateConfig;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.object.RouteStep;
@@ -8,6 +9,7 @@ import com.soen390.backend.service.GoogleMapsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(OutdoorDirectionsController.class)
+@Import(RestTemplateConfig.class)
 public class OutdoorDirectionsControllerTest {
 
     @Autowired
