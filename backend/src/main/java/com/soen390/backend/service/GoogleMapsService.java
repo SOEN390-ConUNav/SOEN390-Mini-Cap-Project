@@ -2,6 +2,7 @@ package com.soen390.backend.service;
 
 import com.soen390.backend.dto.OutdoorDirectionResponse;
 import com.soen390.backend.dto.RouteStep;
+import com.soen390.backend.enums.ManeuverType;
 import com.soen390.backend.enums.TransportMode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -58,8 +59,15 @@ public class GoogleMapsService {
 
                 String stepDist = step.path("distance").path("text").asText();
                 String stepDur = step.path("duration").path("text").asText();
+                ManeuverType maneuverType;
+                if (!step.path("maneuver").isTextual()) {
+                    maneuverType = ManeuverType.STRAIGHT;
+                } else {
+                    String maneuver = step.path("maneuver").asText();
+                    maneuverType = ManeuverType.fromString(maneuver);
+                }
 
-                stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur));
+                stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur,maneuverType));
             }
 
             return new OutdoorDirectionResponse(distance, duration, polyline, mode, stepList);
