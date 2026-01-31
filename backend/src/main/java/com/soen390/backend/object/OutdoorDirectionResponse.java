@@ -1,4 +1,4 @@
-package com.soen390.backend.dto;
+package com.soen390.backend.object;
 
 
 import com.soen390.backend.enums.TransportMode;

@@ -1,8 +1,8 @@
 package com.soen390.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.soen390.backend.dto.OutdoorDirectionResponse;
-import com.soen390.backend.dto.RouteStep;
+import com.soen390.backend.object.OutdoorDirectionResponse;
+import com.soen390.backend.object.RouteStep;
 import com.soen390.backend.enums.ManeuverType;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;

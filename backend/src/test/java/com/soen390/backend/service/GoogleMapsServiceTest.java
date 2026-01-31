@@ -1,6 +1,6 @@
 package com.soen390.backend.service;
 
-import com.soen390.backend.dto.OutdoorDirectionResponse;
+import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
 import org.junit.jupiter.api.BeforeEach;

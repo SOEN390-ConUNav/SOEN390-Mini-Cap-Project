@@ -1,7 +1,8 @@
 package com.soen390.backend.controller;
 
-import com.soen390.backend.dto.OutdoorDirectionResponse;
-import com.soen390.backend.dto.RouteStep;
+import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
+import com.soen390.backend.object.OutdoorDirectionResponse;
+import com.soen390.backend.object.RouteStep;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.service.GoogleMapsService;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ public class OutdoorDirectionsControllerTest {
     private GoogleMapsService googleMapsService;
 
     @Test
-    void getDirections_ShouldReturn200AndJson() throws Exception {
+    void getDirectionsShouldReturn200AndJson() throws Exception {
         List<RouteStep> mockSteps = new ArrayList<>();
 
 
@@ -49,6 +50,19 @@ public class OutdoorDirectionsControllerTest {
                         .param("transportMode", "walking"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.distance").value("1.2 km"))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void getDirectionsShouldReturn404OnInvalidParams() throws Exception {
+        when(googleMapsService.getDirections(any(), any(), any())).thenThrow(new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations."));
+
+        mockMvc.perform(get("/api/directions/outdoor")
+                        .param("origin", "god")
+                        .param("destination", "McGill")
+                        .param("transportMode", "walking"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Directions not found. Please check your start and end locations."))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 }
