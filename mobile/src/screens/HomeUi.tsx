@@ -7,6 +7,7 @@ import FloatingActionButton from "../components/FloatingActionButton";
 import SearchPanel from "../components/SearchPanel";
 import SettingsScreen from "./SettingsScreen";
 import ShuttleScreen from "./ShuttleScreen";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
 type Tab = "settings" | "map" | "shuttle";
 
@@ -19,11 +20,19 @@ export default function HomeUi() {
     if (activeTab === "settings") return <SettingsScreen />;
     if (activeTab === "shuttle") return <ShuttleScreen />;
 
-    // Map page (placeholder)
     return (
-      <View style={styles.mapPlaceholder}>
-        <Text style={styles.placeholderText}>Map goes here (later)</Text>
-      </View>
+      <MapView
+        style={StyleSheet.absoluteFillObject}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={{
+          latitude: 45.4973,
+          longitude: -73.5790,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+      >
+        <Marker coordinate={{ latitude: 45.4973, longitude: -73.5790 }} title="Test" />
+      </MapView>
     );
   };
 
