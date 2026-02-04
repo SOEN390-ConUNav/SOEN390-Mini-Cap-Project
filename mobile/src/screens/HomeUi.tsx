@@ -1,7 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
-import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
+import MapView, { Polygon, PROVIDER_GOOGLE, Region, Marker } from "react-native-maps";
 import * as Location from "expo-location";
 
 import SearchBar from "../components/SearchBar";
@@ -14,18 +14,29 @@ import SettingsScreen from "./SettingsScreen";
 import ShuttleScreen from "./ShuttleScreen";
 import EnableLocationScreen from "./EnableLocationScreen";
 
+import { BUILDINGS, Building, BuildingId } from "../data/buildings";
+import BuildingMarker from "../components/BuildingMarker";
+import BuildingPopup from "../components/BuildingPopup";
+
 type Tab = "settings" | "map" | "shuttle";
 
-// Campus center points
-const SGW_CENTER = { latitude: 45.4973, longitude: -73.5790 };    // Concordia SGW
-const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 }; // Concordia Loyola
-
-// How close the camera center must be to a campus center for auto-switch to happen
-// Around 0.9km. Increase/decrease as need be, imo its fine
-const AUTO_SWITCH_RADIUS_METERS = 900;
-
-// Region delta when jumping between campuses (controls zoom level), for the toggle switcher
+const SGW_CENTER = { latitude: 45.4973, longitude: -73.5790 };
+const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
 const CAMPUS_REGION_DELTA = { latitudeDelta: 0.01, longitudeDelta: 0.01 };
+
+const BURGUNDY = "#800020";
+
+// When user zooms out more than this, we leave outline mode
+const OUTLINE_EXIT_LAT_DELTA = 0.006;
+
+// Zoom level when entering outline mode
+const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
+  latitudeDelta: 0.0028,
+  longitudeDelta: 0.0028,
+};
+
+// Delay before freezing custom marker rendering for performance
+const FREEZE_MARKERS_AFTER_MS = 800;
 
 export default function HomeUi() {
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
@@ -41,11 +52,25 @@ export default function HomeUi() {
     ...CAMPUS_REGION_DELTA,
   });
 
+  const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
+  const [outlineMode, setOutlineMode] = useState(false);
+  const [showBuildingPopup, setShowBuildingPopup] = useState(false);
+
+  // Turns out we gotta freeze custom markers after initial render so it doesnt consume cpu and battery
+  const [freezeMarkers, setFreezeMarkers] = useState(false);
+
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
-  // Guard to prevent campus auto-switch
-  const isProgrammaticMoveRef = useRef(false);
+  useEffect(() => {
+    // When entering the map screen, let markers render, then freeze them
+    // Reset freeze when switching back to map to avoid invisible markers
+    if (activeTab === "map" && !showEnableLocation) {
+      setFreezeMarkers(false);
+      const t = setTimeout(() => setFreezeMarkers(true), FREEZE_MARKERS_AFTER_MS);
+      return () => clearTimeout(t);
+    }
+  }, [activeTab, showEnableLocation]);
 
   const stopWatchingLocation = () => {
     locationSubRef.current?.remove();
@@ -54,27 +79,17 @@ export default function HomeUi() {
 
   const startWatchingLocation = async () => {
     if (locationSubRef.current) return;
-
     locationSubRef.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 1000,
-        distanceInterval: 1,
-      },
-      (loc) => {
-        const updated: Region = {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          ...CAMPUS_REGION_DELTA,
-        };
-        setRegion(updated);
-      }
+      { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
+      () => {}
     );
   };
 
-  const centerToRegion = (r: Region) => {
-    setRegion(r);
-    mapRef.current?.animateToRegion(r, 600);
+  const requestPermission = async (): Promise<boolean> => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    const granted = status === "granted";
+    setHasLocationPermission(granted);
+    return granted;
   };
 
   const getOneFix = async (): Promise<Region> => {
@@ -86,53 +101,10 @@ export default function HomeUi() {
     };
   };
 
-  const requestPermission = async (): Promise<boolean> => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    const granted = status === "granted";
-    setHasLocationPermission(granted);
-    return granted;
+  const animateToRegion = (r: Region) => {
+    mapRef.current?.animateToRegion(r, 650);
   };
 
-  // Distance helper (meters)
-  const metersBetween = (
-    a: { latitude: number; longitude: number },
-    b: { latitude: number; longitude: number }
-  ) => {
-    // Haversine (good enough)
-    const R = 6371000;
-    const toRad = (x: number) => (x * Math.PI) / 180;
-
-    const dLat = toRad(b.latitude - a.latitude);
-    const dLon = toRad(b.longitude - a.longitude);
-
-    const lat1 = toRad(a.latitude);
-    const lat2 = toRad(b.latitude);
-
-    const sinDLat = Math.sin(dLat / 2);
-    const sinDLon = Math.sin(dLon / 2);
-
-    const h =
-      sinDLat * sinDLat +
-      Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
-
-    return 2 * R * Math.asin(Math.sqrt(h));
-  };
-
-  const inferCampusFromRegion = (r: Region): "SGW" | "LOYOLA" | null => {
-    const center = { latitude: r.latitude, longitude: r.longitude };
-
-    const dSgw = metersBetween(center, SGW_CENTER);
-    const dLoy = metersBetween(center, LOYOLA_CENTER);
-
-    // If we’re not close to either campus center, don’t wanna auto-switch
-    const nearest = dSgw < dLoy ? "SGW" : "LOYOLA";
-    const nearestDist = Math.min(dSgw, dLoy);
-
-    if (nearestDist <= AUTO_SWITCH_RADIUS_METERS) return nearest;
-    return null;
-  };
-
-  // User tapped "Enable Location"
   const onEnableLocation = async () => {
     try {
       const granted = await requestPermission();
@@ -144,7 +116,7 @@ export default function HomeUi() {
       setShowEnableLocation(false);
 
       const r = await getOneFix();
-      centerToRegion(r);
+      animateToRegion(r);
 
       await startWatchingLocation();
     } catch {
@@ -152,47 +124,71 @@ export default function HomeUi() {
     }
   };
 
-  // User tapped "Skip for now"
   const onSkipLocation = () => {
     setShowEnableLocation(false);
     setHasLocationPermission(false);
     stopWatchingLocation();
   };
 
-  // FAB centers map to user
   const onPressFab = async () => {
     try {
       if (hasLocationPermission === true) {
-        // Center to last known region (which we keep updated)
-        mapRef.current?.animateToRegion(region, 600);
+        const r = await getOneFix();
+        animateToRegion(r);
         return;
       }
-      // No permission -> show enable screen again
       setShowEnableLocation(true);
     } catch {
       Alert.alert("Location error", "Could not center the map.");
     }
   };
 
-  // Campus toggle -> animate map to campus center
   const onChangeCampus = (next: "SGW" | "LOYOLA") => {
     setCampus(next);
-
-    const targetCenter = next === "SGW" ? SGW_CENTER : LOYOLA_CENTER;
-    const targetRegion: Region = {
-      latitude: targetCenter.latitude,
-      longitude: targetCenter.longitude,
+    const target = next === "SGW" ? SGW_CENTER : LOYOLA_CENTER;
+    animateToRegion({
+      latitude: target.latitude,
+      longitude: target.longitude,
       ...CAMPUS_REGION_DELTA,
-    };
+    });
 
-    // Prevent auto-switch from fighting this movement
-    isProgrammaticMoveRef.current = true;
-    centerToRegion(targetRegion);
+    // Leaving building focus mode when switching campus
+    setSelectedBuildingId(null);
+    setOutlineMode(false);
+    setShowBuildingPopup(false);
+  };
 
-    // Release guard shortly after animation ends
-    setTimeout(() => {
-      isProgrammaticMoveRef.current = false;
-    }, 800);
+  const selectedBuilding: Building | null =
+    selectedBuildingId ? BUILDINGS.find((b) => b.id === selectedBuildingId) ?? null : null;
+
+  const enterOutlineForBuilding = (b: Building) => {
+    setSelectedBuildingId(b.id);
+    setOutlineMode(true);
+    setShowBuildingPopup(false);
+
+    animateToRegion({
+      latitude: b.marker.latitude,
+      longitude: b.marker.longitude,
+      ...OUTLINE_ENTER_REGION,
+    });
+  };
+
+  const onPressBuilding = (b: Building) => {
+    if (selectedBuildingId !== b.id || !outlineMode) {
+      enterOutlineForBuilding(b);
+      return;
+    }
+    setShowBuildingPopup(true);
+  };
+
+  const handleRegionChangeComplete = (r: Region) => {
+    setRegion(r);
+
+    if (outlineMode && r.latitudeDelta > OUTLINE_EXIT_LAT_DELTA) {
+      setOutlineMode(false);
+      setShowBuildingPopup(false);
+      setSelectedBuildingId(null);
+    }
   };
 
   const renderMapPage = () => {
@@ -201,26 +197,50 @@ export default function HomeUi() {
     }
 
     return (
-      <MapView
-        ref={mapRef}
-        style={StyleSheet.absoluteFillObject}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={region}
-        showsUserLocation={hasLocationPermission === true}
-        showsMyLocationButton={false}
-        onRegionChangeComplete={(r) => {
-          // Keep region state synced
-          setRegion(r);
+      <View style={StyleSheet.absoluteFillObject}>
+        <MapView
+          ref={mapRef}
+          style={StyleSheet.absoluteFillObject}
+          provider={PROVIDER_GOOGLE}
+          initialRegion={region}
+          showsUserLocation={hasLocationPermission === true}
+          showsMyLocationButton={false}
+          onRegionChangeComplete={handleRegionChangeComplete}
+          onPress={() => setShowBuildingPopup(false)}
+        >
+          {BUILDINGS.map((b) => (
+            <Marker
+              key={b.id}
+              coordinate={b.marker}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onPressBuilding(b);
+              }}
+              tracksViewChanges={!freezeMarkers}
+            >
+              <BuildingMarker label={b.id} />
+            </Marker>
+          ))}
 
-          // If user moved the camera manually and is near a campus, auto-update the toggle
-          if (isProgrammaticMoveRef.current) return;
+          {outlineMode && selectedBuilding && (
+            <Polygon
+              coordinates={selectedBuilding.polygon}
+              strokeColor={BURGUNDY}
+              strokeWidth={3}
+              fillColor="rgba(128,0,32,0.12)"
+            />
+          )}
+        </MapView>
 
-          const inferred = inferCampusFromRegion(r);
-          if (inferred && inferred !== campus) {
-            setCampus(inferred);
-          }
-        }}
-      />
+        {showBuildingPopup && selectedBuilding && (
+          <BuildingPopup
+            name={selectedBuilding.name}
+            addressLines={selectedBuilding.addressLines}
+            onClose={() => setShowBuildingPopup(false)}
+            onDirections={() => {}}
+          />
+        )}
+      </View>
     );
   };
 
@@ -234,7 +254,6 @@ export default function HomeUi() {
     <View style={styles.root}>
       {renderContent()}
 
-      {/* Overlays only on map tab AND only when the map is visible */}
       {activeTab === "map" && !showEnableLocation && (
         <>
           <View style={styles.searchWrapper}>
@@ -258,9 +277,7 @@ export default function HomeUi() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#fff" },
-
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
-
   campusWrapper: {
     position: "absolute",
     left: 16,
