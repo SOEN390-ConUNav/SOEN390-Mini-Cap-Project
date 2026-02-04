@@ -6,19 +6,19 @@ import {Tabs} from "expo-router";
 const BURGUNDY = "#800020";
 const TABS = [
     {
-        name: 'settings',
+        name: 'settings/index',
         title: 'Settings',
         iconFocused: 'settings',
         iconOutline: 'settings-outline',
     },
     {
-        name: 'map',
+        name: '(home-page)',
         title: 'Map',
         iconFocused: 'location',
         iconOutline: 'location-outline',
     },
     {
-        name: 'shuttle',
+        name: 'shuttle-info/index',
         title: 'Shuttle',
         iconFocused: 'bus',
         iconOutline: 'bus-outline',

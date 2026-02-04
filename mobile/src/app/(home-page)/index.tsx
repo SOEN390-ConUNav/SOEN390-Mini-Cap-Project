@@ -1,13 +1,15 @@
-import React, {useState} from 'react';
-import {StyleSheet, Text, View} from "react-native";
+import React, { useState, useRef, useEffect } from 'react';
+import { StyleSheet, Text, View, Alert } from "react-native";
+import { useRouter } from "expo-router";
+import MapView, { Marker, Polygon, PROVIDER_GOOGLE, Region } from "react-native-maps";
+import * as Location from 'expo-location';
 import SearchBar from "../../components/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
 import FloatingActionButton from "../../components/FloatingActionButton";
 import CampusSwitcher from "../../components/CampusSwitcher";
-import {Building, BuildingId, BUILDINGS} from "../../data/buildings";
+import { Building, BuildingId, BUILDINGS } from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
-import EnableLocationScreen from "../../screens/EnableLocationScreen";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.5790 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -24,11 +26,12 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 const FREEZE_MARKERS_AFTER_MS = 800;
 
 interface HomePageIndexProps {}
+
 export default function HomePageIndex(props: HomePageIndexProps) {
+    const router = useRouter();
     const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
     const [searchOpen, setSearchOpen] = useState(false);
 
-    const [showEnableLocation, setShowEnableLocation] = useState(true);
     const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
 
     const [region, setRegion] = useState<Region>({
@@ -47,15 +50,31 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const mapRef = useRef<MapView>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
+    // Check permission status on mount
     useEffect(() => {
-        // When entering the map screen, let markers render, then freeze them
-        // Reset freeze when switching back to map to avoid invisible markers
-        if (!showEnableLocation) {
-            setFreezeMarkers(false);
-            const t = setTimeout(() => setFreezeMarkers(true), FREEZE_MARKERS_AFTER_MS);
-            return () => clearTimeout(t);
+        checkLocationPermission();
+    }, []);
+
+    useEffect(() => {
+        // When showing the map, let markers render, then freeze them
+        setFreezeMarkers(false);
+        const t = setTimeout(() => setFreezeMarkers(true), FREEZE_MARKERS_AFTER_MS);
+        return () => clearTimeout(t);
+    }, []);
+
+    const checkLocationPermission = async () => {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        const granted = status === "granted";
+        setHasLocationPermission(granted);
+
+        // If no permission yet, show the enable location screen
+        if (!granted) {
+            router.push("/(home-page)/enable-location");
+        } else {
+            // If we have permission, start watching location
+            await startWatchingLocation();
         }
-    }, [showEnableLocation]);
+    };
 
     const stopWatchingLocation = () => {
         locationSubRef.current?.remove();
@@ -64,17 +83,14 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const startWatchingLocation = async () => {
         if (locationSubRef.current) return;
-        locationSubRef.current = await Location.watchPositionAsync(
-            { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
-            () => {}
-        );
-    };
-
-    const requestPermission = async (): Promise<boolean> => {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        const granted = status === "granted";
-        setHasLocationPermission(granted);
-        return granted;
+        try {
+            locationSubRef.current = await Location.watchPositionAsync(
+                { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
+                () => {}
+            );
+        } catch (error) {
+            console.error("Error watching location:", error);
+        }
     };
 
     const getOneFix = async (): Promise<Region> => {
@@ -90,31 +106,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         mapRef.current?.animateToRegion(r, 650);
     };
 
-    const onEnableLocation = async () => {
-        try {
-            const granted = await requestPermission();
-            if (!granted) {
-                Alert.alert("Permission denied", "You can enable location later in device settings.");
-                return;
-            }
-
-            setShowEnableLocation(false);
-
-            const r = await getOneFix();
-            animateToRegion(r);
-
-            await startWatchingLocation();
-        } catch {
-            Alert.alert("Location error", "Could not retrieve your location.");
-        }
-    };
-
-    const onSkipLocation = () => {
-        setShowEnableLocation(false);
-        setHasLocationPermission(false);
-        stopWatchingLocation();
-    };
-
     const onPressFab = async () => {
         try {
             if (hasLocationPermission === true) {
@@ -122,7 +113,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                 animateToRegion(r);
                 return;
             }
-            setShowEnableLocation(true);
+            // Navigate to enable location screen
+            router.push("/(home-page)/enable-location");
         } catch {
             Alert.alert("Location error", "Could not center the map.");
         }
@@ -176,97 +168,70 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         }
     };
 
-    const renderMapPage = () => {
-        if (showEnableLocation) {
-            return <EnableLocationScreen onEnable={onEnableLocation} onSkip={onSkipLocation} />;
-        }
-
-        return (
-            <View style={StyleSheet.absoluteFillObject}>
-                <MapView
-                    ref={mapRef}
-                    style={StyleSheet.absoluteFillObject}
-                    provider={PROVIDER_GOOGLE}
-                    initialRegion={region}
-                    showsUserLocation={hasLocationPermission === true}
-                    showsMyLocationButton={false}
-                    onRegionChangeComplete={handleRegionChangeComplete}
-                    onPress={() => setShowBuildingPopup(false)}
-                >
-                    {BUILDINGS.map((b) => (
-                        <Marker
-                            key={b.id}
-                            coordinate={b.marker}
-                            onPress={(e) => {
-                                e.stopPropagation?.();
-                                onPressBuilding(b);
-                            }}
-                            tracksViewChanges={!freezeMarkers}
-                        >
-                            <BuildingMarker label={b.id} />
-                        </Marker>
-                    ))}
-
-                    {outlineMode && selectedBuilding && (
-                        <Polygon
-                            coordinates={selectedBuilding.polygon}
-                            strokeColor={BURGUNDY}
-                            strokeWidth={3}
-                            fillColor="rgba(128,0,32,0.12)"
-                        />
-                    )}
-                </MapView>
-
-                {showBuildingPopup && selectedBuilding && (
-                    <BuildingPopup
-                        name={selectedBuilding.name}
-                        addressLines={selectedBuilding.addressLines}
-                        onClose={() => setShowBuildingPopup(false)}
-                        onDirections={() => {}}
-                    />
-                )}
-            </View>
-        );
-    };
-
     return (
         <View style={styles.root}>
-            {/* Always render the active page content */}
-            {renderMapPage()}
+            <MapView
+                ref={mapRef}
+                style={StyleSheet.absoluteFillObject}
+                provider={PROVIDER_GOOGLE}
+                initialRegion={region}
+                showsUserLocation={hasLocationPermission === true}
+                showsMyLocationButton={false}
+                onRegionChangeComplete={handleRegionChangeComplete}
+                onPress={() => setShowBuildingPopup(false)}
+            >
+                {BUILDINGS.map((b) => (
+                    <Marker
+                        key={b.id}
+                        coordinate={b.marker}
+                        onPress={(e) => {
+                            e.stopPropagation?.();
+                            onPressBuilding(b);
+                        }}
+                        tracksViewChanges={!freezeMarkers}
+                    >
+                        <BuildingMarker label={b.id} />
+                    </Marker>
+                ))}
 
-            {/* Only show these overlays on the "map" tab */}
-            <>
-                <View style={styles.searchWrapper}>
-                    <SearchBar placeholder="Search" onPress={() => setSearchOpen(true)}/>
-                </View>
+                {outlineMode && selectedBuilding && (
+                    <Polygon
+                        coordinates={selectedBuilding.polygon}
+                        strokeColor={BURGUNDY}
+                        strokeWidth={3}
+                        fillColor="rgba(128,0,32,0.12)"
+                    />
+                )}
+            </MapView>
 
-                <SearchPanel visible={searchOpen} onClose={() => setSearchOpen(false)}/>
+            {showBuildingPopup && selectedBuilding && (
+                <BuildingPopup
+                    name={selectedBuilding.name}
+                    addressLines={selectedBuilding.addressLines}
+                    onClose={() => setShowBuildingPopup(false)}
+                    onDirections={() => {}}
+                />
+            )}
 
-                <FloatingActionButton onPress={() => {
-                }}/>
+            <View style={styles.searchWrapper}>
+                <SearchBar placeholder="Search" onPress={() => setSearchOpen(true)} />
+            </View>
 
-                <View style={styles.campusWrapper}>
-                    <CampusSwitcher value={campus} onChange={setCampus}/>
-                </View>
-            </>
+            <SearchPanel visible={searchOpen} onClose={() => setSearchOpen(false)} />
 
-            {/* Always show Bottom Nav */}
+            <FloatingActionButton onPress={onPressFab} />
+
+            <View style={styles.campusWrapper}>
+                <CampusSwitcher value={campus} onChange={onChangeCampus} />
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {flex: 1, backgroundColor: "#fff"},
+    root: { flex: 1, backgroundColor: "#fff" },
 
-    mapPlaceholder: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: "#EAEAEA",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    placeholderText: {fontSize: 16, opacity: 0.6},
-
-    searchWrapper: {position: "absolute", top: 50, left: 16, right: 16},
+    searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
 
     campusWrapper: {
         position: "absolute",
