@@ -1,7 +1,13 @@
 import BottomNav from "../components/BottomNav";
+import {GestureHandlerRootView} from "react-native-gesture-handler";
+import {BottomSheetModalProvider} from "@gorhom/bottom-sheet";
 
 export default function RootLayout() {
     return (
-        <BottomNav/>
+        <GestureHandlerRootView style={{flex: 1}}>
+            <BottomSheetModalProvider>
+                <BottomNav/>
+            </BottomSheetModalProvider>
+        </GestureHandlerRootView>
     );
 }

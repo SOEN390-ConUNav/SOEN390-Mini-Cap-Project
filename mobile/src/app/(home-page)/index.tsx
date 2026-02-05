@@ -1,19 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Alert } from "react-native";
-import { useRouter } from "expo-router";
-import MapView, { Marker, Polygon, PROVIDER_GOOGLE, Region } from "react-native-maps";
+import React, {useState, useRef, useEffect} from 'react';
+import {StyleSheet, View, Alert} from "react-native";
+import {useRouter} from "expo-router";
+import MapView, {Marker, Polygon, PROVIDER_GOOGLE, Region} from "react-native-maps";
 import * as Location from 'expo-location';
 import SearchBar from "../../components/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
 import FloatingActionButton from "../../components/FloatingActionButton";
 import CampusSwitcher from "../../components/CampusSwitcher";
-import { Building, BuildingId, BUILDINGS } from "../../data/buildings";
+import {Building, BuildingId, BUILDINGS} from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
+import BottomDrawer from "../../components/BottomDrawer"
 
-const SGW_CENTER = { latitude: 45.4973, longitude: -73.5790 };
-const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
-const CAMPUS_REGION_DELTA = { latitudeDelta: 0.01, longitudeDelta: 0.01 };
+const SGW_CENTER = {latitude: 45.4973, longitude: -73.5790};
+const LOYOLA_CENTER = {latitude: 45.4582, longitude: -73.6405};
+const CAMPUS_REGION_DELTA = {latitudeDelta: 0.01, longitudeDelta: 0.01};
 const BURGUNDY = "#800020";
 // When user zooms out more than this, we leave outline mode
 const OUTLINE_EXIT_LAT_DELTA = 0.006;
@@ -25,7 +26,8 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 // Delay before freezing custom marker rendering for performance
 const FREEZE_MARKERS_AFTER_MS = 800;
 
-interface HomePageIndexProps {}
+interface HomePageIndexProps {
+}
 
 export default function HomePageIndex(props: HomePageIndexProps) {
     const router = useRouter();
@@ -43,6 +45,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
     const [outlineMode, setOutlineMode] = useState(false);
     const [showBuildingPopup, setShowBuildingPopup] = useState(false);
+    const [showNavigationHUD, setShowNavigationHUD] = useState(false);
 
     // Turns out we gotta freeze custom markers after initial render so it doesnt consume cpu and battery
     const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -63,7 +66,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }, []);
 
     const checkLocationPermission = async () => {
-        const { status } = await Location.getForegroundPermissionsAsync();
+        const {status} = await Location.getForegroundPermissionsAsync();
         const granted = status === "granted";
         setHasLocationPermission(granted);
 
@@ -85,8 +88,9 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         if (locationSubRef.current) return;
         try {
             locationSubRef.current = await Location.watchPositionAsync(
-                { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
-                () => {}
+                {accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1},
+                () => {
+                }
             );
         } catch (error) {
             console.error("Error watching location:", error);
@@ -133,6 +137,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         setSelectedBuildingId(null);
         setOutlineMode(false);
         setShowBuildingPopup(false);
+        setShowNavigationHUD(false);
     };
 
     const selectedBuilding: Building | null =
@@ -158,6 +163,11 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         setShowBuildingPopup(true);
     };
 
+    const onPressDirections = () => {
+        setShowBuildingPopup(false);
+        setShowNavigationHUD(true);
+    }
+
     const handleRegionChangeComplete = (r: Region) => {
         setRegion(r);
 
@@ -178,7 +188,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                 showsUserLocation={hasLocationPermission === true}
                 showsMyLocationButton={false}
                 onRegionChangeComplete={handleRegionChangeComplete}
-                onPress={() => setShowBuildingPopup(false)}
+                onPress={() => {
+                    setShowBuildingPopup(false);
+                    setShowNavigationHUD(false);
+                }}
             >
                 {BUILDINGS.map((b) => (
                     <Marker
@@ -190,7 +203,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                         }}
                         tracksViewChanges={!freezeMarkers}
                     >
-                        <BuildingMarker label={b.id} />
+                        <BuildingMarker label={b.id}/>
                     </Marker>
                 ))}
 
@@ -209,29 +222,30 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                     name={selectedBuilding.name}
                     addressLines={selectedBuilding.addressLines}
                     onClose={() => setShowBuildingPopup(false)}
-                    onDirections={() => {}}
+                    onDirections={() => onPressDirections()}
                 />
             )}
 
             <View style={styles.searchWrapper}>
-                <SearchBar placeholder="Search" onPress={() => setSearchOpen(true)} />
+                <SearchBar placeholder="Search" onPress={() => setSearchOpen(true)}/>
             </View>
 
-            <SearchPanel visible={searchOpen} onClose={() => setSearchOpen(false)} />
+            <SearchPanel visible={searchOpen} onClose={() => setSearchOpen(false)}/>
+            <BottomDrawer visible={showNavigationHUD} onClose={() => setShowNavigationHUD(false)}/>
 
-            <FloatingActionButton onPress={onPressFab} />
+            <FloatingActionButton onPress={onPressFab}/>
 
             <View style={styles.campusWrapper}>
-                <CampusSwitcher value={campus} onChange={onChangeCampus} />
+                <CampusSwitcher value={campus} onChange={onChangeCampus}/>
             </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#fff" },
+    root: {flex: 1, backgroundColor: "#fff"},
 
-    searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
+    searchWrapper: {position: "absolute", top: 50, left: 16, right: 16},
 
     campusWrapper: {
         position: "absolute",
