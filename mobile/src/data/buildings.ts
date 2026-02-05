@@ -10,7 +10,7 @@ export type Building = {
 };
 
 export const BUILDINGS: Building[] = [
-    // SGW SECTION OF BUILDINGS
+    // **************************** SGW SECTION OF BUILDINGS ****************************
   {
     id: "FB",
     name: "Faubourg Building",
@@ -110,7 +110,7 @@ export const BUILDINGS: Building[] = [
     ],
   },
 
-  // VANIER SECTION OF BUILDINGS
+  // **************************** LOYOLA SECTION OF BUILDINGS ****************************
   {
   id: "VL",
     name: "Vanier Libary Building",
