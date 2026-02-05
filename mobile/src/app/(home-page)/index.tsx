@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {StyleSheet, View, Alert} from "react-native";
-import {useRouter} from "expo-router";
+import {useNavigation, useRouter} from "expo-router";
 import MapView, {Marker, Polygon, PROVIDER_GOOGLE, Region} from "react-native-maps";
 import * as Location from 'expo-location';
 import SearchBar from "../../components/SearchBar";
@@ -11,6 +11,10 @@ import {Building, BuildingId, BUILDINGS} from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
 import BottomDrawer from "../../components/BottomDrawer"
+import useNavigationState from "../../hooks/useNavigationState";
+import {NAVIGATION_STATE} from "../../const";
+import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
+import { styles as navStyles } from "../../components/BottomNav";
 
 const SGW_CENTER = {latitude: 45.4973, longitude: -73.5790};
 const LOYOLA_CENTER = {latitude: 45.4582, longitude: -73.6405};
@@ -32,10 +36,9 @@ interface HomePageIndexProps {
 export default function HomePageIndex(props: HomePageIndexProps) {
     const router = useRouter();
     const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
-    const [searchOpen, setSearchOpen] = useState(false);
-
+    const {setNavigationState, isNavigating, isIdle, isConfiguring, isSearching} = useNavigationState();
     const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
-
+    const navigation = useNavigation();
     const [region, setRegion] = useState<Region>({
         latitude: SGW_CENTER.latitude,
         longitude: SGW_CENTER.longitude,
@@ -45,7 +48,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
     const [outlineMode, setOutlineMode] = useState(false);
     const [showBuildingPopup, setShowBuildingPopup] = useState(false);
-    const [showNavigationHUD, setShowNavigationHUD] = useState(false);
 
     // Turns out we gotta freeze custom markers after initial render so it doesnt consume cpu and battery
     const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -64,6 +66,17 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         const t = setTimeout(() => setFreezeMarkers(true), FREEZE_MARKERS_AFTER_MS);
         return () => clearTimeout(t);
     }, []);
+
+    useEffect(() => {
+        // Define when the tab bar should be hidden
+        const shouldHideTabBar = isConfiguring || isNavigating;
+
+        navigation.setOptions({
+            tabBarStyle: shouldHideTabBar
+                ? { display: "none" } // Hide it completely
+                : navStyles.tabBarStyle, // Explicitly restore your custom styles
+        });
+    }, [isConfiguring, isNavigating, navigation]);
 
     const checkLocationPermission = async () => {
         const {status} = await Location.getForegroundPermissionsAsync();
@@ -137,7 +150,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         setSelectedBuildingId(null);
         setOutlineMode(false);
         setShowBuildingPopup(false);
-        setShowNavigationHUD(false);
+        setNavigationState(NAVIGATION_STATE.IDLE);
     };
 
     const selectedBuilding: Building | null =
@@ -165,7 +178,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const onPressDirections = () => {
         setShowBuildingPopup(false);
-        setShowNavigationHUD(true);
+        setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
     }
 
     const handleRegionChangeComplete = (r: Region) => {
@@ -190,7 +203,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                 onRegionChangeComplete={handleRegionChangeComplete}
                 onPress={() => {
                     setShowBuildingPopup(false);
-                    setShowNavigationHUD(false);
+                    setNavigationState(NAVIGATION_STATE.IDLE);
                 }}
             >
                 {BUILDINGS.map((b) => (
@@ -227,11 +240,12 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             )}
 
             <View style={styles.searchWrapper}>
-                <SearchBar placeholder="Search" onPress={() => setSearchOpen(true)}/>
+                <SearchBar placeholder="Search" onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}/>
             </View>
 
-            <SearchPanel visible={searchOpen} onClose={() => setSearchOpen(false)}/>
-            <BottomDrawer visible={showNavigationHUD} onClose={() => setShowNavigationHUD(false)}/>
+            <SearchPanel visible={isSearching}
+                         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}/>
+            <NavigationConfigView visible={isConfiguring} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}/>
 
             <FloatingActionButton onPress={onPressFab}/>
 

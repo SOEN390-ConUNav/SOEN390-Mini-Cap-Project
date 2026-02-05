@@ -25,7 +25,7 @@ const TABS = [
     }
 ] as const;
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
         tabBarStyle: {
             position: 'absolute',
             bottom: 0,

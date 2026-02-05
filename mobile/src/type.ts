@@ -1,0 +1,3 @@
+import {NAVIGATION_STATE} from "./const";
+
+export type NavigationState = typeof NAVIGATION_STATE[keyof typeof NAVIGATION_STATE];
