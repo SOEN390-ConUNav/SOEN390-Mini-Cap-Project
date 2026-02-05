@@ -2,27 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { View,Text, TextInput, FlatList,TouchableOpacity,StyleSheet,Pressable,Modal, ScrollView, ActivityIndicator} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { getNearbyPlaces } from "../api";
+import { getNearbyPlaces, searchLocations } from "../api";
+import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 
 const BURGUNDY = "#800020";
-
-const RECENTS = [
-  {
-    id: "1",
-    name: "Hall Building Auditorium",
-    address: "1455 Blvd. De Maisonneuve Ouest",
-  },
-  {
-    id: "2",
-    name: "Pavillon EV Building",
-    address: "1515 Rue Sainte-Catherine #1428",
-  },
-  {
-    id: "3",
-    name: "John Molson School of Business",
-    address: "1450 Guy St, Montreal, QC H3H 0A1",
-  },
-];
 
 const PLACE_TYPES = [
   { label: "Restaurants", value: "restaurant" },
@@ -52,44 +35,70 @@ async function getUserLocation() {
 
 export default function SearchPanel({visible, onClose,}: {visible: boolean; onClose: () => void;}) {
   const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>("restaurant");
-  const inputRef = useRef<TextInput>(null);
   const [nearby, setNearby] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<Record<string, any[]>>({});
+  const [recentSearches, setRecentSearches] = useState<any[]>([]);
 
 
-  async function fetchNearbyPlaces(placeType: string) {
-  if (cacheRef.current[placeType]) {
-    setNearby(cacheRef.current[placeType]);
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const { latitude, longitude } = await getUserLocation();
-    const results = await getNearbyPlaces(latitude, longitude, placeType);
-    setNearby(results);
-  } catch (e) {
-    console.error(e);
-  } finally {
-    setLoading(false);
-  }
-}
-
-
-   useEffect(() => {
+  useEffect(() => {
     if (visible) {
-      setQuery("");
-      // focus after modal opens
-      setTimeout(() => inputRef.current?.focus(), 150);
+      loadSearchHistory();
     }
   }, [visible]);
 
-    useEffect(() => {
+
+  useEffect(() => {
       setNearby([]); 
       fetchNearbyPlaces(activeFilter);
   }, [activeFilter]);
+
+  async function fetchNearbyPlaces(placeType: string) {
+    if (cacheRef.current[placeType]) {
+      setNearby(cacheRef.current[placeType]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { latitude, longitude } = await getUserLocation();
+      const results = await getNearbyPlaces(latitude, longitude, placeType);
+      setNearby(results);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+}
+
+  async function loadSearchHistory() {
+    const list = await getSearchHistory();
+    setRecentSearches(list);
+  }
+
+  async function handleSearch() {
+    if (!query.trim()) return;
+
+    setSearching(true);
+    setSearchResults([]);
+
+    try {
+      // save this search query
+      await addSearchHistory(query);
+      // refresh local state
+      loadSearchHistory();
+
+      const results = await searchLocations(query);
+      setSearchResults(results);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSearching(false);
+    }
+  }
 
 
   return (
@@ -113,11 +122,12 @@ export default function SearchPanel({visible, onClose,}: {visible: boolean; onCl
             placeholder="Search"
             value={query}
             onChangeText={setQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
             style={styles.searchInput}
           />
           <Ionicons name="mic" size={20}/>
         </View>
-
 
         {/* Filters */}
         <View style={styles.filtersWrapper}>
@@ -150,22 +160,54 @@ export default function SearchPanel({visible, onClose,}: {visible: boolean; onCl
 
 
         {/* Recents */}
-        <Text style={styles.sectionTitle}>Recents</Text>
-        {RECENTS.map((item) => (
-          <View key={item.id} style={styles.recentItem}>
-            <Ionicons name="location-outline" size={18} color="#777" />
-            <View style={{ marginLeft: 8 }}>
-              <Text style={styles.placeName}>{item.name}</Text>
-              <Text style={styles.address}>{item.address}</Text>
-            </View>
-          </View>
-        ))}
+        {recentSearches.length > 0 && query.length === 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Recent Searches</Text>
 
-        <TouchableOpacity>
-          <Text style={styles.viewMore}>View more</Text>
-        </TouchableOpacity>
+          {recentSearches.map((item, index) => (
+            <TouchableOpacity
+              key={index.toString()}
+              onPress={() => {
+                setQuery(item.query);
+                handleSearch();
+              }}
+              style={styles.recentSearchItem}
+            >
+              <Ionicons name="time-outline" size={18} color={BURGUNDY} />
+              <Text style={styles.recentSearchText}>{item.query}</Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
 
+        {/* Search Results */}
+        {query.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Search results</Text>
+
+            {searching && <Text>Searching…</Text>}
+
+            {!searching && (
+              <FlatList
+                data={searchResults}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.poiItem}>
+                    <View style={styles.poiTextContainer}>
+                      <Text style={styles.placeName}>{item.name}</Text>
+                      <Text style={styles.address}>{item.address}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </>
+        )}
+        
         {/* Nearby Results */}
+        {query.length === 0 && 
+          <>
         <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
         <View style={{ flex: 1 }}>
           <FlatList
@@ -204,7 +246,7 @@ export default function SearchPanel({visible, onClose,}: {visible: boolean; onCl
             </View>
           )}
         </View>
-
+        </>}
       </View>
     </Modal>
   );
@@ -302,8 +344,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-
    backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.25)",
@@ -355,7 +395,6 @@ const styles = StyleSheet.create({
     color: "#999",
     marginTop: 8,
   },
-
   searchContainer: {
     height: 44,
     borderRadius: 12,
@@ -378,5 +417,13 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
-  
+  recentSearchItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 8,
+  },
+  recentSearchText: {
+    marginLeft: 8,
+    color: "#333",
+  },
 });
