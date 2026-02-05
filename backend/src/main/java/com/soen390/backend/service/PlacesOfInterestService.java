@@ -54,4 +54,29 @@ public class PlacesOfInterestService {
 
         return rawJson;
     }
+
+    public String searchPlacesByText(String query) {
+        // Build the request body
+        Map<String, Object> body = Map.of(
+                "textQuery", query
+        );
+
+        String rawJson;
+        try {
+            rawJson = restClient.post()
+                    .uri("https://places.googleapis.com/v1/places:searchText")
+                    .header("X-Goog-Api-Key", apiKey)
+                    .header("X-Goog-FieldMask",
+                            "places.displayName,places.formattedAddress,places.location")
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Google Places Text Search returned an empty response", e);
+        }
+
+        return rawJson;
+    }
+
 }
