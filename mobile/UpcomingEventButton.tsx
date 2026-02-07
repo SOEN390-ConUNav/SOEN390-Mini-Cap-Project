@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Button,
+  ActivityIndicator,
   AppState,
   AppStateStatus,
 } from "react-native";
@@ -19,51 +20,27 @@ type Props = {
 
 export default function UpcomingEventButton({ apiBaseUrl }: Props) {
   const SESSION_KEY = "googleSessionId";
-  const SELECTED_CALENDAR_KEY = "googleSelectedCalendar";
-  const NEXT_EVENT_KEY = "googleNextEvent";
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
 
   const [calendars, setCalendars] = useState<any[]>([]);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
 
   const [nextEvent, setNextEvent] = useState<any | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
 
   const [showEventDetails, setShowEventDetails] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   // ---------- storage ----------
   const saveSessionId = async (id: string) => AsyncStorage.setItem(SESSION_KEY, id);
   const loadSessionId = async () => AsyncStorage.getItem(SESSION_KEY);
   const clearSessionId = async () => AsyncStorage.removeItem(SESSION_KEY);
-  const saveSelectedCalendar = async (calendar: any) =>
-    AsyncStorage.setItem(SELECTED_CALENDAR_KEY, JSON.stringify(calendar));
-  const loadSelectedCalendar = async () => {
-    const raw = await AsyncStorage.getItem(SELECTED_CALENDAR_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  };
-  const clearSelectedCalendar = async () => AsyncStorage.removeItem(SELECTED_CALENDAR_KEY);
-  const saveNextEvent = async (event: any) =>
-    AsyncStorage.setItem(NEXT_EVENT_KEY, JSON.stringify(event));
-  const loadNextEvent = async () => {
-    const raw = await AsyncStorage.getItem(NEXT_EVENT_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  };
-  const clearNextEvent = async () => AsyncStorage.removeItem(NEXT_EVENT_KEY);
 
   const clearLocalGoogleState = async () => {
-    await AsyncStorage.multiRemove([SESSION_KEY, SELECTED_CALENDAR_KEY, NEXT_EVENT_KEY]);
+    await AsyncStorage.multiRemove([SESSION_KEY, "googleSelectedCalendar", "googleNextEvent"]);
     setSessionId(null);
     setSelectedCalendar(null);
     setCalendars([]);
@@ -93,45 +70,16 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       }
 
       const stored = await loadSessionId();
-      const storedCalendar = await loadSelectedCalendar();
-      if (storedCalendar?.id) setSelectedCalendar(storedCalendar);
-
       if (!stored || !apiBaseUrl) {
         await clearSessionId();
         setSessionId(null);
-        await clearNextEvent();
+        setSelectedCalendar(null);
         setNextEvent(null);
         setEventDetailsText("");
         return;
       }
 
-      let sessionValid = false;
-      try {
-        const sessionCheck = await fetch(`${apiBaseUrl}/api/google/calendars`, {
-          headers: { "X-Session-Id": stored },
-        });
-        sessionValid = sessionCheck.ok;
-      } catch {
-        sessionValid = false;
-      }
-
-      if (!sessionValid) {
-        await clearSessionId();
-        setSessionId(null);
-        await clearNextEvent();
-        setNextEvent(null);
-        setEventDetailsText("");
-        return;
-      }
-
-      setSessionId(stored);
-      const storedNextEvent = await loadNextEvent();
-      if (storedNextEvent) {
-        setNextEvent(storedNextEvent);
-        setEventDetailsText(formatEventBlock(storedNextEvent));
-      } else {
-        await clearNextEvent();
-      }
+      await refreshState(stored, false);
     })();
   }, [apiBaseUrl]);
 
@@ -206,7 +154,7 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
     return `${campus}\n${building}\nClassroom: ${room}\n${when}`;
   }
 
-  const exchangeNewSession = async (): Promise<string> => {
+  const exchangeNewSession = async (options?: { showPickerAfterSignIn?: boolean }): Promise<string> => {
         if (!apiBaseUrl) throw new Error("API_BASE_URL is missing");
 
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -217,6 +165,12 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
             (userInfo as any)?.data?.serverAuthCode;
 
         if (!code) throw new Error("No serverAuthCode returned.");
+
+        if (options?.showPickerAfterSignIn) {
+          setCalendars([]);
+          setShowCalendarPicker(true);
+          setIsCalendarLoading(true);
+        }
 
         const exchangeRes = await fetch(`${apiBaseUrl}/api/google/oauth/exchange`, {
             method: "POST",
@@ -235,152 +189,177 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
         return sid;
     };
 
+  const ensureSessionId = async (showPickerAfterSignIn = false): Promise<string> => {
+    let sid = sessionId ?? (await loadSessionId());
+    if (sid) {
+      setSessionId(sid);
+      return sid;
+    }
+    sid = await exchangeNewSession({ showPickerAfterSignIn });
+    return sid;
+  };
 
-  // ---------- core flow ----------
-  const startImportFlow = async (forceCalendarPicker = false) => {
+  const refreshState = async (
+    preferredSessionId?: string,
+    allowReauth = false,
+    includeCalendars = false
+  ): Promise<any | null> => {
+    if (!apiBaseUrl) return null;
+
+    let sid = preferredSessionId ?? sessionId ?? (await loadSessionId());
+    if (!sid) return null;
+
+    const fetchState = async (sidToUse: string) =>
+      fetch(
+        `${apiBaseUrl}/api/google/state?days=7&timeZone=${encodeURIComponent("America/Montreal")}&includeCalendars=${includeCalendars}`,
+        { headers: { "X-Session-Id": sidToUse } }
+      );
+
     try {
-      if (!apiBaseUrl) throw new Error("API_BASE_URL is missing");
+      let stateRes = await fetchState(sid);
 
-      // 0) Reuse session if possible
-      let sid = sessionId ?? (await loadSessionId());
+      if (!stateRes.ok && (stateRes.status === 401 || stateRes.status === 403)) {
+        await clearSessionId();
+        setSessionId(null);
 
-      // 1) If no session, sign in + exchange code
-      if (!sid) {
-        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-        const userInfo = await GoogleSignin.signIn();
+        if (!allowReauth) {
+          setSelectedCalendar(null);
+          setNextEvent(null);
+          setEventDetailsText("");
+          return null;
+        }
 
-        const code =
-          (userInfo as any)?.serverAuthCode ??
-          (userInfo as any)?.data?.serverAuthCode;
+        sid = await exchangeNewSession();
+        stateRes = await fetchState(sid);
+      }
 
-        if (!code) throw new Error("No serverAuthCode returned.");
+      if (!stateRes.ok) {
+        throw new Error(await stateRes.text());
+      }
 
-        const exchangeRes = await fetch(`${apiBaseUrl}/api/google/oauth/exchange`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ serverAuthCode: code }),
-        });
+      const state = await stateRes.json();
+      setSessionId(sid);
+      await saveSessionId(sid);
 
-        if (!exchangeRes.ok) throw new Error(await exchangeRes.text());
+      const selected = state?.selectedCalendar && state.selectedCalendar.id ? state.selectedCalendar : null;
+      setSelectedCalendar(selected);
 
-        const exchangeData = await exchangeRes.json();
-        sid = exchangeData.sessionId;
-        if (!sid) throw new Error("Backend did not return sessionId.");
-
-        setSessionId(sid);
-        await saveSessionId(sid);
+      if (state?.nextEvent && typeof state.nextEvent === "object") {
+        setNextEvent(state.nextEvent);
+        setEventDetailsText(formatEventBlock(state.nextEvent));
       } else {
-        setSessionId(sid);
+        setNextEvent(null);
+        setEventDetailsText("No upcoming events found in the next 7 days.");
       }
 
-      // 2) Fetch calendars
-        const fetchCalendars = async (sidToUse: string) => {
-            return fetch(`${apiBaseUrl}/api/google/calendars`, {
-                headers: { "X-Session-Id": sidToUse },
-            });
-            };
-
-            let calRes = await fetchCalendars(sid!);
-
-            if (!calRes.ok && (calRes.status === 401 || calRes.status === 403)) {
-            // stale session: clear and immediately re-auth in the same click
-            await clearSessionId();
-            setSessionId(null);
-
-            const newSid = await exchangeNewSession();
-
-            calRes = await fetchCalendars(newSid);
-            }
-
-            if (!calRes.ok) {
-            throw new Error(await calRes.text());
-        }
-
-
-      const cals = await calRes.json();
-      if (!Array.isArray(cals)) throw new Error("Calendars response is not an array.");
-
-      setCalendars(cals);
-      const persistedCalendar = selectedCalendar ?? (await loadSelectedCalendar());
-      if (!forceCalendarPicker && persistedCalendar?.id) {
-        const match = cals.find((c: any) => c?.id === persistedCalendar.id);
-        if (match) {
-          const hasEvent = await importNextEventFromCalendar(match);
-          if (!hasEvent) {
-            setShowCalendarPicker(true);
-          }
-          return;
-        }
-        await clearSelectedCalendar();
-        setSelectedCalendar(null);
-      }
-
-      setShowCalendarPicker(true);
+      return state;
     } catch (e: any) {
-      console.log("IMPORT FLOW ERROR:", e);
+      console.log("STATE REFRESH ERROR:", e);
+      return null;
     }
   };
 
-  const importNextEventFromCalendar = async (calendar: any): Promise<boolean> => {
+
+  // ---------- core flow ----------
+  const startImportFlow = async (forceCalendarPicker = false) => {
+    setIsBusy(true);
+    try {
+      if (!apiBaseUrl) throw new Error("API_BASE_URL is missing");
+
+      const sid = await ensureSessionId(true);
+      let sidToUse = sid;
+
+      const fetchCalendarsDirect = async (sessionToUse: string): Promise<any[]> => {
+        const res = await fetch(`${apiBaseUrl}/api/google/calendars`, {
+          headers: { "X-Session-Id": sessionToUse },
+        });
+
+        if (!res.ok && (res.status === 401 || res.status === 403)) {
+          await clearSessionId();
+          setSessionId(null);
+          sidToUse = await exchangeNewSession();
+          const retry = await fetch(`${apiBaseUrl}/api/google/calendars`, {
+            headers: { "X-Session-Id": sidToUse },
+          });
+          if (!retry.ok) throw new Error(await retry.text());
+          const retryCalendars = await retry.json();
+          return Array.isArray(retryCalendars) ? retryCalendars : [];
+        }
+
+        if (!res.ok) throw new Error(await res.text());
+        const cals = await res.json();
+        return Array.isArray(cals) ? cals : [];
+      };
+
+      if (!forceCalendarPicker) {
+        const state = await refreshState(sidToUse, true, false);
+        if (state?.calendarSelected) {
+          setShowCalendarPicker(false);
+          return;
+        }
+      }
+
+      if (!showCalendarPicker) {
+        setCalendars([]);
+        setShowCalendarPicker(true);
+        setIsCalendarLoading(true);
+      }
+
+      const directCalendars = await fetchCalendarsDirect(sidToUse);
+      setCalendars(directCalendars);
+    } catch (e: any) {
+      console.log("IMPORT FLOW ERROR:", e);
+    } finally {
+      setIsCalendarLoading(false);
+      setIsBusy(false);
+    }
+  };
+
+  const selectCalendarAndRefresh = async (calendar: any): Promise<boolean> => {
+    setIsBusy(true);
     try {
       if (!apiBaseUrl) throw new Error("API_BASE_URL is missing");
       let sid = sessionId ?? (await loadSessionId());
       if (!sid) throw new Error("Missing sessionId. Please sign in again.");
       if (!calendar?.id) throw new Error("Missing calendar id.");
 
-      const fetchNextEvent = async (sidToUse: string) => {
-        const url =
-          `${apiBaseUrl}/api/google/calendars/${encodeURIComponent(calendar.id)}/next-event` +
-          `?days=7&timeZone=${encodeURIComponent("America/Montreal")}`;
+      const saveSelection = async (sidToUse: string) => {
         return fetch(url, {
-          method: "GET",
-          headers: { "X-Session-Id": sidToUse },
+          method: "PUT",
+          headers: {
+            "X-Session-Id": sidToUse,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: calendar.id,
+            summary: calendar.summary,
+            primary: !!calendar.primary,
+          }),
         });
       };
 
-      let impRes = await fetchNextEvent(sid);
+      const url = `${apiBaseUrl}/api/google/selected-calendar`;
+      let setRes = await saveSelection(sid);
 
-      if (!impRes.ok && (impRes.status === 401 || impRes.status === 403)) {
+      if (!setRes.ok && (setRes.status === 401 || setRes.status === 403)) {
         await clearSessionId();
         setSessionId(null);
         sid = await exchangeNewSession();
-        impRes = await fetchNextEvent(sid);
+        setRes = await saveSelection(sid);
       }
 
-      if (impRes.status === 204) {
-        setNextEvent(null);
-        setEventDetailsText("No upcoming events found in the next 7 days.");
-        await clearNextEvent();
-        return false;
+      if (!setRes.ok) {
+        throw new Error(await setRes.text());
       }
 
-      if (!impRes.ok) {
-        const t = await impRes.text();
-        if (impRes.status === 404) {
-          await clearSelectedCalendar();
-          setSelectedCalendar(null);
-          await clearNextEvent();
-          setNextEvent(null);
-        }
-        throw new Error(t);
-      }
-
-      const next = await impRes.json();
-      if (!next || typeof next !== "object") {
-        setNextEvent(null);
-        setEventDetailsText("No upcoming events found in the next 7 days.");
-        await clearNextEvent();
-        return false;
-      }
-
-      setNextEvent(next);
-      setEventDetailsText(formatEventBlock(next));
-      await saveNextEvent(next);
-      return true;
+      const state = await refreshState(sid, true);
+      return !!state?.calendarSelected;
 
     } catch (e: any) {
-      console.log("IMPORT EVENTS ERROR:", e);
+      console.log("SELECT CALENDAR ERROR:", e);
       return false;
+    } finally {
+      setIsBusy(false);
     }
   };
 
@@ -391,13 +370,13 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
 
     const intervalId = setInterval(() => {
       if (AppState.currentState === "active") {
-        void importNextEventFromCalendar(selectedCalendar);
+        void refreshState(sessionId, false);
       }
     }, 60_000);
 
     const appStateSub = AppState.addEventListener("change", (state: AppStateStatus) => {
       if (state === "active") {
-        void importNextEventFromCalendar(selectedCalendar);
+        void refreshState(sessionId, false);
       }
     });
 
@@ -405,7 +384,7 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       clearInterval(intervalId);
       appStateSub.remove();
     };
-  }, [selectedCalendar, sessionId, apiBaseUrl]);
+  }, [selectedCalendar?.id, sessionId, apiBaseUrl]);
 
   const changeCalendarFromDetails = async () => {
     setShowEventDetails(false);
@@ -437,7 +416,10 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
     <View style={{ width: "100%" }}>
       {/* Main button */}
       {!showRedEventButton ? (
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => { void startImportFlow(); }}>
+        <TouchableOpacity
+          style={styles.primaryBtn}
+          onPress={() => { if (!isBusy) void startImportFlow(); }}
+        >
           <Text style={styles.primaryBtnText}>Import schedule from Google Calendar</Text>
         </TouchableOpacity>
       ) : (
@@ -452,24 +434,29 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select a calendar</Text>
 
-            <FlatList
-              data={calendars}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.calendarRow}
-                  onPress={async () => {
-                    setShowCalendarPicker(false);
-                    setSelectedCalendar(item);
-                    await saveSelectedCalendar(item);
-                    await importNextEventFromCalendar(item);
-                  }}
-                >
-                  <Text style={styles.calendarName}>{item.summary}</Text>
-                  {item.primary ? <Text style={styles.calendarMeta}>Primary</Text> : null}
-                </TouchableOpacity>
-              )}
-            />
+            {isCalendarLoading ? (
+              <View style={styles.calendarLoadingBox}>
+                <ActivityIndicator size="small" color="#1976d2" />
+                <Text style={styles.calendarLoadingText}>Refreshing calendars...</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={calendars}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.calendarRow}
+                    onPress={async () => {
+                      setShowCalendarPicker(false);
+                      await selectCalendarAndRefresh(item);
+                    }}
+                  >
+                    <Text style={styles.calendarName}>{item.summary}</Text>
+                    {item.primary ? <Text style={styles.calendarMeta}>Primary</Text> : null}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
 
             <View style={{ height: 12 }} />
             <Button title="Cancel" onPress={() => setShowCalendarPicker(false)} />
@@ -555,6 +542,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 12,
+  },
+  calendarLoadingBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  calendarLoadingText: {
+    marginTop: 10,
+    fontSize: 13,
+    color: "#555",
   },
   calendarRow: {
     paddingVertical: 12,

@@ -15,10 +15,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(GoogleCalendarController.class)
@@ -326,6 +329,132 @@ public class GoogleCalendarControllerTest {
         mockMvc.perform(get("/api/google/calendars/user@example.com/next-event")
                         .header("X-Session-Id", "valid-session"))
                 .andExpect(status().isNoContent());
+    }
+
+    // ========== PUT /api/google/selected-calendar Tests ==========
+
+    @Test
+    void testSetSelectedCalendarSuccess() throws Exception {
+        mockMvc.perform(put("/api/google/selected-calendar")
+                        .header("X-Session-Id", "valid-session")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":\"calendar-id\",\"summary\":\"School\",\"primary\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.saved").value(true))
+                .andExpect(jsonPath("$.selectedCalendar.id").value("calendar-id"))
+                .andExpect(jsonPath("$.selectedCalendar.summary").value("School"))
+                .andExpect(jsonPath("$.selectedCalendar.primary").value(true));
+    }
+
+    @Test
+    void testSetSelectedCalendarMissingSessionIdReturns400() throws Exception {
+        mockMvc.perform(put("/api/google/selected-calendar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":\"calendar-id\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testSetSelectedCalendarMissingCalendarIdReturns400() throws Exception {
+        mockMvc.perform(put("/api/google/selected-calendar")
+                        .header("X-Session-Id", "valid-session")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"summary\":\"School\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testSetSelectedCalendarServiceErrorReturns401() throws Exception {
+        doThrow(new RuntimeException("Invalid sessionId (no stored Google session)."))
+                .when(googleCalendarService)
+                .setSelectedCalendar(eq("invalid-session"), any(GoogleCalendarDto.class));
+
+        mockMvc.perform(put("/api/google/selected-calendar")
+                        .header("X-Session-Id", "invalid-session")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":\"calendar-id\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ========== GET /api/google/state Tests ==========
+
+    @Test
+    void testStateSuccess() throws Exception {
+        when(googleCalendarService.getState("valid-session", 7, "America/Montreal", false))
+                .thenReturn(Map.of(
+                        "connected", true,
+                        "calendarSelected", true,
+                        "selectedCalendar", new GoogleCalendarDto("calendar-id", "School", false),
+                        "nextEvent", new GoogleEventDto("event-id", "SOEN 390", "H-937",
+                                "2026-02-10T10:00:00-05:00", "2026-02-10T11:15:00-05:00", false)
+                ));
+
+        mockMvc.perform(get("/api/google/state")
+                        .header("X-Session-Id", "valid-session"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.connected").value(true))
+                .andExpect(jsonPath("$.calendarSelected").value(true))
+                .andExpect(jsonPath("$.selectedCalendar.id").value("calendar-id"))
+                .andExpect(jsonPath("$.nextEvent.id").value("event-id"));
+    }
+
+    @Test
+    void testStateWithCustomParams() throws Exception {
+        Map<String, Object> state = new java.util.LinkedHashMap<>();
+        state.put("connected", true);
+        state.put("calendarSelected", false);
+        state.put("selectedCalendar", null);
+        state.put("nextEvent", null);
+
+        when(googleCalendarService.getState("valid-session", 14, "America/New_York", false))
+                .thenReturn(state);
+
+        mockMvc.perform(get("/api/google/state")
+                        .header("X-Session-Id", "valid-session")
+                        .param("days", "14")
+                        .param("timeZone", "America/New_York"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.connected").value(true))
+                .andExpect(jsonPath("$.calendarSelected").value(false));
+    }
+
+    @Test
+    void testStateMissingSessionIdReturns400() throws Exception {
+        mockMvc.perform(get("/api/google/state"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testStateServiceErrorReturns401() throws Exception {
+        when(googleCalendarService.getState("invalid-session", 7, "America/Montreal", false))
+                .thenThrow(new RuntimeException("Invalid sessionId (no stored Google session)."));
+
+        mockMvc.perform(get("/api/google/state")
+                        .header("X-Session-Id", "invalid-session"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void testStateIncludeCalendars() throws Exception {
+        Map<String, Object> state = new java.util.LinkedHashMap<>();
+        state.put("connected", true);
+        state.put("calendarSelected", false);
+        state.put("selectedCalendar", null);
+        state.put("nextEvent", null);
+        state.put("calendars", List.of(new GoogleCalendarDto("cal1", "Primary", true)));
+
+        when(googleCalendarService.getState("valid-session", 7, "America/Montreal", true))
+                .thenReturn(state);
+
+        mockMvc.perform(get("/api/google/state")
+                        .header("X-Session-Id", "valid-session")
+                        .param("includeCalendars", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.calendarSelected").value(false))
+                .andExpect(jsonPath("$.calendars.length()").value(1))
+                .andExpect(jsonPath("$.calendars[0].id").value("cal1"));
     }
 
 }

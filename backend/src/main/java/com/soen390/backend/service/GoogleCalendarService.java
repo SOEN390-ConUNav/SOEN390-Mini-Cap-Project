@@ -15,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -164,6 +165,56 @@ public class GoogleCalendarService {
       }
     }
     return null;
+  }
+
+  public void setSelectedCalendar(String sessionId, GoogleCalendarDto selectedCalendar) {
+    GoogleTokenSession session = sessionService.require(sessionId);
+    if (selectedCalendar == null || selectedCalendar.getId() == null || selectedCalendar.getId().isBlank()) {
+      throw new RuntimeException("calendar.id is required.");
+    }
+
+    session.setSelectedCalendarId(selectedCalendar.getId());
+    session.setSelectedCalendarSummary(
+        selectedCalendar.getSummary() != null ? selectedCalendar.getSummary() : "(no name)"
+    );
+    session.setSelectedCalendarPrimary(selectedCalendar.isPrimary());
+    sessionService.put(sessionId, session);
+  }
+
+  public Map<String, Object> getState(String sessionId, int days, String timeZone) {
+    return getState(sessionId, days, timeZone, false);
+  }
+
+  public Map<String, Object> getState(String sessionId, int days, String timeZone, boolean includeCalendars) {
+    GoogleTokenSession session = sessionService.require(sessionId);
+
+    if (session.getExpiresAt() != null && Instant.now().isAfter(session.getExpiresAt())) {
+      throw new RuntimeException("Session expired. Please sign in again.");
+    }
+
+    GoogleCalendarDto selectedCalendar = null;
+    GoogleEventDto nextEvent = null;
+    boolean calendarSelected = session.getSelectedCalendarId() != null && !session.getSelectedCalendarId().isBlank();
+
+    if (calendarSelected) {
+      selectedCalendar = new GoogleCalendarDto(
+          session.getSelectedCalendarId(),
+          session.getSelectedCalendarSummary() != null ? session.getSelectedCalendarSummary() : "(no name)",
+          session.isSelectedCalendarPrimary()
+      );
+      nextEvent = getNextEvent(sessionId, selectedCalendar.getId(), days, timeZone);
+    }
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("connected", true);
+    out.put("calendarSelected", calendarSelected);
+    out.put("selectedCalendar", selectedCalendar);
+    out.put("nextEvent", nextEvent);
+    if (includeCalendars) {
+      List<GoogleCalendarDto> calendars = listCalendars(sessionId);
+      out.put("calendars", calendars);
+    }
+    return out;
   }
 
   private Instant toEventStartInstant(GoogleEventDto event, String timeZone) {

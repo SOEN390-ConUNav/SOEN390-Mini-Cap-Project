@@ -5,6 +5,7 @@ import com.soen390.backend.object.GoogleEventDto;
 import com.soen390.backend.object.GoogleTokenSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.*;
@@ -570,5 +571,50 @@ public class GoogleCalendarServiceTest {
         GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
 
         assertNull(next);
+    }
+
+    // ========== State/session selection Tests ==========
+
+    @Test
+    void testSetSelectedCalendarStoresSelectionInSession() {
+        GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
+        when(sessionService.require("session-id")).thenReturn(session);
+
+        googleCalendarService.setSelectedCalendar(
+                "session-id",
+                new GoogleCalendarDto("calendar-id", "School Calendar", true)
+        );
+
+        ArgumentCaptor<GoogleTokenSession> sessionCaptor = ArgumentCaptor.forClass(GoogleTokenSession.class);
+        verify(sessionService).put(eq("session-id"), sessionCaptor.capture());
+
+        GoogleTokenSession stored = sessionCaptor.getValue();
+        assertEquals("calendar-id", stored.getSelectedCalendarId());
+        assertEquals("School Calendar", stored.getSelectedCalendarSummary());
+        assertTrue(stored.isSelectedCalendarPrimary());
+    }
+
+    @Test
+    void testGetStateReturnsSelectedCalendarAndNextEvent() {
+        GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
+        session.setSelectedCalendarId("calendar-id");
+        session.setSelectedCalendarSummary("School Calendar");
+        session.setSelectedCalendarPrimary(false);
+
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        when(sessionService.require("session-id")).thenReturn(session);
+        doReturn(new GoogleEventDto("event-id", "SOEN 390", "H-937",
+                OffsetDateTime.now().plusHours(1).toString(),
+                OffsetDateTime.now().plusHours(2).toString(),
+                false))
+                .when(serviceSpy)
+                .getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+
+        Map<String, Object> state = serviceSpy.getState("session-id", 7, "America/Montreal");
+
+        assertEquals(true, state.get("connected"));
+        assertEquals(true, state.get("calendarSelected"));
+        assertNotNull(state.get("selectedCalendar"));
+        assertNotNull(state.get("nextEvent"));
     }
 }
