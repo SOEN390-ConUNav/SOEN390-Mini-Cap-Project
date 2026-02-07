@@ -25,7 +25,6 @@ export default function BuildingPopup({
   hasStudySpots: boolean;
   image: any;
   accessibility: {
-    hasRamp: boolean;
     hasElevator: boolean;
     hasParking: boolean;
     isAccessible: boolean;
@@ -56,10 +55,6 @@ export default function BuildingPopup({
 
               {accessibility.hasElevator && (
                 <Foundation name="elevator" size={20} color={BURGUNDY} />
-              )}
-
-              {accessibility.hasRamp && (
-                <FontAwesome5 name="wheelchair" size={18} color={BURGUNDY} />
               )}
 
               {accessibility.isAccessible && (
