@@ -10,6 +10,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -151,10 +155,42 @@ public class GoogleCalendarService {
 
   public GoogleEventDto getNextEvent(String sessionId, String calendarId, int days, String timeZone) {
     List<GoogleEventDto> events = importEvents(sessionId, calendarId, days, timeZone);
-    if (events.isEmpty()) {
+    Instant now = Instant.now();
+
+    for (GoogleEventDto event : events) {
+      Instant eventStart = toEventStartInstant(event, timeZone);
+      if (eventStart != null && eventStart.isAfter(now)) {
+        return event;
+      }
+    }
+    return null;
+  }
+
+  private Instant toEventStartInstant(GoogleEventDto event, String timeZone) {
+    if (event == null || event.getStart() == null || event.getStart().isBlank()) {
       return null;
     }
-    return events.get(0);
+
+    String start = event.getStart();
+
+    if (event.isAllDay()) {
+      try {
+        ZoneId zone = ZoneId.of(timeZone);
+        return LocalDate.parse(start).atStartOfDay(zone).toInstant();
+      } catch (RuntimeException e) {
+        return null;
+      }
+    }
+
+    try {
+      return OffsetDateTime.parse(start).toInstant();
+    } catch (DateTimeParseException e) {
+      try {
+        return Instant.parse(start);
+      } catch (DateTimeParseException ignored) {
+        return null;
+      }
+    }
   }
 }
 

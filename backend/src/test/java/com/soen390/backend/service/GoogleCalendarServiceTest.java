@@ -12,6 +12,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -509,14 +510,16 @@ public class GoogleCalendarServiceTest {
     // ========== getNextEvent Tests ==========
 
     @Test
-    void testGetNextEventReturnsFirstEvent() {
+    void testGetNextEventReturnsFirstFutureEvent() {
         GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        String soon = OffsetDateTime.now().plusMinutes(30).toString();
+        String later = OffsetDateTime.now().plusMinutes(90).toString();
 
         List<GoogleEventDto> events = Arrays.asList(
                 new GoogleEventDto("event1", "Earliest", null,
-                        "2026-02-09T09:00:00-05:00", "2026-02-09T10:00:00-05:00", false),
+                        soon, soon, false),
                 new GoogleEventDto("event2", "Later", null,
-                        "2026-02-09T11:00:00-05:00", "2026-02-09T12:00:00-05:00", false)
+                        later, later, false)
         );
 
         doReturn(events).when(serviceSpy).importEvents("session-id", "calendar-id", 7, "America/Montreal");
@@ -529,10 +532,38 @@ public class GoogleCalendarServiceTest {
     }
 
     @Test
-    void testGetNextEventReturnsNullWhenNoEvents() {
+    void testGetNextEventSkipsAlreadyStartedEvent() {
         GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        String started = OffsetDateTime.now().minusMinutes(1).toString();
+        String future = OffsetDateTime.now().plusMinutes(45).toString();
 
-        doReturn(Collections.emptyList())
+        List<GoogleEventDto> events = Arrays.asList(
+                new GoogleEventDto("event-started", "Started", null, started, started, false),
+                new GoogleEventDto("event-future", "Future", null, future, future, false)
+        );
+
+        doReturn(events)
+                .when(serviceSpy)
+                .importEvents("session-id", "calendar-id", 7, "America/Montreal");
+
+        GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+
+        assertNotNull(next);
+        assertEquals("event-future", next.getId());
+    }
+
+    @Test
+    void testGetNextEventReturnsNullWhenNoFutureEvents() {
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        String started1 = OffsetDateTime.now().minusHours(2).toString();
+        String started2 = OffsetDateTime.now().minusMinutes(10).toString();
+
+        List<GoogleEventDto> events = Arrays.asList(
+                new GoogleEventDto("event-started-1", "Started 1", null, started1, started1, false),
+                new GoogleEventDto("event-started-2", "Started 2", null, started2, started2, false)
+        );
+
+        doReturn(events)
                 .when(serviceSpy)
                 .importEvents("session-id", "calendar-id", 7, "America/Montreal");
 

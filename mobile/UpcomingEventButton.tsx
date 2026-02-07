@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Button,
+  AppState,
+  AppStateStatus,
 } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -30,7 +32,6 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
 
   const [showEventDetails, setShowEventDetails] = useState(false);
-  const [status, setStatus] = useState<string>("");
 
   // ---------- storage ----------
   const saveSessionId = async (id: string) => AsyncStorage.setItem(SESSION_KEY, id);
@@ -317,7 +318,6 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       setShowCalendarPicker(true);
     } catch (e: any) {
       console.log("IMPORT FLOW ERROR:", e);
-      setStatus(e?.message ?? String(e));
     }
   };
 
@@ -350,7 +350,6 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       if (impRes.status === 204) {
         setNextEvent(null);
         setEventDetailsText("No upcoming events found in the next 7 days.");
-        setStatus("No upcoming event");
         await clearNextEvent();
         return false;
       }
@@ -370,23 +369,43 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       if (!next || typeof next !== "object") {
         setNextEvent(null);
         setEventDetailsText("No upcoming events found in the next 7 days.");
-        setStatus("No upcoming event");
         await clearNextEvent();
         return false;
       }
 
       setNextEvent(next);
       setEventDetailsText(formatEventBlock(next));
-      setStatus("Imported");
       await saveNextEvent(next);
       return true;
 
     } catch (e: any) {
       console.log("IMPORT EVENTS ERROR:", e);
-      setStatus(e?.message ?? String(e));
       return false;
     }
   };
+
+  useEffect(() => {
+    if (!selectedCalendar?.id || !sessionId || !apiBaseUrl) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      if (AppState.currentState === "active") {
+        void importNextEventFromCalendar(selectedCalendar);
+      }
+    }, 60_000);
+
+    const appStateSub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") {
+        void importNextEventFromCalendar(selectedCalendar);
+      }
+    });
+
+    return () => {
+      clearInterval(intervalId);
+      appStateSub.remove();
+    };
+  }, [selectedCalendar, sessionId, apiBaseUrl]);
 
   const changeCalendarFromDetails = async () => {
     setShowEventDetails(false);
@@ -402,9 +421,8 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       try {
         await GoogleSignin.signOut();
       } catch {}
-      setStatus("Logged out (testing)");
     } catch (e: any) {
-      setStatus(e?.message ?? String(e));
+      console.log("LOGOUT ERROR:", e);
     }
   };
 
@@ -427,9 +445,6 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
           <Text style={styles.upcomingBtnText}>Upcoming event: {upcomingTitle}</Text>
         </TouchableOpacity>
       )}
-
-      {/* optional status line */}
-      {!!status && <Text style={styles.status}>{status}</Text>}
 
       {/* Calendar picker modal */}
       <Modal visible={showCalendarPicker} transparent animationType="slide">
@@ -467,6 +482,7 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
         <View style={styles.modalBackdrop}>
           <View style={styles.detailsCard}>
             <View style={styles.detailsHeader}>
+              <Text style={styles.detailsTitle}>{upcomingTitle}</Text>
               <TouchableOpacity
                 style={styles.detailsCloseBtn}
                 onPress={() => setShowEventDetails(false)}
@@ -476,11 +492,12 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.detailsTitle}>{upcomingTitle}</Text>
             <Text style={styles.detailsBody}>{eventDetailsText}</Text>
 
             <View style={{ height: 12 }} />
-            <Button title="Change calendar" onPress={changeCalendarFromDetails} />
+            <TouchableOpacity style={styles.changeCalendarBtn} onPress={changeCalendarFromDetails}>
+              <Text style={styles.changeCalendarBtnText}>Change calendar</Text>
+            </TouchableOpacity>
             <View style={{ height: 8 }} />
             <TouchableOpacity style={styles.logoutBtn} onPress={logoutGoogleForTesting}>
               <Text style={styles.logoutBtnText}>Log out of Google</Text>
@@ -522,13 +539,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  status: {
-    marginTop: 10,
-    fontSize: 12,
-    opacity: 0.8,
-    textAlign: "center",
-  },
-
   modalBackdrop: {
     flex: 1,
     justifyContent: "center",
@@ -566,10 +576,13 @@ const styles = StyleSheet.create({
   },
   detailsHeader: {
     width: "100%",
-    alignItems: "flex-end",
-    marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   detailsCloseBtn: {
+    marginLeft: 12,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -583,13 +596,23 @@ const styles = StyleSheet.create({
     color: "#444",
   },
   detailsTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: "800",
-    marginBottom: 10,
   },
   detailsBody: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  changeCalendarBtn: {
+    backgroundColor: "#1976d2",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  changeCalendarBtnText: {
+    color: "white",
+    fontWeight: "700",
   },
   logoutBtn: {
     backgroundColor: "#c62828",
