@@ -96,6 +96,13 @@ export default function HomeUi() {
     }
   }, [activeTab, showEnableLocation, shuttleStop]);
 
+  useEffect(() => {
+    if (activeTab !== "map") {
+      setShuttleStop(null);
+    }
+  }, [activeTab]);
+
+
   const stopWatchingLocation = () => {
     locationSubRef.current?.remove();
     locationSubRef.current = null;
