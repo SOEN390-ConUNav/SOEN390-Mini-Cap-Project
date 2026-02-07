@@ -148,6 +148,14 @@ public class GoogleCalendarService {
         );
       }
     }
+
+  public GoogleEventDto getNextEvent(String sessionId, String calendarId, int days, String timeZone) {
+    List<GoogleEventDto> events = importEvents(sessionId, calendarId, days, timeZone);
+    if (events.isEmpty()) {
+      return null;
+    }
+    return events.get(0);
+  }
 }
 
 

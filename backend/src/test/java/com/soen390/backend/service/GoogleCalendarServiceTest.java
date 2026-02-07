@@ -505,4 +505,39 @@ public class GoogleCalendarServiceTest {
 
         assertNotNull(events);
     }
+
+    // ========== getNextEvent Tests ==========
+
+    @Test
+    void testGetNextEventReturnsFirstEvent() {
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+
+        List<GoogleEventDto> events = Arrays.asList(
+                new GoogleEventDto("event1", "Earliest", null,
+                        "2026-02-09T09:00:00-05:00", "2026-02-09T10:00:00-05:00", false),
+                new GoogleEventDto("event2", "Later", null,
+                        "2026-02-09T11:00:00-05:00", "2026-02-09T12:00:00-05:00", false)
+        );
+
+        doReturn(events).when(serviceSpy).importEvents("session-id", "calendar-id", 7, "America/Montreal");
+
+        GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+
+        assertNotNull(next);
+        assertEquals("event1", next.getId());
+        assertEquals("Earliest", next.getSummary());
+    }
+
+    @Test
+    void testGetNextEventReturnsNullWhenNoEvents() {
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+
+        doReturn(Collections.emptyList())
+                .when(serviceSpy)
+                .importEvents("session-id", "calendar-id", 7, "America/Montreal");
+
+        GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+
+        assertNull(next);
+    }
 }

@@ -26,6 +26,8 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
+    profiles:
+      - sonarqube
 
   sonarqube-db:
     image: postgres:15-alpine
@@ -36,6 +38,8 @@ services:
       POSTGRES_DB: sonarqube
     volumes:
       - sonarqube_pgdata:/var/lib/postgresql/data
+    profiles:
+      - sonarqube
 
 volumes:
   pgdata:

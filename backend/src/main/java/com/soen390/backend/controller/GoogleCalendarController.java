@@ -3,6 +3,7 @@ package com.soen390.backend.controller;
 import com.soen390.backend.object.GoogleCalendarDto;
 import com.soen390.backend.object.GoogleEventDto;
 import com.soen390.backend.service.GoogleCalendarService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,8 +33,8 @@ public class GoogleCalendarController {
     }
   }
 
-  @PostMapping("/calendars/{calendarId}/import")
-  public List<GoogleEventDto> importCalendar(
+  @GetMapping("/calendars/{calendarId}/events")
+  public List<GoogleEventDto> getCalendarEvents(
       @RequestHeader("X-Session-Id") String sessionId,
       @PathVariable String calendarId,
       @RequestParam(defaultValue = "7") int days,
@@ -45,6 +46,28 @@ public class GoogleCalendarController {
 
     try {
       return googleCalendarService.importEvents(sessionId, calendarId, days, timeZone);
+    } catch (RuntimeException e) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage(), e);
+    }
+  }
+
+  @GetMapping("/calendars/{calendarId}/next-event")
+  public ResponseEntity<GoogleEventDto> getNextEvent(
+      @RequestHeader("X-Session-Id") String sessionId,
+      @PathVariable String calendarId,
+      @RequestParam(defaultValue = "7") int days,
+      @RequestParam(defaultValue = "America/Montreal") String timeZone
+  ) {
+    if (sessionId == null || sessionId.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "X-Session-Id header is required.");
+    }
+
+    try {
+      GoogleEventDto nextEvent = googleCalendarService.getNextEvent(sessionId, calendarId, days, timeZone);
+      if (nextEvent == null) {
+        return ResponseEntity.noContent().build();
+      }
+      return ResponseEntity.ok(nextEvent);
     } catch (RuntimeException e) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage(), e);
     }
