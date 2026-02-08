@@ -1,5 +1,0 @@
-appId: com.anonymous.mobile
----
-- launchApp
-- tapOn: "Call /API/HEALTH"
-- assertVisible: "Result: OK"
