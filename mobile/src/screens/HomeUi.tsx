@@ -9,6 +9,7 @@ import CampusSwitcher from "../components/CampusSwitcher";
 import BottomNav from "../components/BottomNav";
 import FloatingActionButton from "../components/FloatingActionButton";
 import SearchPanel from "../components/SearchPanel";
+import UpcomingEventButton from "../components/UpcomingEventButton";
 
 import SettingsScreen from "./SettingsScreen";
 import ShuttleScreen from "./ShuttleScreen";
@@ -267,6 +268,10 @@ export default function HomeUi() {
 
           <SearchPanel visible={searchOpen} onClose={() => setSearchOpen(false)} />
 
+          <View style={styles.upcomingEventWrapper}>
+            <UpcomingEventButton />
+          </View>
+
           <FloatingActionButton onPress={onPressFab} />
 
           <View style={styles.campusWrapper}>
@@ -283,6 +288,7 @@ export default function HomeUi() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#fff" },
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
+  upcomingEventWrapper: { position: "absolute", top: 108, left: 16, right: 16 },
   campusWrapper: {
     position: "absolute",
     left: 16,

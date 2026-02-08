@@ -12,12 +12,17 @@ import {
   AppStateStatus,
 } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import Constants from "expo-constants";
+import {
+  requestGoogleCalendars,
+  requestGoogleLogout,
+  requestGoogleOAuthExchange,
+  requestGoogleState,
+  requestSetGoogleSelectedCalendar,
+} from "../api/googleCalendarApi";
 
-type Props = {
-  apiBaseUrl?: string;
-};
-
-export default function UpcomingEventButton({ apiBaseUrl }: Props) {
+export default function UpcomingEventButton() {
+  const googleWebClientId = (Constants.expoConfig?.extra as any)?.GOOGLE_WEB_CLIENT_ID as string | undefined;
   const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
   const [calendars, setCalendars] = useState<any[]>([]);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
@@ -36,34 +41,24 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
     setShowEventDetails(false);
   };
 
-  const apiFetch = (path: string, init?: RequestInit) => {
-    if (!apiBaseUrl) {
-      throw new Error("API_BASE_URL is missing");
-    }
-    return fetch(`${apiBaseUrl}${path}`, {
-      ...(init ?? {}),
-      credentials: "include",
-    });
-  };
-
   useEffect(() => {
     GoogleSignin.configure({
       scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
-      webClientId: "511345858617-6dd93pjirlhn1k82scnvs9ovcpopd81u.apps.googleusercontent.com",
+      webClientId: googleWebClientId,
       offlineAccess: true,
       forceCodeForRefreshToken: true,
     });
   }, []);
 
   useEffect(() => {
-    if (!apiBaseUrl) {
-      void clearLocalGoogleState();
-      return;
-    }
     void refreshState(false, false);
-  }, [apiBaseUrl]);
+  }, []);
 
   const exchangeNewSession = async (options?: { showPickerAfterSignIn?: boolean }): Promise<void> => {
+    if (!googleWebClientId) {
+      throw new Error("GOOGLE_WEB_CLIENT_ID is missing in app config.");
+    }
+
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const userInfo = await GoogleSignin.signIn();
 
@@ -76,11 +71,7 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       setIsCalendarLoading(true);
     }
 
-    const exchangeRes = await apiFetch("/api/google/oauth/exchange", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ serverAuthCode: code }),
-    });
+    const exchangeRes = await requestGoogleOAuthExchange(code);
 
     if (!exchangeRes.ok) {
       throw new Error(await exchangeRes.text());
@@ -92,12 +83,8 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
     includeCalendars = false,
     reauthOptions?: { showPickerAfterSignIn?: boolean }
   ): Promise<any | null> => {
-    if (!apiBaseUrl) return null;
-
-    const statePath = `/api/google/state?days=7&timeZone=${encodeURIComponent("America/Montreal")}&includeCalendars=${includeCalendars}`;
-
     try {
-      let stateRes = await apiFetch(statePath);
+      let stateRes = await requestGoogleState(includeCalendars);
 
       if (!stateRes.ok && (stateRes.status === 400 || stateRes.status === 401 || stateRes.status === 403)) {
         if (!allowReauth) {
@@ -106,7 +93,7 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
         }
 
         await exchangeNewSession(reauthOptions);
-        stateRes = await apiFetch(statePath);
+        stateRes = await requestGoogleState(includeCalendars);
       }
 
       if (!stateRes.ok) {
@@ -135,11 +122,11 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
   };
 
   const fetchCalendarsWithReauth = async (): Promise<any[]> => {
-    let res = await apiFetch("/api/google/calendars");
+    let res = await requestGoogleCalendars();
 
     if (!res.ok && (res.status === 400 || res.status === 401 || res.status === 403)) {
       await exchangeNewSession();
-      res = await apiFetch("/api/google/calendars");
+      res = await requestGoogleCalendars();
     }
 
     if (!res.ok) {
@@ -153,8 +140,6 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
   const startImportFlow = async (forceCalendarPicker = false) => {
     setIsBusy(true);
     try {
-      if (!apiBaseUrl) throw new Error("API_BASE_URL is missing");
-
       const state = await refreshState(true, false, { showPickerAfterSignIn: true });
       if (!forceCalendarPicker && state?.calendarSelected) {
         setShowCalendarPicker(false);
@@ -180,27 +165,20 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
   const selectCalendarAndRefresh = async (calendar: any): Promise<boolean> => {
     setIsBusy(true);
     try {
-      if (!apiBaseUrl) throw new Error("API_BASE_URL is missing");
       if (!calendar?.id) throw new Error("Missing calendar id.");
 
-      const body = JSON.stringify({
+      let setRes = await requestSetGoogleSelectedCalendar({
         id: calendar.id,
         summary: calendar.summary,
         primary: !!calendar.primary,
       });
 
-      let setRes = await apiFetch("/api/google/selected-calendar", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body,
-      });
-
       if (!setRes.ok && (setRes.status === 400 || setRes.status === 401 || setRes.status === 403)) {
         await exchangeNewSession();
-        setRes = await apiFetch("/api/google/selected-calendar", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body,
+        setRes = await requestSetGoogleSelectedCalendar({
+          id: calendar.id,
+          summary: calendar.summary,
+          primary: !!calendar.primary,
         });
       }
 
@@ -219,7 +197,7 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
   };
 
   useEffect(() => {
-    if (!selectedCalendar?.id || !apiBaseUrl) {
+    if (!selectedCalendar?.id) {
       return;
     }
 
@@ -239,15 +217,13 @@ export default function UpcomingEventButton({ apiBaseUrl }: Props) {
       clearInterval(intervalId);
       appStateSub.remove();
     };
-  }, [selectedCalendar?.id, apiBaseUrl]);
+  }, [selectedCalendar?.id]);
 
   const logoutGoogleForTesting = async () => {
     try {
-      if (apiBaseUrl) {
-        try {
-          await apiFetch("/api/google/oauth/logout", { method: "POST" });
-        } catch {}
-      }
+      try {
+        await requestGoogleLogout();
+      } catch {}
       await clearLocalGoogleState();
       try {
         await GoogleSignin.revokeAccess();
