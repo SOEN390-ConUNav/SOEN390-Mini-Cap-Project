@@ -2,7 +2,15 @@ import React from "react";
 import { StyleSheet, Text, View, Button } from "react-native";
 import Constants from "expo-constants";
 import UpcomingEventButton from "./UpcomingEventButton";
-import GoogleMap from "./GoogleMap";
+import GoogleMap from './GoogleMap';
+import HomeUi from "./src/screens/HomeUi";
+
+export default function App() {
+  return <HomeUi />;
+}
+
+
+/* EXAMPLE OF LINKING FRONTEND WITH BACKEND
 
 export default function App() {
   const apiBaseUrl = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
@@ -45,3 +53,4 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "600", marginBottom: 10 },
   small: { fontSize: 12 },
 });
+*/
