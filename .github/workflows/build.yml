@@ -30,11 +30,10 @@ jobs:
           node-version: '20'
           cache: npm
           # change this to your actual frontend folder if different
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: mobile/package-lock.json
 
       - name: Install frontend dependencies
-        # change working-directory to where your package.json actually is:
-        working-directory: frontend
+        working-directory: mobile
         run: npm ci
 
       # Optional: build frontend (not required for Sonar warnings, but good CI hygiene)
