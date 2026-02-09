@@ -11,6 +11,20 @@ jobs:
     name: SonarQube
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:14
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: bigdataenergy
+          POSTGRES_PASSWORD: bigdataenergy
+          POSTGRES_DB: backend
+        options: >-
+          --health-cmd="pg_isready -U bigdataenergy"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,8 +56,12 @@ jobs:
       #   run: npm run build --if-present
 
       # ---- Backend / Java (fixes sonar.java.libraries warning) ----
-      - name: Build backend
+      - name: Build & test backend
         working-directory: backend
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/backend
+          SPRING_DATASOURCE_USERNAME: bigdataenergy
+          SPRING_DATASOURCE_PASSWORD: bigdataenergy
         run: mvn -B clean verify
 
       - name: Copy backend dependencies for Sonar (creates backend/target/dependency/*.jar)
