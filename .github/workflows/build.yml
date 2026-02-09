@@ -68,6 +68,12 @@ jobs:
         working-directory: backend
         run: mvn -B -DskipTests dependency:copy-dependencies -DoutputDirectory=target/dependency
 
+      - name: Debug jar paths
+        run: |
+          pwd
+          ls -la
+          ls -la backend/target || true
+          ls -la backend/target/*.jar || true
       # ---- SonarQube Scan ----
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
@@ -75,5 +81,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
+            -Dsonar.projectBaseDir=.
             -Dsonar.java.binaries=backend/target/classes
-            -Dsonar.java.libraries=backend/target/dependency/*.jar
+            -Dsonar.java.libraries=backend/target/*.jar
