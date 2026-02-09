@@ -66,7 +66,7 @@ jobs:
 
       - name: Copy backend dependencies for Sonar (creates backend/target/*.jar)
         working-directory: backend
-        run: mvn -B -DskipTests dependency:copy-dependencies -DoutputDirectory=target/
+        run: mvn -B -DskipTests dependency:copy-dependencies -DoutputDirectory=target/dependency
 
       # ---- SonarQube Scan ----
       - name: SonarQube Scan
@@ -76,4 +76,4 @@ jobs:
         with:
           args: >
             -Dsonar.java.binaries=backend/target/classes
-            -Dsonar.java.libraries=backend/target/*.jar
+            -Dsonar.java.libraries=backend/target/dependency/*.jar
