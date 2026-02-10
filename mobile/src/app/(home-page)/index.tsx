@@ -1,5 +1,5 @@
-import React, {useState, useRef, useEffect} from 'react';
-import {StyleSheet, View, Alert, Text, Pressable} from "react-native";
+import React, {useEffect, useRef, useState} from 'react';
+import {Alert, Pressable, StyleSheet, Text, View} from "react-native";
 import {useNavigation} from "expo-router";
 import MapView, {Marker, Polygon, PROVIDER_GOOGLE, Region} from "react-native-maps";
 import * as Location from 'expo-location';
@@ -10,6 +10,7 @@ import CampusSwitcher from "../../components/CampusSwitcher";
 import {Building, BuildingId, BUILDINGS} from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
+import UpcomingEventButton from "../../components/UpcomingEventButton";
 import useNavigationState from "../../hooks/useNavigationState";
 import {NAVIGATION_STATE} from "../../const";
 import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
@@ -52,8 +53,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const [outlineMode, setOutlineMode] = useState(false);
     const [showBuildingPopup, setShowBuildingPopup] = useState(false);
 
-    // Turns out we gotta freeze custom markers after initial render so it doesnt consume cpu and battery
+    // Marker render optimization: freeze custom marker rendering after initial paint
+    const [mapReady, setMapReady] = useState(false);
     const [freezeMarkers, setFreezeMarkers] = useState(false);
+    const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const mapRef = useRef<MapView>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
@@ -64,11 +67,12 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }, []);
 
     useEffect(() => {
-        if (!showEnableLocation) {
-            setFreezeMarkers(false);
-            const t = setTimeout(() => setFreezeMarkers(true), FREEZE_MARKERS_AFTER_MS);
-            return () => clearTimeout(t);
-        }
+        // Schedule freezing markers whenever map visibility/ready state changes
+        scheduleFreezeMarkers();
+        return () => {
+            if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+            freezeTimerRef.current = null;
+        };
     }, [showEnableLocation]);
 
     useEffect(() => {
@@ -81,6 +85,15 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                 : navStyles.tabBarStyle, // Explicitly restore your custom styles
         });
     }, [isConfiguring, isNavigating, navigation]);
+
+    useEffect(() => {
+        // Re-schedule marker freezing when the map becomes ready or navigation overlays toggle.
+        scheduleFreezeMarkers();
+        return () => {
+            if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+            freezeTimerRef.current = null;
+        };
+    }, [mapReady, showEnableLocation, isConfiguring, isNavigating]);
 
     const checkLocationPermission = async () => {
         const {status} = await Location.getForegroundPermissionsAsync();
@@ -124,6 +137,20 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         mapRef.current?.animateToRegion(r, 650);
     };
 
+    const scheduleFreezeMarkers = () => {
+        if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+
+        // Let markers re-render briefly first
+        setFreezeMarkers(false);
+
+        const overlaysVisible = !showEnableLocation; // overlays are only on map view
+        if (!mapReady || !overlaysVisible) return;
+
+        freezeTimerRef.current = setTimeout(() => {
+            setFreezeMarkers(true);
+        }, FREEZE_MARKERS_AFTER_MS);
+    };
+
     const onPressFab = async () => {
         try {
             if (hasLocationPermission === true) {
@@ -157,11 +184,15 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const onSkipLocation = () => {
         setShowEnableLocation(false);
         setHasLocationPermission(false);
+        stopWatchingLocation();
     };
 
     const onChangeCampus = (next: "SGW" | "LOYOLA") => {
         setCampus(next);
         const target = next === "SGW" ? SGW_CENTER : LOYOLA_CENTER;
+
+        // Unfreeze briefly when camera jumps
+        scheduleFreezeMarkers();
         animateToRegion({
             latitude: target.latitude,
             longitude: target.longitude,
@@ -179,6 +210,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         selectedBuildingId ? BUILDINGS.find((b) => b.id === selectedBuildingId) ?? null : null;
 
     const enterOutlineForBuilding = (b: Building) => {
+        // Unfreeze briefly when going into outline mode
+        scheduleFreezeMarkers();
         setSelectedBuildingId(b.id);
         setOutlineMode(true);
         setShowBuildingPopup(false);
@@ -257,6 +290,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                     setShowBuildingPopup(false);
                     setNavigationState(NAVIGATION_STATE.IDLE);
                 }}
+                onMapReady={() => {
+                    setMapReady(true);
+                    scheduleFreezeMarkers();
+                }}
             >
 
             {BUILDINGS.map((b) => (
@@ -300,6 +337,16 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                     onDirections={() => onPressDirections()}
                 />
             )}
+
+            <View
+                style={[
+                    styles.upcomingEventWrapper,
+                    (showEnableLocation || isConfiguring || isNavigating) && styles.overlayHidden,
+                ]}
+                pointerEvents={!showEnableLocation && !(isConfiguring || isNavigating) ? "auto" : "none"}
+            >
+                <UpcomingEventButton/>
+            </View>
 
             <View style={styles.searchWrapper}>
                 <SearchBar placeholder="Search" onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}/>
@@ -361,6 +408,8 @@ const styles = StyleSheet.create({
     enableLocationSkip: { paddingVertical: 14, alignItems: "center" },
     enableLocationSkipText: { color: "#777", fontWeight: "600" },
     searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
+    upcomingEventWrapper: { position: "absolute", top: 108, left: 16, right: 16 },
+    overlayHidden: { opacity: 0 },
     campusWrapper: {
         position: "absolute",
         left: 16,
