@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Alert, Pressable, StyleSheet, Text, View} from "react-native";
-import {useNavigation} from "expo-router";
+import {useNavigation, useLocalSearchParams} from "expo-router";
 import MapView, {Marker, Polygon, PROVIDER_GOOGLE, Region} from "react-native-maps";
 import * as Location from 'expo-location';
 import SearchBar from "../../components/SearchBar";
@@ -21,15 +21,19 @@ import DirectionPath from "../../components/DirectionPath";
 const SGW_CENTER = {latitude: 45.4973, longitude: -73.5790};
 const LOYOLA_CENTER = {latitude: 45.4582, longitude: -73.6405};
 const CAMPUS_REGION_DELTA = {latitudeDelta: 0.01, longitudeDelta: 0.01};
+
+// Shuttle stop coordinates
+const SHUTTLE_STOPS = {
+    SGW: { latitude: 45.497122, longitude: -73.578471 },
+    LOYOLA: { latitude: 45.45844144049705, longitude: -73.63831707854963 },
+} as const;
+
 const BURGUNDY = "#800020";
-// When user zooms out more than this, we leave outline mode
 const OUTLINE_EXIT_LAT_DELTA = 0.006;
-// Zoom level when entering outline mode
 const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
     latitudeDelta: 0.0028,
     longitudeDelta: 0.0028,
 };
-// Delay before freezing custom marker rendering for performance
 const FREEZE_MARKERS_AFTER_MS = 800;
 
 interface HomePageIndexProps {
@@ -37,23 +41,30 @@ interface HomePageIndexProps {
 
 export default function HomePageIndex(props: HomePageIndexProps) {
     const navigation = useNavigation();
+    const params = useLocalSearchParams<{ shuttleCampus?: string }>();
+
     const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
     const {setNavigationState, isNavigating, isConfiguring, isSearching} = useNavigationState();
     const {origin, setOrigin, destination, setDestination} = useNavigationEndpoints();
     const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
-    // When true, show enable-location prompt inline and do NOT mount MapView (so map gets proper layout when we show it)
     const [showEnableLocation, setShowEnableLocation] = useState(true);
+
     const [region, setRegion] = useState<Region>({
         latitude: SGW_CENTER.latitude,
         longitude: SGW_CENTER.longitude,
         ...CAMPUS_REGION_DELTA,
     });
 
+    // Shuttle stop state
+    const [shuttleStop, setShuttleStop] = useState<{
+        campus: "SGW" | "LOYOLA";
+        coordinate: { latitude: number; longitude: number };
+    } | null>(null);
+
     const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
     const [outlineMode, setOutlineMode] = useState(false);
     const [showBuildingPopup, setShowBuildingPopup] = useState(false);
 
-    // Marker render optimization: freeze custom marker rendering after initial paint
     const [mapReady, setMapReady] = useState(false);
     const [freezeMarkers, setFreezeMarkers] = useState(false);
     const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,8 +77,30 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         checkLocationPermission();
     }, []);
 
+    // Handle shuttle navigation from route params
     useEffect(() => {
-        // Schedule freezing markers whenever map visibility/ready state changes
+        if (params.shuttleCampus && (params.shuttleCampus === 'SGW' || params.shuttleCampus === 'LOYOLA')) {
+            const targetCampus = params.shuttleCampus as "SGW" | "LOYOLA";
+            const coord = SHUTTLE_STOPS[targetCampus];
+
+            setCampus(targetCampus);
+            setShuttleStop({ campus: targetCampus, coordinate: coord });
+
+            // Animate to shuttle stop after a brief delay to ensure map is ready
+            requestAnimationFrame(() => {
+                mapRef.current?.animateToRegion(
+                    {
+                        latitude: coord.latitude,
+                        longitude: coord.longitude,
+                        ...CAMPUS_REGION_DELTA,
+                    },
+                    650
+                );
+            });
+        }
+    }, [params.shuttleCampus]);
+
+    useEffect(() => {
         scheduleFreezeMarkers();
         return () => {
             if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
@@ -76,18 +109,16 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }, [showEnableLocation]);
 
     useEffect(() => {
-        // Define when the tab bar should be hidden
         const shouldHideTabBar = isConfiguring || isNavigating;
 
         navigation.setOptions({
             tabBarStyle: shouldHideTabBar
-                ? {display: "none"} // Hide it completely
-                : navStyles.tabBarStyle, // Explicitly restore your custom styles
+                ? {display: "none"}
+                : navStyles.tabBarStyle,
         });
     }, [isConfiguring, isNavigating, navigation]);
 
     useEffect(() => {
-        // Re-schedule marker freezing when the map becomes ready or navigation overlays toggle.
         scheduleFreezeMarkers();
         return () => {
             if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
@@ -103,7 +134,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             setShowEnableLocation(false);
             await startWatchingLocation();
         }
-        // else keep showEnableLocation true so we show the inline prompt (MapView not mounted yet)
     };
 
     const stopWatchingLocation = () => {
@@ -116,8 +146,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         try {
             locationSubRef.current = await Location.watchPositionAsync(
                 {accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1},
-                () => {
-                }
+                () => {}
             );
         } catch (error) {
             console.error("Error watching location:", error);
@@ -139,11 +168,9 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const scheduleFreezeMarkers = () => {
         if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
-
-        // Let markers re-render briefly first
         setFreezeMarkers(false);
 
-        const overlaysVisible = !showEnableLocation; // overlays are only on map view
+        const overlaysVisible = !showEnableLocation;
         if (!mapReady || !overlaysVisible) return;
 
         freezeTimerRef.current = setTimeout(() => {
@@ -191,7 +218,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         setCampus(next);
         const target = next === "SGW" ? SGW_CENTER : LOYOLA_CENTER;
 
-        // Unfreeze briefly when camera jumps
         scheduleFreezeMarkers();
         animateToRegion({
             latitude: target.latitude,
@@ -199,10 +225,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             ...CAMPUS_REGION_DELTA,
         });
 
-        // Leaving building focus mode when switching campus
         setSelectedBuildingId(null);
         setOutlineMode(false);
         setShowBuildingPopup(false);
+        setShuttleStop(null); // Clear shuttle stop when switching campus
         setNavigationState(NAVIGATION_STATE.IDLE);
     };
 
@@ -210,7 +236,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         selectedBuildingId ? BUILDINGS.find((b) => b.id === selectedBuildingId) ?? null : null;
 
     const enterOutlineForBuilding = (b: Building) => {
-        // Unfreeze briefly when going into outline mode
         scheduleFreezeMarkers();
         setSelectedBuildingId(b.id);
         setOutlineMode(true);
@@ -295,8 +320,16 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                     scheduleFreezeMarkers();
                 }}
             >
+                {/* Shuttle stop marker */}
+                {shuttleStop && (
+                    <Marker
+                        coordinate={shuttleStop.coordinate}
+                        title={`${shuttleStop.campus} Shuttle Stop`}
+                        pinColor={BURGUNDY}
+                    />
+                )}
 
-            {BUILDINGS.map((b) => (
+                {BUILDINGS.map((b) => (
                     <Marker
                         key={b.id}
                         coordinate={b.marker}
