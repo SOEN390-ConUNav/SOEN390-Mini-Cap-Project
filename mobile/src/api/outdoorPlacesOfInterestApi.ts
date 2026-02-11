@@ -1,9 +1,7 @@
 import Constants from "expo-constants";
 
 const API_BASE_URL =
-  (Constants.expoConfig?.extra as { API_BASE_URL?: string } | undefined)?.API_BASE_URL ??
-  (Constants.manifest as { extra?: { API_BASE_URL?: string } } | undefined)?.extra?.API_BASE_URL ??
-  "http://localhost:8080";
+    (Constants.expoConfig?.extra as any)?.API_BASE_URL;
 
 export interface NearbyPlace {
   id: string;
@@ -31,7 +29,7 @@ export async function getNearbyPlaces(
     );
 
     if (!response.ok) {
-      return [];
+      throw new Error(`Search API error: ${response.status}`);
     }
 
     const json = await response.json();

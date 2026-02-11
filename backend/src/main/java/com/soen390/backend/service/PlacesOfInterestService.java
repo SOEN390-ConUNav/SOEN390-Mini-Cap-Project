@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -26,7 +25,7 @@ public class PlacesOfInterestService {
 
     public String getNearbyPlaces(int maxResultCount, double radius, double lat, double lng, PlaceType placeType) {
         Map<String, Object> body = Map.of(
-                "includedTypes", List.of(placeType.toString().toLowerCase()),
+                "includedTypes", placeType.toString().toLowerCase(),
                 "maxResultCount", maxResultCount,
                 "locationRestriction", Map.of(
                         "circle", Map.of(
@@ -73,9 +72,7 @@ public class PlacesOfInterestService {
                     .body(String.class);
 
         } catch (Exception e) {
-            // This will print the actual HTTP status and error body from Google in your terminal
-            e.printStackTrace();
-            throw new RuntimeException("Google Places API error: " + e.getMessage(), e);
+            throw new RuntimeException("Google Places Text Search returned an empty response", e);
         }
 
         return rawJson;
