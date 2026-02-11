@@ -81,7 +81,7 @@ export default function HomeUi() {
     // Reset freeze when switching back to map to avoid invisible markers
     if (activeTab === "map" && !showEnableLocation) {
       setFreezeMarkers(false);
-      const t = setTimeout(() => setFreezeMarkers(true), FREEZE_MARKERS_AFTER_MS);
+      const t = setTimeout(() => setFreezeMarkers(true), FREEZE_AFTER_MAP_READY_MS);
 
       if (shuttleStop) {
       requestAnimationFrame(() => {
