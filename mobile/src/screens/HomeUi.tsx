@@ -9,6 +9,7 @@ import CampusSwitcher from "../components/CampusSwitcher";
 import BottomNav from "../components/BottomNav";
 import FloatingActionButton from "../components/FloatingActionButton";
 import SearchPanel from "../components/SearchPanel";
+import UpcomingEventButton from "../components/UpcomingEventButton";
 
 import SettingsScreen from "./SettingsScreen";
 import ShuttleScreen from "./ShuttleScreen";
@@ -31,17 +32,17 @@ const SHUTTLE_STOPS = {
 
 const BURGUNDY = "#800020";
 
-// When user zooms out more than this, we leave outline mode
+// When user zooms out more than this, we leave outline mode (back to regular map view)
 const OUTLINE_EXIT_LAT_DELTA = 0.006;
 
-// Zoom level when entering outline mode
+// Zoom level when entering outline mode (when you click on a marker)
 const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
   latitudeDelta: 0.0028,
   longitudeDelta: 0.0028,
 };
 
-// Delay before freezing custom marker rendering for performance
-const FREEZE_MARKERS_AFTER_MS = 800;
+// When Mmap ready then freeze markers
+const FREEZE_AFTER_MAP_READY_MS = 1500;
 
 export default function HomeUi() {
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
@@ -67,8 +68,10 @@ export default function HomeUi() {
   const [outlineMode, setOutlineMode] = useState(false);
   const [showBuildingPopup, setShowBuildingPopup] = useState(false);
 
-  // Turns out we gotta freeze custom markers after initial render so it doesnt consume cpu and battery
+  // Markers Pptimization Control
+  const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
+  const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
@@ -136,6 +139,32 @@ export default function HomeUi() {
     mapRef.current?.animateToRegion(r, 650);
   };
 
+  // Marker Freeze
+  const scheduleFreezeMarkers = () => {
+    // Clear any previous timer
+    if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+
+    // Unfreeze first so markers can render
+    setFreezeMarkers(false);
+
+    // Only freeze if map is ready and map page is actually visible
+    if (!mapReady || activeTab !== "map" || showEnableLocation) return;
+
+    freezeTimerRef.current = setTimeout(() => {
+      setFreezeMarkers(true);
+    }, FREEZE_AFTER_MAP_READY_MS);
+  };
+
+  useEffect(() => {
+    // Every time map becomes visible/ready, reschedule freezing safely
+    // Meaning freezing properly so markers dont just disappear
+    scheduleFreezeMarkers();
+    return () => {
+      if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+      freezeTimerRef.current = null;
+    };
+  }, [mapReady, activeTab, showEnableLocation]);
+
   const onEnableLocation = async () => {
     try {
       const granted = await requestPermission();
@@ -177,13 +206,16 @@ export default function HomeUi() {
   const onChangeCampus = (next: "SGW" | "LOYOLA") => {
     setCampus(next);
     const target = next === "SGW" ? SGW_CENTER : LOYOLA_CENTER;
+
+    // Unfreeze briefly when camera jumps
+    scheduleFreezeMarkers();
+
     animateToRegion({
       latitude: target.latitude,
       longitude: target.longitude,
       ...CAMPUS_REGION_DELTA,
     });
 
-    // Leaving building focus mode when switching campus
     setSelectedBuildingId(null);
     setOutlineMode(false);
     setShowBuildingPopup(false);
@@ -193,6 +225,9 @@ export default function HomeUi() {
     selectedBuildingId ? BUILDINGS.find((b) => b.id === selectedBuildingId) ?? null : null;
 
   const enterOutlineForBuilding = (b: Building) => {
+    // Unfreeze briefly when going into outline mode
+    scheduleFreezeMarkers();
+
     setSelectedBuildingId(b.id);
     setOutlineMode(true);
     setShowBuildingPopup(false);
@@ -247,6 +282,10 @@ export default function HomeUi() {
           showsMyLocationButton={false}
           onRegionChangeComplete={handleRegionChangeComplete}
           onPress={() => setShowBuildingPopup(false)}
+          onMapReady={() => {
+            setMapReady(true);
+            scheduleFreezeMarkers();
+          }}
         >
 
           {shuttleStop && (
@@ -304,11 +343,20 @@ export default function HomeUi() {
     return renderMapPage();
   };
 
+  const showMapOverlays = activeTab === "map" && !showEnableLocation;
+
   return (
     <View style={styles.root}>
       {renderContent()}
 
-      {activeTab === "map" && !showEnableLocation && (
+      <View
+        style={[styles.upcomingEventWrapper, !showMapOverlays && styles.overlayHidden]}
+        pointerEvents={showMapOverlays ? "auto" : "none"}
+      >
+        <UpcomingEventButton />
+      </View>
+
+      {showMapOverlays && (
         <>
           <View style={styles.searchWrapper}>
             <SearchBar placeholder="Search" onPress={() => setSearchOpen(true)} />
@@ -332,6 +380,8 @@ export default function HomeUi() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#fff" },
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
+  upcomingEventWrapper: { position: "absolute", top: 108, left: 16, right: 16 },
+  overlayHidden: { opacity: 0 },
   campusWrapper: {
     position: "absolute",
     left: 16,

@@ -1,0 +1,8 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Enable Location"
+- tapOn: "Search"
+- tapOn: "Search"
+- inputText: "Mcdona"
+- pressKey: Enter
