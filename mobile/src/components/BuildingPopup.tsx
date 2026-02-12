@@ -7,12 +7,18 @@ import Foundation from '@expo/vector-icons/Foundation';
 
 const BURGUNDY = "#800020";
 
+const defaultAccessibility = {
+  hasElevator: false,
+  hasParking: false,
+  isAccessible: false,
+};
+
 export default function BuildingPopup({
   id,
   name,
-  addressLines,
-  openingHours,
-  hasStudySpots,
+  addressLines = [],
+  openingHours = "",
+  hasStudySpots = false,
   image,
   accessibility,
   onClose,
@@ -20,11 +26,11 @@ export default function BuildingPopup({
 }: {
   id: string;
   name: string;
-  addressLines: string[];
-  openingHours: string;
-  hasStudySpots: boolean;
+  addressLines?: string[];
+  openingHours?: string;
+  hasStudySpots?: boolean;
   image: any;
-  accessibility: {
+  accessibility?: {
     hasElevator: boolean;
     hasParking: boolean;
     isAccessible: boolean;
@@ -32,11 +38,12 @@ export default function BuildingPopup({
   onClose: () => void;
   onDirections: () => void;
 }) {
+  const acc = accessibility ?? defaultAccessibility;
   return (
     <View style={styles.backdrop}>
       <View style={styles.card}>
         {/* Image */}
-        <Image source={image} style={styles.image} resizeMode="cover" />
+        {image != null && <Image source={image} style={styles.image} resizeMode="cover" />}
 
         {/* Header */}
         <View style={styles.headerRow}>
@@ -47,17 +54,17 @@ export default function BuildingPopup({
           <View style={styles.headerRight}>
             {/* Accessibility icons (conditional) */}
             <View style={styles.iconsRow}>
-              {accessibility.hasParking && (
+              {acc.hasParking && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>P</Text>
                 </View>
               )}
 
-              {accessibility.hasElevator && (
+              {acc.hasElevator && (
                 <Foundation name="elevator" size={20} color={BURGUNDY} />
               )}
 
-              {accessibility.isAccessible && (
+              {acc.isAccessible && (
                 <FontAwesome name="wheelchair" size={20} color={BURGUNDY} />
               )}
             </View>
@@ -69,7 +76,7 @@ export default function BuildingPopup({
         </View>
 
         {/* Address */}
-        {addressLines.map((line, idx) => (
+        {(addressLines ?? []).map((line, idx) => (
           <Text key={idx} style={styles.address}>
             {line}
           </Text>

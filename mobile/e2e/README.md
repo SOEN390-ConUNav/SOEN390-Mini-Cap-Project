@@ -74,12 +74,12 @@ maestro --version
 A typical project structure for Maestro E2E tests:
 
 ```css
-project-root/
-├── e2e/
+project-root\/
+├── e2e\/
 │   ├── config.yml
 │   ├── flow.yml
 │   └── login.yml
-└── src/
+└── src\/
 ```
 
 - e2e/: Contains Maestro test flows

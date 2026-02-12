@@ -19,7 +19,7 @@ import {
   requestGoogleOAuthExchange,
   requestGoogleState,
   requestSetGoogleSelectedCalendar,
-} from "../api/googleCalendarApi";
+} from "../api";
 
 export default function UpcomingEventButton() {
   const googleWebClientId = (Constants.expoConfig?.extra as any)?.GOOGLE_WEB_CLIENT_ID as string | undefined;
