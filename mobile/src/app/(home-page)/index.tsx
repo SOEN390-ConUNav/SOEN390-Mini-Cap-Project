@@ -86,19 +86,31 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             setCampus(targetCampus);
             setShuttleStop({ campus: targetCampus, coordinate: coord });
 
-            // Animate to shuttle stop after a brief delay to ensure map is ready
-            requestAnimationFrame(() => {
-                mapRef.current?.animateToRegion(
-                    {
-                        latitude: coord.latitude,
-                        longitude: coord.longitude,
-                        ...CAMPUS_REGION_DELTA,
-                    },
-                    650
-                );
-            });
+            // Clear any building focus when showing shuttle stop
+            setSelectedBuildingId(null);
+            setOutlineMode(false);
+            setShowBuildingPopup(false);
         }
     }, [params.shuttleCampus]);
+
+    // Animate to shuttle stop when it's set and map is ready
+    useEffect(() => {
+        if (!shuttleStop) return;
+        if (showEnableLocation) return;
+        if (!mapReady) return;
+
+        // Let overlays/markers render before camera jump
+        requestAnimationFrame(() => {
+            animateToRegion({
+                latitude: shuttleStop.coordinate.latitude,
+                longitude: shuttleStop.coordinate.longitude,
+                ...CAMPUS_REGION_DELTA,
+            });
+        });
+
+        // Unfreeze briefly during camera movement
+        scheduleFreezeMarkers();
+    }, [shuttleStop, showEnableLocation, mapReady]);
 
     useEffect(() => {
         scheduleFreezeMarkers();
@@ -225,10 +237,14 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             ...CAMPUS_REGION_DELTA,
         });
 
+        // Clear building focus
         setSelectedBuildingId(null);
         setOutlineMode(false);
         setShowBuildingPopup(false);
-        setShuttleStop(null); // Clear shuttle stop when switching campus
+
+        // Clear shuttle stop when manually changing campus
+        setShuttleStop(null);
+
         setNavigationState(NAVIGATION_STATE.IDLE);
     };
 
@@ -237,6 +253,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const enterOutlineForBuilding = (b: Building) => {
         scheduleFreezeMarkers();
+
+        // Clear shuttle stop when focusing on a building
+        setShuttleStop(null);
+
         setSelectedBuildingId(b.id);
         setOutlineMode(true);
         setShowBuildingPopup(false);
@@ -320,7 +340,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                     scheduleFreezeMarkers();
                 }}
             >
-                {/* Shuttle stop marker */}
+                {/* Shuttle stop marker (only when set) */}
                 {shuttleStop && (
                     <Marker
                         coordinate={shuttleStop.coordinate}

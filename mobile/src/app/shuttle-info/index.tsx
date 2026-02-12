@@ -1,11 +1,10 @@
-import { useState, useMemo } from "react";
-import { StyleSheet, Text, View, Pressable, ScrollView } from "react-native";
+import { useState, useMemo, useEffect } from "react";
+import { ActivityIndicator, StyleSheet, Text, View, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import CampusSwitcher from "../../components/CampusSwitcher";
-import monThuData from "../../data/shuttle_schedule_mon_thu.json";
-import fridayData from "../../data/shuttle_schedule_friday.json";
 import { computeNextDepartures } from "../../data/ShuttleSchedule";
+import { getSchedule, DeparturesByDay } from "../../services/shuttleScheduleCache";
 
 type Campus = "SGW" | "LOYOLA";
 type CampusKey = "sgw" | "loyola";
@@ -27,6 +26,14 @@ export default function ShuttleInfoPage() {
     const router = useRouter();
     const [campus, setCampus] = useState<Campus>("SGW");
     const [showFullSchedule, setShowFullSchedule] = useState(false);
+    const [schedule, setSchedule] = useState<DeparturesByDay | null>(null);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        getSchedule()
+            .then(setSchedule)
+            .catch(() => setError(true));
+    }, []);
 
     const campusInfo = CAMPUS_INFO[campus];
     const campusKey: CampusKey = campus === "SGW" ? "sgw" : "loyola";
@@ -40,16 +47,36 @@ export default function ShuttleInfoPage() {
     };
 
     const nextDepartures = useMemo(() => {
+        if (!schedule) return [];
         return computeNextDepartures(
             campusKey,
             campusInfo.name,
-            monThuData.departures,
-            fridayData.departures
+            schedule.monThu,
+            schedule.friday
         );
-    }, [campusKey, campusInfo.name]);
+    }, [campusKey, campusInfo.name, schedule]);
 
-    const monThuTimes = monThuData.departures[campusKey] ?? [];
-    const fridayTimes = fridayData.departures[campusKey] ?? [];
+    const monThuTimes = schedule?.monThu[campusKey] ?? [];
+    const fridayTimes = schedule?.friday[campusKey] ?? [];
+
+    if (error) {
+        return (
+            <View style={styles.center}>
+                <Text style={styles.errorText}>
+                    Unable to load shuttle schedule. Please try again later.
+                </Text>
+            </View>
+        );
+    }
+
+    if (!schedule) {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color={BURGUNDY} />
+                <Text style={styles.loadingText}>Loading shuttle schedule…</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.root}>
@@ -191,6 +218,17 @@ function FullScheduleTable({
 
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: "#fff" },
+
+    center: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#fff",
+        padding: 24,
+    },
+    loadingText: { marginTop: 12, fontSize: 14, color: "#666" },
+    errorText: { fontSize: 16, color: "#c00", textAlign: "center" },
+
     content: {
         paddingHorizontal: 16,
         paddingTop: 8,
