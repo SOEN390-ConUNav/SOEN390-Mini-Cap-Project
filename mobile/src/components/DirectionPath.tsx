@@ -15,7 +15,7 @@ interface DirectionPathProps {
 export default function DirectionPath({origin, destination}: DirectionPathProps) {
     const [routeCoords, setRouteCoords] = useState<Coordinate[]>([]);
     const {navigationMode} = useNavigationConfig();
-    const {setPathDistance, setPathDuration} = useNavigationInfo();
+    const {setPathDistance, setPathDuration, setIsLoading} = useNavigationInfo();
 
     const directionsMode = useMemo(() => {
         switch (navigationMode) {
@@ -34,6 +34,7 @@ export default function DirectionPath({origin, destination}: DirectionPathProps)
 
     useEffect(() => {
         const getRoute = async () => {
+            setIsLoading(true);
             try {
                 const originStr = `${origin.latitude},${origin.longitude}`;
                 const destinationStr = `${destination.latitude},${destination.longitude}`;
@@ -51,15 +52,29 @@ export default function DirectionPath({origin, destination}: DirectionPathProps)
                     return;
                 }
 
-                const routePoints = polyline.decode(outdoorDirection.polyline);
-                const routePointsCoordinates = routePoints.map(point => ({
-                    latitude: point[0],
-                    longitude: point[1]
-                }));
 
-                setRouteCoords(routePointsCoordinates);
+                let allCoordinates: Coordinate[] = [];
 
-                // Set distance and duration if available
+                // See @backend/service/GoogleMapsService.java
+                if (outdoorDirection.steps) {
+                    outdoorDirection.steps.forEach((step: any) => {
+                        // Decode the polyline for this specific step
+                        const stepPoints = polyline.decode(step.polyline);
+
+                        const stepCoords = stepPoints.map((point: number[]) => ({
+                            latitude: point[0],
+                            longitude: point[1]
+                        }));
+                        allCoordinates = [...allCoordinates, ...stepCoords];
+                    });
+                } else if (outdoorDirection.polyline) {
+                    // Fallback to overview if steps are missing
+                    const points = polyline.decode(outdoorDirection.polyline);
+                    allCoordinates = points.map(point => ({ latitude: point[0], longitude: point[1] }));
+                }
+
+                setRouteCoords(allCoordinates);
+
                 if (outdoorDirection.distance !== undefined) {
                     setPathDistance(outdoorDirection.distance);
                 }
@@ -68,14 +83,13 @@ export default function DirectionPath({origin, destination}: DirectionPathProps)
                 }
             } catch (error) {
                 console.error("Error fetching route:", error);
+            } finally {
+                setIsLoading(false);
             }
+
         };
         getRoute();
     }, [origin, destination, directionsMode, setPathDistance, setPathDuration]);
-
-    if (routeCoords.length === 0) {
-        return null;
-    }
 
     return (
         <>
@@ -84,8 +98,6 @@ export default function DirectionPath({origin, destination}: DirectionPathProps)
                 strokeWidth={3}
                 strokeColor="red"
             />
-            <Marker coordinate={routeCoords[0]}/>
-            <Marker coordinate={routeCoords[1]}/>
         </>
     );
 }

@@ -83,9 +83,11 @@ public class GoogleMapsService {
             String stepDist = step.path("distance").path("text").asText();
             String stepDur = step.path("duration").path("text").asText();
 
+            String stepPolyline = step.path("polyline").path("points").asText();
+
             ManeuverType maneuverType= handleMissingManeuver(step);
 
-            stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur,maneuverType));
+            stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur, maneuverType, stepPolyline));
         }
         return stepList;
 
