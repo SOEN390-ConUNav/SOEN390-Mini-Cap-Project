@@ -78,6 +78,12 @@ export default function BottomNav() {
                     }}
                 />
             ))}
+            <Tabs.Screen
+                name="indoor-navigation"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }

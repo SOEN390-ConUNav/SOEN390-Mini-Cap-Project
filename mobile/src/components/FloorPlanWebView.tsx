@@ -144,8 +144,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                     window.drawRouteFromPoints = function(routePoints) {
                       try {
                         if (!routePoints || routePoints.length < 2) return false;
-
-                        // Remove existing route elements
+                      
+                        
                         ['#routePath', '#routePathOutline', '#startMarker', '#endMarker'].forEach(function(sel) {
                           try {
                             var el = svg.querySelector(sel);
@@ -157,9 +157,9 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                         var pathData = 'M ' + routePoints[0].x + ' ' + routePoints[0].y;
                         for (var i = 1; i < routePoints.length; i++) {
                           pathData += ' L ' + routePoints[i].x + ' ' + routePoints[i].y;
-                        }
+                      }
+                      
                         
-                        // White outline for contrast (dotted)
                         var pathOutline = document.createElementNS(SVG_NS, 'path');
                         pathOutline.id = 'routePathOutline';
                         pathOutline.setAttribute('d', pathData);
@@ -172,7 +172,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                         pathOutline.setAttribute('style', 'pointer-events: none;');
                         svg.appendChild(pathOutline);
                         
-                        // Main route path (dotted)
+                        
                         var path = document.createElementNS(SVG_NS, 'path');
                       path.id = 'routePath';
                       path.setAttribute('d', pathData);
@@ -184,8 +184,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                         path.setAttribute('stroke-dasharray', '4 18');
                         path.setAttribute('style', 'pointer-events: none;');
                         svg.appendChild(path);
-                        
-                        // Start marker (teardrop pin)
+                      
+                      
                         var startPoint = routePoints[0];
                         var startMarker = document.createElementNS(SVG_NS, 'g');
                         startMarker.id = 'startMarker';
@@ -206,7 +206,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                         startMarker.appendChild(sd);
                         svg.appendChild(startMarker);
                         
-                        // End marker (teardrop pin)
+                        
                         var endPoint = routePoints[routePoints.length - 1];
                         var endMarker = document.createElementNS(SVG_NS, 'g');
                         endMarker.id = 'endMarker';
@@ -437,7 +437,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                       } catch(e) {}
                     };
 
-                    // Signal that WebView is ready
+                   
                     if (window.ReactNativeWebView) {
                       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'webViewReady' }));
                     }
@@ -464,7 +464,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
         setTimeout(() => executeDrawRoute(routePoints, retryCount + 1), 500);
       }
         return;
-    }
+      }
 
     if (!isWebViewReady) {
       pendingRouteRef.current = routePoints;

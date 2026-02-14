@@ -6,6 +6,8 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -22,6 +24,7 @@ import java.util.*;
 @Service
 public class PathfindingService {
     
+    private static final Logger log = LoggerFactory.getLogger(PathfindingService.class);
     private static final Map<String, List<Waypoint>> WAYPOINTS = new HashMap<>();
     
     static {
@@ -613,7 +616,7 @@ public class PathfindingService {
 
         Graph<Waypoint, DefaultWeightedEdge> graph = graphs.get(currentBuildingId);
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
-            System.err.println("ERROR: Graph missing or vertices not found for " + currentBuildingId);
+            log.error("Graph missing or vertices not found for {}", currentBuildingId);
             return null;
         }
 
@@ -621,7 +624,7 @@ public class PathfindingService {
                 new DijkstraShortestPath<>(graph).getPath(start, end);
 
         if (path == null) {
-            System.err.println("ERROR: No path found between waypoints: " + start.id + " -> " + end.id);
+            log.error("No path found between waypoints: {} -> {}", start.id, end.id);
             return null;
         }
 
