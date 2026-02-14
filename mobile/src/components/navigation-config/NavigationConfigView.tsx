@@ -25,6 +25,17 @@ export default function NavigationConfigView({
 
     return route ? route.duration : 'N/A';
   };
+  const getSelectedDuration = () => {
+    const modeMapping: Record<string, string> = {
+      WALK: 'walking',
+      BIKE: 'bicycling',
+      BUS: 'transit',
+      SHUTTLE: 'shuttle',
+    };
+
+    const apiKey = modeMapping[navigationMode] || 'walking';
+    return getDurationForMode(apiKey);
+  };
   const handleGo = () => {
     // Logic to start the actual turn-by-turn navigation
     console.log('Start navigation with mode:', navigationMode);
@@ -67,7 +78,7 @@ export default function NavigationConfigView({
       </View>
 
       {/* 2. Stats & Action Row */}
-      <NavigationPathRow handleGo={handleGo} />
+      <NavigationPathRow duration={getSelectedDuration()} handleGo={handleGo} />
     </BottomDrawer>
   );
 }
