@@ -4,6 +4,7 @@ import { useNavigation, useLocalSearchParams } from 'expo-router';
 import MapView, {
   Marker,
   Polygon,
+  Polyline,
   PROVIDER_GOOGLE,
   Region,
 } from 'react-native-maps';
@@ -21,12 +22,12 @@ import { NAVIGATION_STATE } from '../../const';
 import NavigationConfigView from '../../components/navigation-config/NavigationConfigView';
 import { styles as navStyles } from '../../components/BottomNav';
 import useNavigationEndpoints from '../../hooks/useNavigationEndpoints';
-import DirectionPath from '../../components/DirectionPath';
 import { TransportModeApi } from '../../type';
 import {
   getOutdoorDirections,
   OutdoorDirectionResponse,
 } from '../../api/outdoorDirectionsApi';
+import useNavigationConfig from '../../hooks/useNavigationConfig';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -46,6 +47,36 @@ const OUTLINE_ENTER_REGION: Pick<Region, 'latitudeDelta' | 'longitudeDelta'> = {
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
 
+function decodePolyline(encoded: string) {
+  const points = [];
+  let index = 0, len = encoded.length;
+  let lat = 0, lng = 0;
+
+  while (index < len) {
+    let b, shift = 0, result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lng += dlng;
+
+    points.push({ latitude: (lat / 1e5), longitude: (lng / 1e5) });
+  }
+  return points;
+}
+
 interface HomePageIndexProps {}
 
 export default function HomePageIndex(props: HomePageIndexProps) {
@@ -57,6 +88,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     useNavigationState();
   const { origin, setOrigin, destination, setDestination } =
     useNavigationEndpoints();
+  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
+
   const [hasLocationPermission, setHasLocationPermission] = useState<
     boolean | null
   >(null);
@@ -67,10 +100,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     longitude: SGW_CENTER.longitude,
     ...CAMPUS_REGION_DELTA,
   });
-  // All api responses for outdoor directions(all means all modes of transport)
-  const [allOutdoorRoutes, setAllOutdoorRoutes] = useState<
-    OutdoorDirectionResponse[]
-  >([]);
 
   // Shuttle stop state
   const [shuttleStop, setShuttleStop] = useState<{
@@ -368,6 +397,25 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }
   };
 
+  const currentRoutePolyline = React.useMemo(() => {
+    if (!isConfiguring && !isNavigating) return null;
+
+    const modeMapping: Record<string, string> = {
+      WALK: 'walking',
+      BIKE: 'bicycling',
+      BUS: 'transit',
+      SHUTTLE: 'shuttle',
+    };
+
+    const targetMode = modeMapping[navigationMode];
+    const route = allOutdoorRoutes.find(r => r.transportMode?.toLowerCase() === targetMode);
+
+    if (route?.polyline) {
+      return decodePolyline(route.polyline);
+    }
+    return null;
+  }, [allOutdoorRoutes, navigationMode, isConfiguring, isNavigating]);
+
   if (showEnableLocation) {
     return (
       <View style={styles.root}>
@@ -458,8 +506,12 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           />
         )}
 
-        {(isConfiguring || isNavigating) && (
-          <DirectionPath origin={origin} destination={destination} />
+        {currentRoutePolyline && (
+            <Polyline
+                coordinates={currentRoutePolyline}
+                strokeColor={BURGUNDY}
+                strokeWidth={4}
+            />
         )}
       </MapView>
 
