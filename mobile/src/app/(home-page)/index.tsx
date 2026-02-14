@@ -344,7 +344,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     origin: { latitude: number; longitude: number },
     destination: { latitude: number; longitude: number },
   ) => {
-    const modes: TransportModeApi[] = ['walking', 'bicycling', 'transit'];
+    const modes: TransportModeApi[] = ['walking', 'bicycling', 'transit', 'driving'];
 
     const originStr = `${origin.latitude},${origin.longitude}`;
     const destStr = `${destination.latitude},${destination.longitude}`;

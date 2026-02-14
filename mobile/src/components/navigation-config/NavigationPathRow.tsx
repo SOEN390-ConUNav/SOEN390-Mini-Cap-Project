@@ -15,17 +15,25 @@ export default function NavigationPathRow({
     if (!durationStr || durationStr === 'N/A') return '--:--';
 
     const now = new Date();
+    let totalMinutes = 0;
 
-    const hourMatch = durationStr.match(/(\d+)(?:[ ]?h|[ ]?hour)/i);
-    const minMatch = durationStr.match(/(\d+)(?:[ ]?m|[ ]?min)/i);
+    // Split by spaces and parse tokens to avoid backtracking-heavy regexes
+    const tokens = durationStr.toLowerCase().split(/\s+/);
+    for (let i = 0; i < tokens.length; i++) {
+      const val = parseInt(tokens[i], 10);
+      if (!isNaN(val)) {
+        const nextToken = tokens[i + 1] || '';
+        if (nextToken.includes('hour')) {
+          totalMinutes += val * 60;
+        } else if (nextToken.includes('min')) {
+          totalMinutes += val;
+        }
+      }
+    }
 
-    const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
-    const mins = minMatch ? parseInt(minMatch[1], 10) : 0;
+    if (totalMinutes === 0) return '--:--';
 
-    if (hours > 8760) return '--:--';
-
-    now.setHours(now.getHours() + hours);
-    now.setMinutes(now.getMinutes() + mins);
+    now.setMinutes(now.getHours() * 60 + now.getMinutes() + totalMinutes);
 
     return now.toLocaleTimeString([], {
       hour: '2-digit',
@@ -33,6 +41,7 @@ export default function NavigationPathRow({
       hour12: false,
     });
   };
+
   return (
     <View style={styles.actionRow}>
       <View style={styles.statsContainer}>
