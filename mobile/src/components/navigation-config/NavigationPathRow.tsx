@@ -16,11 +16,13 @@ export default function NavigationPathRow({
 
     const now = new Date();
 
-    const hourMatch = durationStr.match(/(\d+)\s*hour/);
-    const minMatch = durationStr.match(/(\d+)\s*min/);
+    const hourMatch = durationStr.match(/(\d+)(?:[ ]?h|[ ]?hour)/i);
+    const minMatch = durationStr.match(/(\d+)(?:[ ]?m|[ ]?min)/i);
 
-    const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
-    const mins = minMatch ? parseInt(minMatch[1]) : 0;
+    const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
+    const mins = minMatch ? parseInt(minMatch[1], 10) : 0;
+
+    if (hours > 8760) return '--:--';
 
     now.setHours(now.getHours() + hours);
     now.setMinutes(now.getMinutes() + mins);
