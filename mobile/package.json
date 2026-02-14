@@ -13,6 +13,7 @@
     "@gorhom/bottom-sheet": "^5.2.8",
     "dotenv": "^17.2.3",
     "expo": "^54.0.33",
+    "expo-asset": "^12.0.12",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
     "expo-linking": "~8.0.11",
@@ -26,7 +27,10 @@
     "react-native-maps": "^1.20.1",
     "react-native-reanimated": "^4.2.1",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0"
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
+    "react-native-web": "^0.21.0",
+    "react-native-webview": "13.15.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
