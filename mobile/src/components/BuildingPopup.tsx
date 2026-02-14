@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { BuildingId } from "../data/buildings";
+import { hasIndoorMaps } from "../utils/buildingIndoorMaps";
 
 const BURGUNDY = "#800020";
 
@@ -12,14 +14,19 @@ const CARD_HEIGHT = 220;
 export default function BuildingPopup({
   name,
   addressLines,
+  buildingId,
   onClose,
   onDirections,
+  onIndoorMaps,
 }: {
   name: string;
   addressLines: string[];
+  buildingId: BuildingId;
   onClose: () => void;
   onDirections: () => void;
+  onIndoorMaps?: () => void;
 }) {
+  const showIndoorMaps = hasIndoorMaps(buildingId);
   return (
     <View style={styles.backdrop}>
       <View style={styles.card}>
@@ -49,10 +56,19 @@ export default function BuildingPopup({
           Services: <Text style={styles.muted}>...</Text>
         </Text>
 
-        <Pressable onPress={onDirections} style={styles.directionsBtn}>
-          <FontAwesome5 name="directions" size={18} color="white" />
-          <Text style={styles.directionsText}>Directions</Text>
-        </Pressable>
+        <View style={styles.buttonRow}>
+          <Pressable onPress={onDirections} style={styles.directionsBtn}>
+            <FontAwesome5 name="directions" size={18} color="white" />
+            <Text style={styles.directionsText}>Directions</Text>
+          </Pressable>
+          
+          {showIndoorMaps && onIndoorMaps && (
+            <Pressable onPress={onIndoorMaps} style={styles.indoorMapsBtn}>
+              <Ionicons name="map" size={18} color="white" />
+              <Text style={styles.indoorMapsText}>Indoor Maps</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -101,9 +117,13 @@ const styles = StyleSheet.create({
   sectionLabel: { marginTop: 10, fontWeight: "800" },
   muted: { color: "#444", fontWeight: "600" },
 
-  directionsBtn: {
+  buttonRow: {
     marginTop: 14,
-    alignSelf: "flex-end",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  directionsBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -113,4 +133,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   directionsText: { color: "#fff", fontWeight: "800" },
+  indoorMapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: BURGUNDY,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  indoorMapsText: { color: "#fff", fontWeight: "800" },
 });

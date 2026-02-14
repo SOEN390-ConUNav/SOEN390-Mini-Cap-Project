@@ -1,6 +1,7 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {StyleSheet, View, Alert} from "react-native";
 import {useRouter} from "expo-router";
+import {hasIndoorMaps} from "../../utils/buildingIndoorMaps";
 import MapView, {Marker, Polygon, PROVIDER_GOOGLE, Region} from "react-native-maps";
 import * as Location from 'expo-location';
 import SearchBar from "../../components/SearchBar";
@@ -10,20 +11,20 @@ import CampusSwitcher from "../../components/CampusSwitcher";
 import {Building, BuildingId, BUILDINGS} from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
-import BottomDrawer from "../../components/BottomDrawer"
+import BottomDrawer from "../../components/BottomDrawer";
+import {getDefaultFloor} from "../../utils/buildingIndoorMaps";
 
 const SGW_CENTER = {latitude: 45.4973, longitude: -73.5790};
 const LOYOLA_CENTER = {latitude: 45.4582, longitude: -73.6405};
 const CAMPUS_REGION_DELTA = {latitudeDelta: 0.01, longitudeDelta: 0.01};
 const BURGUNDY = "#800020";
-// When user zooms out more than this, we leave outline mode
 const OUTLINE_EXIT_LAT_DELTA = 0.006;
-// Zoom level when entering outline mode
+
 const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
     latitudeDelta: 0.0028,
     longitudeDelta: 0.0028,
 };
-// Delay before freezing custom marker rendering for performance
+
 const FREEZE_MARKERS_AFTER_MS = 800;
 
 interface HomePageIndexProps {
@@ -168,6 +169,21 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         setShowNavigationHUD(true);
     }
 
+    const onPressIndoorMaps = () => {
+        if (selectedBuildingId) {
+            setShowBuildingPopup(false);
+          
+            const defaultFloor = getDefaultFloor(selectedBuildingId);
+            router.push({
+                pathname: "/indoor-navigation",
+                params: { 
+                    buildingId: selectedBuildingId,
+                    floor: defaultFloor,
+                },
+            });
+        }
+    }
+
     const handleRegionChangeComplete = (r: Region) => {
         setRegion(r);
 
@@ -221,8 +237,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                 <BuildingPopup
                     name={selectedBuilding.name}
                     addressLines={selectedBuilding.addressLines}
+                    buildingId={selectedBuilding.id}
                     onClose={() => setShowBuildingPopup(false)}
                     onDirections={() => onPressDirections()}
+                    onIndoorMaps={hasIndoorMaps(selectedBuilding.id) ? () => onPressIndoorMaps() : undefined}
                 />
             )}
 
