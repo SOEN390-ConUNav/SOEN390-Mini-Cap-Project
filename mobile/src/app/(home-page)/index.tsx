@@ -329,6 +329,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   };
 
   const onPressBuilding = (b: Building) => {
+    setNavigationState(NAVIGATION_STATE.IDLE);
     if (selectedBuildingId !== b.id || !outlineMode) {
       setDestination({
         longitude: b.marker.longitude,
@@ -508,9 +509,11 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
         {currentRoutePolyline && (
             <Polyline
+                key={`polyline-${navigationMode}`}
                 coordinates={currentRoutePolyline}
                 strokeColor={BURGUNDY}
                 strokeWidth={4}
+                lineDashPattern={navigationMode === "WALK" ? [5, 5] : undefined}
             />
         )}
       </MapView>
