@@ -10,7 +10,7 @@ interface NavigationPathRowProps {
 export default function NavigationPathRow({
   handleGo,
   duration,
-}: NavigationPathRowProps) {
+}: Readonly<NavigationPathRowProps>) {
   const calculateETA = (durationStr: string) => {
     if (!durationStr || durationStr === 'N/A') return '--:--';
 
@@ -20,8 +20,8 @@ export default function NavigationPathRow({
     // Split by spaces and parse tokens to avoid backtracking-heavy regexes
     const tokens = durationStr.toLowerCase().split(/\s+/);
     for (let i = 0; i < tokens.length; i++) {
-      const val = parseInt(tokens[i], 10);
-      if (!isNaN(val)) {
+      const val = Number.parseInt(tokens[i], 10);
+      if (!Number.isNaN(val)) {
         const nextToken = tokens[i + 1] || '';
         if (nextToken.includes('hour')) {
           totalMinutes += val * 60;

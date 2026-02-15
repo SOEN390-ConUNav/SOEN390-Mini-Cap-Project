@@ -1,7 +1,6 @@
 import { getOutdoorDirections } from '../outdoorDirectionsApi';
 
-
-global.fetch = jest.fn();
+globalThis.fetch = jest.fn();
 
 describe('outdoorDirectionsApi', () => {
   beforeEach(() => {
@@ -20,7 +19,7 @@ describe('outdoorDirectionsApi', () => {
       duration: '15 mins',
       polyline: 'abc',
       transportMode: 'walking',
-      steps: []
+      steps: [],
     };
 
     (fetch as jest.Mock).mockResolvedValue({
@@ -28,10 +27,16 @@ describe('outdoorDirectionsApi', () => {
       json: async () => mockData,
     });
 
-    const result = await getOutdoorDirections('origin', 'destination', 'walking');
+    const result = await getOutdoorDirections(
+      'origin',
+      'destination',
+      'walking',
+    );
 
     expect(result).toEqual(mockData);
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('transportMode=walking'));
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('transportMode=walking'),
+    );
   });
 
   it('returns null and logs error on response !ok', async () => {
@@ -52,6 +57,9 @@ describe('outdoorDirectionsApi', () => {
     const result = await getOutdoorDirections('origin', 'destination');
 
     expect(result).toBeNull();
-    expect(console.error).toHaveBeenCalledWith('Failed to fetch directions:', expect.any(Error));
+    expect(console.error).toHaveBeenCalledWith(
+      'Failed to fetch directions:',
+      expect.any(Error),
+    );
   });
 });

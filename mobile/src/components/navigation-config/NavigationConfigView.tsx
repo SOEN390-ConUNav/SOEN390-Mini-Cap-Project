@@ -7,9 +7,9 @@ import useNavigationConfig from '../../hooks/useNavigationConfig';
 import { OutdoorDirectionResponse } from '../../api/outdoorDirectionsApi';
 
 interface NavigationConfigViewProps {
-  durations: OutdoorDirectionResponse[];
-  visible: boolean;
-  onClose: () => void;
+  readonly durations: OutdoorDirectionResponse[];
+  readonly visible: boolean;
+  readonly onClose: () => void;
 }
 
 export default function NavigationConfigView({

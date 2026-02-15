@@ -49,30 +49,34 @@ const FREEZE_MARKERS_AFTER_MS = 800;
 
 function decodePolyline(encoded: string) {
   const points = [];
-  let index = 0, len = encoded.length;
-  let lat = 0, lng = 0;
+  let index = 0,
+    len = encoded.length;
+  let lat = 0,
+    lng = 0;
 
   while (index < len) {
-    let b, shift = 0, result = 0;
+    let b,
+      shift = 0,
+      result = 0;
     do {
-      b = encoded.charCodeAt(index++) - 63;
+      b = (encoded.codePointAt(index++) ?? 0) - 63;
       result |= (b & 0x1f) << shift;
       shift += 5;
     } while (b >= 0x20);
-    let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    let dlat = result & 1 ? ~(result >> 1) : result >> 1;
     lat += dlat;
 
     shift = 0;
     result = 0;
     do {
-      b = encoded.charCodeAt(index++) - 63;
+      b = (encoded.codePointAt(index++) ?? 0) - 63;
       result |= (b & 0x1f) << shift;
       shift += 5;
     } while (b >= 0x20);
-    let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    let dlng = result & 1 ? ~(result >> 1) : result >> 1;
     lng += dlng;
 
-    points.push({ latitude: (lat / 1e5), longitude: (lng / 1e5) });
+    points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
   }
   return points;
 }
@@ -86,9 +90,9 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const [campus, setCampus] = useState<'SGW' | 'LOYOLA'>('SGW');
   const { setNavigationState, isNavigating, isConfiguring, isSearching } =
     useNavigationState();
-  const { origin, setOrigin, destination, setDestination } =
-    useNavigationEndpoints();
-  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
+  const { setOrigin, setDestination } = useNavigationEndpoints();
+  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
+    useNavigationConfig();
 
   const [hasLocationPermission, setHasLocationPermission] = useState<
     boolean | null
@@ -344,7 +348,12 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     origin: { latitude: number; longitude: number },
     destination: { latitude: number; longitude: number },
   ) => {
-    const modes: TransportModeApi[] = ['walking', 'bicycling', 'transit', 'driving'];
+    const modes: TransportModeApi[] = [
+      'walking',
+      'bicycling',
+      'transit',
+      'driving',
+    ];
 
     const originStr = `${origin.latitude},${origin.longitude}`;
     const destStr = `${destination.latitude},${destination.longitude}`;
@@ -409,7 +418,9 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     };
 
     const targetMode = modeMapping[navigationMode];
-    const route = allOutdoorRoutes.find(r => r.transportMode?.toLowerCase() === targetMode);
+    const route = allOutdoorRoutes.find(
+      (r) => r.transportMode?.toLowerCase() === targetMode,
+    );
 
     if (route?.polyline) {
       return decodePolyline(route.polyline);
@@ -508,13 +519,13 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         )}
 
         {currentRoutePolyline && (
-            <Polyline
-                key={`polyline-${navigationMode}`}
-                coordinates={currentRoutePolyline}
-                strokeColor={BURGUNDY}
-                strokeWidth={4}
-                lineDashPattern={navigationMode === "WALK" ? [5, 5] : undefined}
-            />
+          <Polyline
+            key={`polyline-${navigationMode}`}
+            coordinates={currentRoutePolyline}
+            strokeColor={BURGUNDY}
+            strokeWidth={4}
+            lineDashPattern={navigationMode === 'WALK' ? [5, 5] : undefined}
+          />
         )}
       </MapView>
 
