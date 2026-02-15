@@ -180,4 +180,13 @@ class PathfindingServiceTest {
         assertNotEquals(null, wp);
     }
 
+
+    @Test
+    void getAllWaypoints_returnsListForCurrentBuilding() {
+        service.setBuilding("Hall-8");
+        List<Waypoint> all = service.getAllWaypoints();
+        assertNotNull(all);
+        assertFalse(all.isEmpty());
+    }
+
 }
