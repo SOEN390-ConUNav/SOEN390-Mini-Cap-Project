@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import NavigationTransportCard from '../NavigationTransportCard';
+import NavigationTransportCard from '../components/navigation-config/NavigationTransportCard';
 
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
@@ -20,7 +20,7 @@ describe('NavigationTransportCard', () => {
         duration="10 mins"
         isSelected={false}
         onSelect={mockOnSelect}
-      />
+      />,
     );
 
     expect(getByText('Walk')).toBeTruthy();
@@ -34,7 +34,7 @@ describe('NavigationTransportCard', () => {
         duration="5 mins"
         isSelected={false}
         onSelect={mockOnSelect}
-      />
+      />,
     );
 
     fireEvent.press(getByText('Bike'));
@@ -48,7 +48,7 @@ describe('NavigationTransportCard', () => {
         duration="8 mins"
         isSelected={true}
         onSelect={mockOnSelect}
-      />
+      />,
     );
 
     const label = getByText('Bus');

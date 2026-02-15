@@ -1,25 +1,30 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import NavigationConfigView from '../NavigationConfigView';
-import { OutdoorDirectionResponse } from '../../../api/outdoorDirectionsApi';
+import NavigationConfigView from '../components/navigation-config/NavigationConfigView';
+import { OutdoorDirectionResponse } from '../api/outdoorDirectionsApi';
 
-jest.mock('../NavigationTransportCard', () => {
+// Updated mock paths to match component location
+jest.mock('../components/navigation-config/NavigationTransportCard', () => {
   const { Text } = require('react-native');
-  return (props: any) => <Text>{props.mode}: {props.duration}</Text>;
+  return (props: any) => (
+    <Text>
+      {props.mode}: {props.duration}
+    </Text>
+  );
 });
 
-jest.mock('../NavigationPathRow', () => {
+jest.mock('../components/navigation-config/NavigationPathRow', () => {
   const { Text } = require('react-native');
   return (props: any) => <Text>PathRow Duration: {props.duration}</Text>;
 });
 
-jest.mock('../../BottomDrawer', () => {
+jest.mock('../components/BottomDrawer', () => {
   const { View } = require('react-native');
   return (props: any) => <View>{props.children}</View>;
 });
 
 const mockSetNavigationMode = jest.fn();
-jest.mock('../../../hooks/useNavigationConfig', () => ({
+jest.mock('../hooks/useNavigationConfig', () => ({
   __esModule: true,
   default: () => ({
     navigationMode: 'WALK',
@@ -33,32 +38,34 @@ const mockDurations: OutdoorDirectionResponse[] = [
     duration: '10 mins',
     distance: '1km',
     polyline: '',
-    steps: []
+    steps: [],
   },
   {
     transportMode: 'bicycling',
     duration: '5 mins',
     distance: '1km',
     polyline: '',
-    steps: []
+    steps: [],
   },
   {
     transportMode: 'transit',
     duration: '15 mins',
     distance: '5km',
     polyline: '',
-    steps: []
-  }
+    steps: [],
+  },
 ];
 
 describe('NavigationConfigView', () => {
   it('renders with durations mapped correctly', () => {
     const { getByText } = render(
       <NavigationConfigView
+        destinationName="Test Dest"
+        destinationAddress="123 Test St"
         durations={mockDurations}
         visible={true}
         onClose={jest.fn()}
-      />
+      />,
     );
 
     expect(getByText('WALK: 10 mins')).toBeTruthy();
@@ -70,10 +77,12 @@ describe('NavigationConfigView', () => {
   it('passes the selected mode duration to NavigationPathRow', () => {
     const { getByText } = render(
       <NavigationConfigView
+        destinationName="Test Dest"
+        destinationAddress="123 Test St"
         durations={mockDurations}
         visible={true}
         onClose={jest.fn()}
-      />
+      />,
     );
 
     expect(getByText('PathRow Duration: 10 mins')).toBeTruthy();

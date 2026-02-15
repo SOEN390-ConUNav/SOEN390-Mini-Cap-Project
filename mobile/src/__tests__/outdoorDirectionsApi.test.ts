@@ -1,4 +1,4 @@
-import { getOutdoorDirections } from '../outdoorDirectionsApi';
+import { getOutdoorDirections } from '../api/outdoorDirectionsApi';
 
 globalThis.fetch = jest.fn();
 
