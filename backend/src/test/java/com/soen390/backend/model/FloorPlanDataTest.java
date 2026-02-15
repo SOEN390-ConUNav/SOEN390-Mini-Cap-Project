@@ -153,6 +153,32 @@ class FloorPlanDataTest {
   
 
     @Test
+    void getPointsOfInterest_hall2_detectsStairsAndEntrances() {
+        FloorPlanData data = new FloorPlanData("Hall-2", "2");
+        var pois = data.getPointsOfInterest();
+
+        boolean hasStairsUp = pois.stream().anyMatch(p -> "stairs-up".equals(p.type));
+        boolean hasStairsDown = pois.stream().anyMatch(p -> "stairs-down".equals(p.type));
+        boolean hasEntrance = pois.stream().anyMatch(p -> "emergency-exit".equals(p.type));
+
+        assertTrue(hasStairsUp, "Hall-2 should have stairs-up POIs");
+        assertTrue(hasStairsDown, "Hall-2 should have stairs-down POIs");
+        assertTrue(hasEntrance, "Hall-2 should have entrance/exit POIs");
+    }
+
+    @Test
+    void getPointsOfInterest_hall1_detectsMetroAndDisability() {
+        FloorPlanData data = new FloorPlanData("Hall-1", "1");
+        var pois = data.getPointsOfInterest();
+
+        boolean hasMetro = pois.stream().anyMatch(p -> "entrance-exit".equals(p.type));
+        boolean hasEmergency = pois.stream().anyMatch(p -> "emergency-exit".equals(p.type));
+
+        assertTrue(hasMetro, "Hall-1 should have entrance-exit POIs");
+        assertTrue(hasEmergency, "Hall-1 should have emergency-exit POIs");
+    }
+
+    @Test
     void point_distanceTo_calculatesCorrectly() {
         FloorPlanData.Point a = new FloorPlanData.Point(0, 0);
         FloorPlanData.Point b = new FloorPlanData.Point(3, 4);
