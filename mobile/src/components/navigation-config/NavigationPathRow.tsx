@@ -17,7 +17,6 @@ export default function NavigationPathRow({
     const now = new Date();
     let totalMinutes = 0;
 
-    // Split by spaces and parse tokens to avoid backtracking-heavy regexes
     const tokens = durationStr.toLowerCase().split(/\s+/);
     for (let i = 0; i < tokens.length; i++) {
       const val = Number.parseInt(tokens[i], 10);
