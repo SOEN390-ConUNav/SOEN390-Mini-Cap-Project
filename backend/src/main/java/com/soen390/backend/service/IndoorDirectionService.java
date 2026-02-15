@@ -99,8 +99,8 @@ public class IndoorDirectionService {
 
         if (originFloor != null && destinationFloor != null
                 && !originFloor.equals(destinationFloor)) {
-            int originFloorNum = Integer.parseInt(originFloor);
-            int destFloorNum = Integer.parseInt(destinationFloor);
+            int originFloorNum = parseFloorNumber(originFloor);
+            int destFloorNum = parseFloorNumber(destinationFloor);
             IndoorManeuverType elevatorType = destFloorNum > originFloorNum
                     ? IndoorManeuverType.ELEVATOR_UP
                     : IndoorManeuverType.ELEVATOR_DOWN;
@@ -221,41 +221,14 @@ public class IndoorDirectionService {
 
         String pathfindingBuildingId = convertBuildingIdForPathfinding(buildingId, floor);
 
-        // Hall-2 has different up/down stairs, so A→B and B→A can differ — skip normalization
         boolean isHall2 = "Hall-2".equals(pathfindingBuildingId);
         boolean shouldReverse = !isHall2 && originRoomId.compareTo(destinationRoomId) > 0;
         String normalizedOrigin = shouldReverse ? destinationRoomId : originRoomId;
         String normalizedDest = shouldReverse ? originRoomId : destinationRoomId;
 
         FloorPlanData floorPlan = new FloorPlanData(pathfindingBuildingId, floor);
-        String resolvedOriginId = normalizedOrigin;
-        String resolvedDestId = normalizedDest;
-
-        // Resolve multi-entrance rooms to closest entrance
-        FloorPlanData.Point tempOriginPoint = floorPlan.getRoomPoints().get(normalizedOrigin);
-        if (tempOriginPoint == null) {
-            FloorPlanData.Point tempDestPoint = floorPlan.getRoomPoints().get(normalizedDest);
-            if (tempDestPoint == null) {
-                java.util.List<String> destEntrances = floorPlan.getRoomEntranceGroups().get(normalizedDest);
-                if (destEntrances != null && !destEntrances.isEmpty()) {
-                    String firstDestEntrance = destEntrances.get(0);
-                    FloorPlanData.Point firstDestPoint = floorPlan.getRoomPoints().get(firstDestEntrance);
-                    if (firstDestPoint != null) {
-                        resolvedOriginId = floorPlan.resolveToClosestEntrance(normalizedOrigin,
-                            firstDestPoint.getX(), firstDestPoint.getY());
-                    }
-                }
-            } else {
-                resolvedOriginId = floorPlan.resolveToClosestEntrance(normalizedOrigin,
-                    tempDestPoint.getX(), tempDestPoint.getY());
-            }
-        }
-
-        FloorPlanData.Point resolvedOriginPoint = floorPlan.getRoomPoints().get(resolvedOriginId);
-        if (resolvedOriginPoint != null) {
-            resolvedDestId = floorPlan.resolveToClosestEntrance(normalizedDest,
-                resolvedOriginPoint.getX(), resolvedOriginPoint.getY());
-        }
+        String resolvedOriginId = resolveOriginEntrance(floorPlan, normalizedOrigin, normalizedDest);
+        String resolvedDestId = resolveDestinationEntrance(floorPlan, normalizedDest, resolvedOriginId);
 
         FloorPlanData.Point originPoint = floorPlan.getRoomPoints().get(resolvedOriginId);
         FloorPlanData.Point destPoint = floorPlan.getRoomPoints().get(resolvedDestId);
@@ -264,39 +237,78 @@ public class IndoorDirectionService {
             return new ArrayList<>();
         }
 
+        List<IndoorDirectionResponse.RoutePoint> routePoints = buildRoute(
+                pathfindingBuildingId, originPoint, destPoint, resolvedOriginId, resolvedDestId);
+
+        if (shouldReverse) {
+            java.util.Collections.reverse(routePoints);
+        }
+        return routePoints;
+    }
+
+    private String resolveOriginEntrance(FloorPlanData floorPlan, String originId, String destId) {
+        FloorPlanData.Point originPoint = floorPlan.getRoomPoints().get(originId);
+        if (originPoint != null) {
+            return originId;
+        }
+        FloorPlanData.Point destPoint = floorPlan.getRoomPoints().get(destId);
+        if (destPoint != null) {
+            return floorPlan.resolveToClosestEntrance(originId, destPoint.getX(), destPoint.getY());
+        }
+        FloorPlanData.Point fallbackDest = getFirstEntrancePoint(floorPlan, destId);
+        if (fallbackDest != null) {
+            return floorPlan.resolveToClosestEntrance(originId, fallbackDest.getX(), fallbackDest.getY());
+        }
+        return originId;
+    }
+
+    private String resolveDestinationEntrance(FloorPlanData floorPlan, String destId, String resolvedOriginId) {
+        FloorPlanData.Point originPoint = floorPlan.getRoomPoints().get(resolvedOriginId);
+        if (originPoint != null) {
+            return floorPlan.resolveToClosestEntrance(destId, originPoint.getX(), originPoint.getY());
+        }
+        return destId;
+    }
+
+    private FloorPlanData.Point getFirstEntrancePoint(FloorPlanData floorPlan, String roomId) {
+        java.util.List<String> entrances = floorPlan.getRoomEntranceGroups().get(roomId);
+        if (entrances == null || entrances.isEmpty()) {
+            return null;
+        }
+        return floorPlan.getRoomPoints().get(entrances.get(0));
+    }
+
+    private List<IndoorDirectionResponse.RoutePoint> buildRoute(
+            String pathfindingBuildingId,
+            FloorPlanData.Point originPoint, FloorPlanData.Point destPoint,
+            String originId, String destId) {
+
         pathfindingService.setBuilding(pathfindingBuildingId);
 
-        PathfindingService.Waypoint startWaypoint = pathfindingService.findNearestWaypoint(
+        PathfindingService.Waypoint startWp = pathfindingService.findNearestWaypoint(
                 originPoint.getX(), originPoint.getY());
-        PathfindingService.Waypoint endWaypoint = pathfindingService.findNearestWaypoint(
+        PathfindingService.Waypoint endWp = pathfindingService.findNearestWaypoint(
                 destPoint.getX(), destPoint.getY());
 
-        if (startWaypoint == null || endWaypoint == null) {
+        if (startWp == null || endWp == null) {
             return new ArrayList<>();
         }
 
-        List<PathfindingService.Waypoint> waypointPath = pathfindingService.findPathThroughWaypoints(
-                startWaypoint, endWaypoint);
+        List<PathfindingService.Waypoint> waypointPath =
+                pathfindingService.findPathThroughWaypoints(startWp, endWp);
 
         if (waypointPath == null || waypointPath.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // Build route: origin room → waypoints → destination room
         List<IndoorDirectionResponse.RoutePoint> routePoints = new ArrayList<>();
         routePoints.add(new IndoorDirectionResponse.RoutePoint(
-                originPoint.getX(), originPoint.getY(), resolvedOriginId));
-        for (PathfindingService.Waypoint waypoint : waypointPath) {
-            routePoints.add(new IndoorDirectionResponse.RoutePoint(
-                    waypoint.x, waypoint.y, waypoint.id));
+                originPoint.getX(), originPoint.getY(), originId));
+        for (PathfindingService.Waypoint wp : waypointPath) {
+            routePoints.add(new IndoorDirectionResponse.RoutePoint(wp.x, wp.y, wp.id));
         }
         routePoints.add(new IndoorDirectionResponse.RoutePoint(
-                destPoint.getX(), destPoint.getY(), resolvedDestId));
-
-        if (shouldReverse) {
-            java.util.Collections.reverse(routePoints);
-        }
-
+                destPoint.getX(), destPoint.getY(), destId));
         return routePoints;
     }
 
@@ -306,5 +318,13 @@ public class IndoorDirectionService {
 
     private String calculateDuration(List<IndoorDirectionResponse.RoutePoint> routePoints) {
         return "—";
+    }
+
+    private int parseFloorNumber(String floor) {
+        try {
+            return Integer.parseInt(floor.replaceAll("[^0-9-]", ""));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

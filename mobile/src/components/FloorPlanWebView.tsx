@@ -156,7 +156,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                         // Build SVG path data through all waypoints
                         var pathData = 'M ' + routePoints[0].x + ' ' + routePoints[0].y;
                         for (var i = 1; i < routePoints.length; i++) {
-                          pathData += ' L ' + routePoints[i].x + ' ' + routePoints[i].y;
+                        pathData += ' L ' + routePoints[i].x + ' ' + routePoints[i].y;
                       }
                       
                         

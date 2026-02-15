@@ -83,262 +83,262 @@ public class PathfindingService {
 
         // ── VL-1 ──
         List<Waypoint> vl1 = new ArrayList<>();
-        vl1.add(new Waypoint(273.19421, 147.59822, "Allowedpath"));
-        vl1.add(new Waypoint(607.81128, 153.09877, "AllowedPath2"));
-        vl1.add(new Waypoint(806.74799, 151.26524, "AllowedPath3"));
-        vl1.add(new Waypoint(816.83234, 545.47168, "AllowedPath4"));
-        vl1.add(new Waypoint(782.91229, 543.63812, "AllowedPath5"));
-        vl1.add(new Waypoint(781.07874, 742.57489, "AllowedPath6"));
-        vl1.add(new Waypoint(615.14539, 264.02661, "AllowedPath7"));
-        vl1.add(new Waypoint(620.64594, 421.7092, "AllowedPath8"));
-        vl1.add(new Waypoint(616.97888, 358.45282, "AllowePath9"));
-        vl1.add(new Waypoint(468.4639, 345.61819, "AllowedPath10"));
-        vl1.add(new Waypoint(229.18977, 347.45169, "AllowedPath11"));
-        vl1.add(new Waypoint(223.68922, 152.18201, "AllowedPath12"));
-        vl1.add(new Waypoint(634.39728, 548.22192, "AllowedPath13"));
-        vl1.add(new Waypoint(550.97223, 473.96445, "AllowedPath14"));
-        vl1.add(new Waypoint(386.87234, 474.88123, "AllowedPath15"));
-        vl1.add(new Waypoint(396.03995, 776.495, "AllowedPath16"));
-        vl1.add(new Waypoint(122.84572, 779.24524, "AllowedPath17"));
-        vl1.add(new Waypoint(122.84572, 645.39844, "AllowedPath18"));
-        vl1.add(new Waypoint(281.44504, 645.39844, "AllowedPath19"));
-        vl1.add(new Waypoint(276.86124, 487.71585, "AllowedPath20"));
-        vl1.add(new Waypoint(121.0122, 944.2619, "AllowedPath21"));
-        vl1.add(new Waypoint(267.69366, 926.84344, "AllowedPath22"));
-        vl1.add(new Waypoint(556.47278, 756.32629, "AllowedPath23"));
+        vl1.add(new Waypoint(273.19421, 147.59822, "VL1-AllowedPath1"));
+        vl1.add(new Waypoint(607.81128, 153.09877, "VL1-AllowedPath2"));
+        vl1.add(new Waypoint(806.74799, 151.26524, "VL1-AllowedPath3"));
+        vl1.add(new Waypoint(816.83234, 545.47168, "VL1-AllowedPath4"));
+        vl1.add(new Waypoint(782.91229, 543.63812, "VL1-AllowedPath5"));
+        vl1.add(new Waypoint(781.07874, 742.57489, "VL1-AllowedPath6"));
+        vl1.add(new Waypoint(615.14539, 264.02661, "VL1-AllowedPath7"));
+        vl1.add(new Waypoint(620.64594, 421.7092, "VL1-AllowedPath8"));
+        vl1.add(new Waypoint(616.97888, 358.45282, "VL1-AllowedPath9"));
+        vl1.add(new Waypoint(468.4639, 345.61819, "VL1-AllowedPath10"));
+        vl1.add(new Waypoint(229.18977, 347.45169, "VL1-AllowedPath11"));
+        vl1.add(new Waypoint(223.68922, 152.18201, "VL1-AllowedPath12"));
+        vl1.add(new Waypoint(634.39728, 548.22192, "VL1-AllowedPath13"));
+        vl1.add(new Waypoint(550.97223, 473.96445, "VL1-AllowedPath14"));
+        vl1.add(new Waypoint(386.87234, 474.88123, "VL1-AllowedPath15"));
+        vl1.add(new Waypoint(396.03995, 776.495, "VL1-AllowedPath16"));
+        vl1.add(new Waypoint(122.84572, 779.24524, "VL1-AllowedPath17"));
+        vl1.add(new Waypoint(122.84572, 645.39844, "VL1-AllowedPath18"));
+        vl1.add(new Waypoint(281.44504, 645.39844, "VL1-AllowedPath19"));
+        vl1.add(new Waypoint(276.86124, 487.71585, "VL1-AllowedPath20"));
+        vl1.add(new Waypoint(121.0122, 944.2619, "VL1-AllowedPath21"));
+        vl1.add(new Waypoint(267.69366, 926.84344, "VL1-AllowedPath22"));
+        vl1.add(new Waypoint(556.47278, 756.32629, "VL1-AllowedPath23"));
         WAYPOINTS.put("VL-1", vl1);
 
         // ── VL-2 ──
         List<Waypoint> vl2 = new ArrayList<>();
-        vl2.add(new Waypoint(616.35431, 203.6649, "AllowedPath1"));
-        vl2.add(new Waypoint(619.57007, 335.51114, "AllowedPath2"));
-        vl2.add(new Waypoint(733.19366, 349.44611, "AllowedPath3"));
-        vl2.add(new Waypoint(249.75749, 348.37418, "AllowedPath4"));
-        vl2.add(new Waypoint(475.93271, 353.73376, "AllowedPath5"));
-        vl2.add(new Waypoint(823.23499, 352.66187, "AllowedPath6"));
-        vl2.add(new Waypoint(828.5946, 461.99774, "AllowedPath7"));
-        vl2.add(new Waypoint(827.52264, 552.03906, "AllowedPath8"));
-        vl2.add(new Waypoint(331.22345, 354.80569, "AllowedPath9"));
-        vl2.add(new Waypoint(340.87073, 452.35046, "AllowedPath10"));
-        vl2.add(new Waypoint(345.15842, 503.80264, "AllowedPath11"));
-        vl2.add(new Waypoint(278.69934, 517.73761, "AllowedPath12"));
-        vl2.add(new Waypoint(293.70624, 818.94727, "AllowedPath13"));
-        vl2.add(new Waypoint(116.83934, 840.38568, "AllowedPath14"));
-        vl2.add(new Waypoint(130.77431, 944.362, "AllowedPath15"));
-        vl2.add(new Waypoint(623.85773, 465.2135, "AllowedPath16"));
-        vl2.add(new Waypoint(631.36121, 631.36121, "AllowedPath17"));
-        vl2.add(new Waypoint(642.08038, 712.82715, "AllowedPath18"));
-        vl2.add(new Waypoint(736.40942, 720.33063, "AllowedPath19"));
-        vl2.add(new Waypoint(728.90594, 796.43695, "AllowedPath20"));
+        vl2.add(new Waypoint(616.35431, 203.6649, "VL2-AllowedPath1"));
+        vl2.add(new Waypoint(619.57007, 335.51114, "VL2-AllowedPath2"));
+        vl2.add(new Waypoint(733.19366, 349.44611, "VL2-AllowedPath3"));
+        vl2.add(new Waypoint(249.75749, 348.37418, "VL2-AllowedPath4"));
+        vl2.add(new Waypoint(475.93271, 353.73376, "VL2-AllowedPath5"));
+        vl2.add(new Waypoint(823.23499, 352.66187, "VL2-AllowedPath6"));
+        vl2.add(new Waypoint(828.5946, 461.99774, "VL2-AllowedPath7"));
+        vl2.add(new Waypoint(827.52264, 552.03906, "VL2-AllowedPath8"));
+        vl2.add(new Waypoint(331.22345, 354.80569, "VL2-AllowedPath9"));
+        vl2.add(new Waypoint(340.87073, 452.35046, "VL2-AllowedPath10"));
+        vl2.add(new Waypoint(345.15842, 503.80264, "VL2-AllowedPath11"));
+        vl2.add(new Waypoint(278.69934, 517.73761, "VL2-AllowedPath12"));
+        vl2.add(new Waypoint(293.70624, 818.94727, "VL2-AllowedPath13"));
+        vl2.add(new Waypoint(116.83934, 840.38568, "VL2-AllowedPath14"));
+        vl2.add(new Waypoint(130.77431, 944.362, "VL2-AllowedPath15"));
+        vl2.add(new Waypoint(623.85773, 465.2135, "VL2-AllowedPath16"));
+        vl2.add(new Waypoint(631.36121, 631.36121, "VL2-AllowedPath17"));
+        vl2.add(new Waypoint(642.08038, 712.82715, "VL2-AllowedPath18"));
+        vl2.add(new Waypoint(736.40942, 720.33063, "VL2-AllowedPath19"));
+        vl2.add(new Waypoint(728.90594, 796.43695, "VL2-AllowedPath20"));
         WAYPOINTS.put("VL-2", vl2);
 
         // ── LB-2 ──
         List<Waypoint> lb2 = new ArrayList<>();
-        lb2.add(new Waypoint(176.86403, 457.58429, "AllowedPath1"));
-        lb2.add(new Waypoint(302.31412, 458.61255, "AllowedPath2"));
-        lb2.add(new Waypoint(347.39804, 470.95715, "AllowedPath3"));
-        lb2.add(new Waypoint(399.32867, 467.97263, "AllowedPath4"));
-        lb2.add(new Waypoint(408.87915, 382.61539, "AllowedPath5"));
-        lb2.add(new Waypoint(412.46057, 250.69962, "AllowedPath6"));
-        lb2.add(new Waypoint(338.44449, 248.31201, "AllowedPath7"));
-        lb2.add(new Waypoint(286.51385, 246.52129, "AllowedPath8"));
-        lb2.add(new Waypoint(236.37393, 248.90891, "AllowedPath9"));
-        lb2.add(new Waypoint(234.58322, 294.27359, "AllowedPath10"));
-        lb2.add(new Waypoint(230.40489, 385.59988, "AllowedPath11"));
-        lb2.add(new Waypoint(99.682945, 327.70023, "allowedPath12"));
-        lb2.add(new Waypoint(101.47366, 171.3114, "AllowedPath13"));
-        lb2.add(new Waypoint(470.36023, 251.29652, "AllowedPath14"));
-        lb2.add(new Waypoint(852.37872, 242.93987, "AllowedPath15"));
-        lb2.add(new Waypoint(866.10748, 273.38196, "AllowedPath16"));
-        lb2.add(new Waypoint(616.60168, 250.10272, "AllowedPath17"));
-        lb2.add(new Waypoint(609.43884, 351.57639, "AllowdPath19"));
-        lb2.add(new Waypoint(608.84192, 448.27481, "AllowedPath20"));
-        lb2.add(new Waypoint(612.42334, 634.50879, "AllowedPath21"));
-        lb2.add(new Waypoint(609.43884, 511.5466, "AllowedPath22"));
-        lb2.add(new Waypoint(612.42334, 724.6413, "AllowedPath23"));
-        lb2.add(new Waypoint(584.3689, 727.02887, "AllowedPath24"));
-        lb2.add(new Waypoint(584.3689, 782.54095, "AllowedPath25"));
-        lb2.add(new Waypoint(736.57935, 780.75024, "AllowedPath26"));
-        lb2.add(new Waypoint(865.51062, 779.55646, "AllowedPath37"));
-        lb2.add(new Waypoint(864.31677, 685.84253, "AllowedPath27"));
-        lb2.add(new Waypoint(866.70441, 638.09021, "Allowed-Path28"));
-        lb2.add(new Waypoint(909.08459, 639.88092, "AllowedPath29"));
-        lb2.add(new Waypoint(612.42334, 396.94107, "AllowedPath30"));
-        lb2.add(new Waypoint(709.71869, 405.29773, "AllowedPath31"));
-        lb2.add(new Waypoint(880.43317, 401.71631, "AllowedPath32"));
-        lb2.add(new Waypoint(866.10748, 362.91754, "AllowedPath33"));
-        lb2.add(new Waypoint(667.3385, 740.16077, "AlloedPath34"));
-        lb2.add(new Waypoint(705.54034, 741.95148, "AllowedPath35"));
-        lb2.add(new Waypoint(706.73419, 665.54779, "AlloedPath36"));
-        lb2.add(new Waypoint(518.70947, 778.36261, "AllowedPath37"));
-        lb2.add(new Waypoint(434.54602, 781.34717, "AllowedPath38"));
-        lb2.add(new Waypoint(324.7157, 775.37811, "AllowedPath39"));
-        lb2.add(new Waypoint(398.13489, 778.36261, "AllowedPAth40"));
-        lb2.add(new Waypoint(397.53796, 931.76691, "AllowedPath41"));
-        lb2.add(new Waypoint(397.53796, 972.95331, "AllowedPath42"));
-        lb2.add(new Waypoint(426.78625, 669.12921, "AllowedPath43"));
-        lb2.add(new Waypoint(405.29773, 667.3385, "AllowedPath44"));
-        lb2.add(new Waypoint(403.50702, 576.60913, "AllowedPath45"));
-        lb2.add(new Waypoint(287.11075, 574.81842, "AllowedPath46"));
-        lb2.add(new Waypoint(239.35844, 568.84937, "AllowedPath47"));
-        lb2.add(new Waypoint(152.21048, 572.43079, "AllowedPath48"));
+        lb2.add(new Waypoint(176.86403, 457.58429, "LB2-AllowedPath1"));
+        lb2.add(new Waypoint(302.31412, 458.61255, "LB2-AllowedPath2"));
+        lb2.add(new Waypoint(347.39804, 470.95715, "LB2-AllowedPath3"));
+        lb2.add(new Waypoint(399.32867, 467.97263, "LB2-AllowedPath4"));
+        lb2.add(new Waypoint(408.87915, 382.61539, "LB2-AllowedPath5"));
+        lb2.add(new Waypoint(412.46057, 250.69962, "LB2-AllowedPath6"));
+        lb2.add(new Waypoint(338.44449, 248.31201, "LB2-AllowedPath7"));
+        lb2.add(new Waypoint(286.51385, 246.52129, "LB2-AllowedPath8"));
+        lb2.add(new Waypoint(236.37393, 248.90891, "LB2-AllowedPath9"));
+        lb2.add(new Waypoint(234.58322, 294.27359, "LB2-AllowedPath10"));
+        lb2.add(new Waypoint(230.40489, 385.59988, "LB2-AllowedPath11"));
+        lb2.add(new Waypoint(99.682945, 327.70023, "LB2-AllowedPath12"));
+        lb2.add(new Waypoint(101.47366, 171.3114, "LB2-AllowedPath13"));
+        lb2.add(new Waypoint(470.36023, 251.29652, "LB2-AllowedPath14"));
+        lb2.add(new Waypoint(852.37872, 242.93987, "LB2-AllowedPath15"));
+        lb2.add(new Waypoint(866.10748, 273.38196, "LB2-AllowedPath16"));
+        lb2.add(new Waypoint(616.60168, 250.10272, "LB2-AllowedPath17"));
+        lb2.add(new Waypoint(609.43884, 351.57639, "LB2-AllowedPath19"));
+        lb2.add(new Waypoint(608.84192, 448.27481, "LB2-AllowedPath20"));
+        lb2.add(new Waypoint(612.42334, 634.50879, "LB2-AllowedPath21"));
+        lb2.add(new Waypoint(609.43884, 511.5466, "LB2-AllowedPath22"));
+        lb2.add(new Waypoint(612.42334, 724.6413, "LB2-AllowedPath23"));
+        lb2.add(new Waypoint(584.3689, 727.02887, "LB2-AllowedPath24"));
+        lb2.add(new Waypoint(584.3689, 782.54095, "LB2-AllowedPath25"));
+        lb2.add(new Waypoint(736.57935, 780.75024, "LB2-AllowedPath26"));
+        lb2.add(new Waypoint(865.51062, 779.55646, "LB2-AllowedPath37a"));
+        lb2.add(new Waypoint(864.31677, 685.84253, "LB2-AllowedPath27"));
+        lb2.add(new Waypoint(866.70441, 638.09021, "LB2-AllowedPath28"));
+        lb2.add(new Waypoint(909.08459, 639.88092, "LB2-AllowedPath29"));
+        lb2.add(new Waypoint(612.42334, 396.94107, "LB2-AllowedPath30"));
+        lb2.add(new Waypoint(709.71869, 405.29773, "LB2-AllowedPath31"));
+        lb2.add(new Waypoint(880.43317, 401.71631, "LB2-AllowedPath32"));
+        lb2.add(new Waypoint(866.10748, 362.91754, "LB2-AllowedPath33"));
+        lb2.add(new Waypoint(667.3385, 740.16077, "LB2-AllowedPath34"));
+        lb2.add(new Waypoint(705.54034, 741.95148, "LB2-AllowedPath35"));
+        lb2.add(new Waypoint(706.73419, 665.54779, "LB2-AllowedPath36"));
+        lb2.add(new Waypoint(518.70947, 778.36261, "LB2-AllowedPath37"));
+        lb2.add(new Waypoint(434.54602, 781.34717, "LB2-AllowedPath38"));
+        lb2.add(new Waypoint(324.7157, 775.37811, "LB2-AllowedPath39"));
+        lb2.add(new Waypoint(398.13489, 778.36261, "LB2-AllowedPath40"));
+        lb2.add(new Waypoint(397.53796, 931.76691, "LB2-AllowedPath41"));
+        lb2.add(new Waypoint(397.53796, 972.95331, "LB2-AllowedPath42"));
+        lb2.add(new Waypoint(426.78625, 669.12921, "LB2-AllowedPath43"));
+        lb2.add(new Waypoint(405.29773, 667.3385, "LB2-AllowedPath44"));
+        lb2.add(new Waypoint(403.50702, 576.60913, "LB2-AllowedPath45"));
+        lb2.add(new Waypoint(287.11075, 574.81842, "LB2-AllowedPath46"));
+        lb2.add(new Waypoint(239.35844, 568.84937, "LB2-AllowedPath47"));
+        lb2.add(new Waypoint(152.21048, 572.43079, "LB2-AllowedPath48"));
         WAYPOINTS.put("LB-2", lb2);
 
         // ── LB-3 ──
         List<Waypoint> lb3 = new ArrayList<>();
-        lb3.add(new Waypoint(558.31384, 265.48685, "Allowedpath1"));
-        lb3.add(new Waypoint(620.90833, 264.04791, "AllowedPath2"));
-        lb3.add(new Waypoint(658.32111, 271.96216, "AllowedPath3"));
-        lb3.add(new Waypoint(899.34576, 273.40109, "AllowedPath4"));
-        lb3.add(new Waypoint(907.26001, 312.97232, "AllowedPath5"));
-        lb3.add(new Waypoint(907.26001, 359.73828, "AllowedPath6"));
-        lb3.add(new Waypoint(914.45477, 400.74847, "AllowedPath7"));
-        lb3.add(new Waypoint(940.3559, 398.59003, "AllowedPath8"));
-        lb3.add(new Waypoint(1010.1451, 403.62637, "AllowedPath9"));
-        lb3.add(new Waypoint(858.33557, 405.78479, "AllowedPath10"));
-        lb3.add(new Waypoint(861.2135, 655.44318, "AllowedPath11"));
-        lb3.add(new Waypoint(946.83118, 661.19897, "AllowedPath12"));
-        lb3.add(new Waypoint(1013.7425, 656.88214, "AllowedPath13"));
-        lb3.add(new Waypoint(910.13788, 657.60162, "AllowedPath14"));
-        lb3.add(new Waypoint(905.82104, 710.12341, "AllowedPath15"));
-        lb3.add(new Waypoint(906.54053, 774.87628, "AllowedPath16"));
-        lb3.add(new Waypoint(904.38208, 802.21637, "AllowedPath17"));
-        lb3.add(new Waypoint(656.16266, 795.74109, "AllowedPath18"));
-        lb3.add(new Waypoint(617.31091, 792.14374, "AllowedPath19"));
-        lb3.add(new Waypoint(622.34723, 730.26874, "AllowedPath20"));
-        lb3.add(new Waypoint(622.34723, 615.87195, "AllowedPath21"));
-        lb3.add(new Waypoint(626.66412, 316.5697, "AllowedPath22"));
-        lb3.add(new Waypoint(549.68011, 790.70477, "AllowedPath23"));
-        lb3.add(new Waypoint(464.78189, 799.3385, "AllowedPath24"));
-        lb3.add(new Waypoint(465.50134, 713.00128, "AllowedPath25"));
-        lb3.add(new Waypoint(466.94031, 630.26147, "AllowedPath26"));
-        lb3.add(new Waypoint(297.14383, 629.54199, "AllowedPath27"));
-        lb3.add(new Waypoint(276.99847, 624.50568, "AllowedPath28"));
-        lb3.add(new Waypoint(276.99847, 676.30798, "AllowedPath29"));
-        lb3.add(new Waypoint(278.43744, 715.87921, "AllowedPath30"));
-        lb3.add(new Waypoint(279.15692, 741.7804, "AllowedPath31"));
-        lb3.add(new Waypoint(282.03482, 805.0943, "AllowedPath32"));
-        lb3.add(new Waypoint(119.43311, 794.30219, "AllowedPath33"));
-        lb3.add(new Waypoint(112.95782, 253.97523, "AllowedPath34"));
-        lb3.add(new Waypoint(198.57555, 243.18309, "AllowedPath35"));
-        lb3.add(new Waypoint(318.00867, 242.46361, "AllowedPath36"));
-        lb3.add(new Waypoint(288.5101, 320.16708, "AllowedPath37"));
-        lb3.add(new Waypoint(109.36044, 315.13074, "AllowedPath38"));
-        lb3.add(new Waypoint(419.45486, 259.73105, "AllowedPath39"));
-        lb3.add(new Waypoint(439.60019, 200.0145, "AllowedPath40"));
-        lb3.add(new Waypoint(438.88071, 122.31102, "AllowedPath41"));
-        lb3.add(new Waypoint(118.71364, 189.94182, "AllowedPath42"));
-        lb3.add(new Waypoint(474.85455, 266.20633, "AllowedPath43"));
-        lb3.add(new Waypoint(471.97665, 361.17725, "AllowedPath44"));
-        lb3.add(new Waypoint(475.57404, 628.82257, "AllowedPath45"));
-        lb3.add(new Waypoint(425.93015, 912.29633, "AllowedPath46"));
-        lb3.add(new Waypoint(418.0159, 964.81812, "AllowedPath47"));
-        lb3.add(new Waypoint(271.96216, 963.37915, "AllowedPath48"));
-        lb3.add(new Waypoint(271.24268, 992.1582, "AllowedPath49"));
-        lb3.add(new Waypoint(356.86038, 253.97523, "AllowedPath50"));
+        lb3.add(new Waypoint(558.31384, 265.48685, "LB3-AllowedPath1"));
+        lb3.add(new Waypoint(620.90833, 264.04791, "LB3-AllowedPath2"));
+        lb3.add(new Waypoint(658.32111, 271.96216, "LB3-AllowedPath3"));
+        lb3.add(new Waypoint(899.34576, 273.40109, "LB3-AllowedPath4"));
+        lb3.add(new Waypoint(907.26001, 312.97232, "LB3-AllowedPath5"));
+        lb3.add(new Waypoint(907.26001, 359.73828, "LB3-AllowedPath6"));
+        lb3.add(new Waypoint(914.45477, 400.74847, "LB3-AllowedPath7"));
+        lb3.add(new Waypoint(940.3559, 398.59003, "LB3-AllowedPath8"));
+        lb3.add(new Waypoint(1010.1451, 403.62637, "LB3-AllowedPath9"));
+        lb3.add(new Waypoint(858.33557, 405.78479, "LB3-AllowedPath10"));
+        lb3.add(new Waypoint(861.2135, 655.44318, "LB3-AllowedPath11"));
+        lb3.add(new Waypoint(946.83118, 661.19897, "LB3-AllowedPath12"));
+        lb3.add(new Waypoint(1013.7425, 656.88214, "LB3-AllowedPath13"));
+        lb3.add(new Waypoint(910.13788, 657.60162, "LB3-AllowedPath14"));
+        lb3.add(new Waypoint(905.82104, 710.12341, "LB3-AllowedPath15"));
+        lb3.add(new Waypoint(906.54053, 774.87628, "LB3-AllowedPath16"));
+        lb3.add(new Waypoint(904.38208, 802.21637, "LB3-AllowedPath17"));
+        lb3.add(new Waypoint(656.16266, 795.74109, "LB3-AllowedPath18"));
+        lb3.add(new Waypoint(617.31091, 792.14374, "LB3-AllowedPath19"));
+        lb3.add(new Waypoint(622.34723, 730.26874, "LB3-AllowedPath20"));
+        lb3.add(new Waypoint(622.34723, 615.87195, "LB3-AllowedPath21"));
+        lb3.add(new Waypoint(626.66412, 316.5697, "LB3-AllowedPath22"));
+        lb3.add(new Waypoint(549.68011, 790.70477, "LB3-AllowedPath23"));
+        lb3.add(new Waypoint(464.78189, 799.3385, "LB3-AllowedPath24"));
+        lb3.add(new Waypoint(465.50134, 713.00128, "LB3-AllowedPath25"));
+        lb3.add(new Waypoint(466.94031, 630.26147, "LB3-AllowedPath26"));
+        lb3.add(new Waypoint(297.14383, 629.54199, "LB3-AllowedPath27"));
+        lb3.add(new Waypoint(276.99847, 624.50568, "LB3-AllowedPath28"));
+        lb3.add(new Waypoint(276.99847, 676.30798, "LB3-AllowedPath29"));
+        lb3.add(new Waypoint(278.43744, 715.87921, "LB3-AllowedPath30"));
+        lb3.add(new Waypoint(279.15692, 741.7804, "LB3-AllowedPath31"));
+        lb3.add(new Waypoint(282.03482, 805.0943, "LB3-AllowedPath32"));
+        lb3.add(new Waypoint(119.43311, 794.30219, "LB3-AllowedPath33"));
+        lb3.add(new Waypoint(112.95782, 253.97523, "LB3-AllowedPath34"));
+        lb3.add(new Waypoint(198.57555, 243.18309, "LB3-AllowedPath35"));
+        lb3.add(new Waypoint(318.00867, 242.46361, "LB3-AllowedPath36"));
+        lb3.add(new Waypoint(288.5101, 320.16708, "LB3-AllowedPath37"));
+        lb3.add(new Waypoint(109.36044, 315.13074, "LB3-AllowedPath38"));
+        lb3.add(new Waypoint(419.45486, 259.73105, "LB3-AllowedPath39"));
+        lb3.add(new Waypoint(439.60019, 200.0145, "LB3-AllowedPath40"));
+        lb3.add(new Waypoint(438.88071, 122.31102, "LB3-AllowedPath41"));
+        lb3.add(new Waypoint(118.71364, 189.94182, "LB3-AllowedPath42"));
+        lb3.add(new Waypoint(474.85455, 266.20633, "LB3-AllowedPath43"));
+        lb3.add(new Waypoint(471.97665, 361.17725, "LB3-AllowedPath44"));
+        lb3.add(new Waypoint(475.57404, 628.82257, "LB3-AllowedPath45"));
+        lb3.add(new Waypoint(425.93015, 912.29633, "LB3-AllowedPath46"));
+        lb3.add(new Waypoint(418.0159, 964.81812, "LB3-AllowedPath47"));
+        lb3.add(new Waypoint(271.96216, 963.37915, "LB3-AllowedPath48"));
+        lb3.add(new Waypoint(271.24268, 992.1582, "LB3-AllowedPath49"));
+        lb3.add(new Waypoint(356.86038, 253.97523, "LB3-AllowedPath50"));
         WAYPOINTS.put("LB-3", lb3);
 
         // ── LB-4 ──
         List<Waypoint> lb4 = new ArrayList<>();
-        lb4.add(new Waypoint(567.04987, 265.56055, "AllowedPath1"));
-        lb4.add(new Waypoint(631.0968, 267.12265, "AllowedPath2"));
-        lb4.add(new Waypoint(660.7771, 263.21738, "AllowedPath3"));
-        lb4.add(new Waypoint(912.27856, 263.99841, "AllowedPath4"));
-        lb4.add(new Waypoint(914.62177, 401.46506, "AllowedPath5"));
-        lb4.add(new Waypoint(993.50885, 392.09235, "AllowedPath6"));
-        lb4.add(new Waypoint(1010.6922, 648.28015, "AllowedPath7"));
-        lb4.add(new Waypoint(913.05963, 652.96649, "AllowedPath8"));
-        lb4.add(new Waypoint(916.1839, 524.87262, "AllowedPath9"));
-        lb4.add(new Waypoint(912.27856, 701.39227, "AllowedPath10"));
-        lb4.add(new Waypoint(913.05963, 772.46875, "AllowedPath11"));
-        lb4.add(new Waypoint(906.81116, 795.11951, "AllowedPath12"));
-        lb4.add(new Waypoint(726.38617, 793.55737, "AllowedPath13"));
-        lb4.add(new Waypoint(634.22107, 790.43317, "AllowedPath14"));
-        lb4.add(new Waypoint(660.7771, 788.08997, "AllowedPath15"));
-        lb4.add(new Waypoint(628.75366, 784.9657, "AllowedPath16"));
-        lb4.add(new Waypoint(626.41046, 723.26196, "AllowedPath17"));
-        lb4.add(new Waypoint(627.19153, 605.32184, "AllowedPath18"));
-        lb4.add(new Waypoint(635.7832, 321.01584, "AllowedPath19"));
-        lb4.add(new Waypoint(591.26276, 784.18469, "AllowedPath20"));
-        lb4.add(new Waypoint(557.67712, 785.74677, "AllowedPath21"));
-        lb4.add(new Waypoint(523.31049, 781.06042, "AllowedPath22"));
-        lb4.add(new Waypoint(488.94382, 781.06042, "AllowedPath23"));
-        lb4.add(new Waypoint(449.10974, 775.59302, "AllowedPath24"));
-        lb4.add(new Waypoint(444.42337, 936.49146, "AllowedPath25"));
-        lb4.add(new Waypoint(315.5484, 934.14825, "AllowedPath26"));
-        lb4.add(new Waypoint(313.20523, 951.3316, "AllowedPath27"));
-        lb4.add(new Waypoint(282.74387, 950.55054, "AllowedPath28"));
-        lb4.add(new Waypoint(285.08707, 978.6687, "AllowedPath29"));
-        lb4.add(new Waypoint(130.43709, 944.30206, "AllowedPath30"));
-        lb4.add(new Waypoint(129.65604, 703.73541, "AllowedPath31"));
-        lb4.add(new Waypoint(294.45978, 699.04907, "AllowedPath32"));
-        lb4.add(new Waypoint(293.67871, 664.68243, "AllowedPath33"));
-        lb4.add(new Waypoint(294.45978, 720.91876, "AllowedPath34"));
-        lb4.add(new Waypoint(298.36508, 763.87708, "AllowedPath35"));
-        lb4.add(new Waypoint(468.63626, 768.56348, "AllowedPath36"));
-        lb4.add(new Waypoint(469.41733, 686.55212, "AllowedPath37"));
-        lb4.add(new Waypoint(460.04459, 617.03772, "AllowedPath38"));
-        lb4.add(new Waypoint(298.36508, 622.50513, "AllowedPath39"));
-        lb4.add(new Waypoint(460.04459, 428.02112, "Allowed-Path40"));
-        lb4.add(new Waypoint(299.92722, 426.45898, "Allowed-Path41"));
-        lb4.add(new Waypoint(267.12265, 414.74307, "Allowed-Path42"));
-        lb4.add(new Waypoint(292.11661, 332.73175, "Allowed-Path43"));
-        lb4.add(new Waypoint(131.99921, 335.07492, "Allowed-Path44"));
-        lb4.add(new Waypoint(131.21815, 338.19916, "Allowed-Path45"));
-        lb4.add(new Waypoint(292.11661, 328.82645, "AllowedPath46"));
-        lb4.add(new Waypoint(296.80295, 280.4007, "AllowedPath47"));
-        lb4.add(new Waypoint(465.51202, 271.02795, "AllowedPath48"));
-        lb4.add(new Waypoint(463.94989, 360.06885, "AllowedPath49"));
-        lb4.add(new Waypoint(451.45291, 272.59009, "AllowedPath50"));
-        lb4.add(new Waypoint(492.06805, 268.68478, "AllowedPath51"));
-        lb4.add(new Waypoint(126.53179, 124.96967, "AllowedPath52"));
-        lb4.add(new Waypoint(164.02269, 101.53786, "AllowedPath53"));
-        lb4.add(new Waypoint(164.02269, 74.200737, "AllowedPath54"));
-        lb4.add(new Waypoint(450.67188, 74.200737, "AllowedPath55"));
-        lb4.add(new Waypoint(302.27039, 74.200737, "AllowedPath56"));
+        lb4.add(new Waypoint(567.04987, 265.56055, "LB4-AllowedPath1"));
+        lb4.add(new Waypoint(631.0968, 267.12265, "LB4-AllowedPath2"));
+        lb4.add(new Waypoint(660.7771, 263.21738, "LB4-AllowedPath3"));
+        lb4.add(new Waypoint(912.27856, 263.99841, "LB4-AllowedPath4"));
+        lb4.add(new Waypoint(914.62177, 401.46506, "LB4-AllowedPath5"));
+        lb4.add(new Waypoint(993.50885, 392.09235, "LB4-AllowedPath6"));
+        lb4.add(new Waypoint(1010.6922, 648.28015, "LB4-AllowedPath7"));
+        lb4.add(new Waypoint(913.05963, 652.96649, "LB4-AllowedPath8"));
+        lb4.add(new Waypoint(916.1839, 524.87262, "LB4-AllowedPath9"));
+        lb4.add(new Waypoint(912.27856, 701.39227, "LB4-AllowedPath10"));
+        lb4.add(new Waypoint(913.05963, 772.46875, "LB4-AllowedPath11"));
+        lb4.add(new Waypoint(906.81116, 795.11951, "LB4-AllowedPath12"));
+        lb4.add(new Waypoint(726.38617, 793.55737, "LB4-AllowedPath13"));
+        lb4.add(new Waypoint(634.22107, 790.43317, "LB4-AllowedPath14"));
+        lb4.add(new Waypoint(660.7771, 788.08997, "LB4-AllowedPath15"));
+        lb4.add(new Waypoint(628.75366, 784.9657, "LB4-AllowedPath16"));
+        lb4.add(new Waypoint(626.41046, 723.26196, "LB4-AllowedPath17"));
+        lb4.add(new Waypoint(627.19153, 605.32184, "LB4-AllowedPath18"));
+        lb4.add(new Waypoint(635.7832, 321.01584, "LB4-AllowedPath19"));
+        lb4.add(new Waypoint(591.26276, 784.18469, "LB4-AllowedPath20"));
+        lb4.add(new Waypoint(557.67712, 785.74677, "LB4-AllowedPath21"));
+        lb4.add(new Waypoint(523.31049, 781.06042, "LB4-AllowedPath22"));
+        lb4.add(new Waypoint(488.94382, 781.06042, "LB4-AllowedPath23"));
+        lb4.add(new Waypoint(449.10974, 775.59302, "LB4-AllowedPath24"));
+        lb4.add(new Waypoint(444.42337, 936.49146, "LB4-AllowedPath25"));
+        lb4.add(new Waypoint(315.5484, 934.14825, "LB4-AllowedPath26"));
+        lb4.add(new Waypoint(313.20523, 951.3316, "LB4-AllowedPath27"));
+        lb4.add(new Waypoint(282.74387, 950.55054, "LB4-AllowedPath28"));
+        lb4.add(new Waypoint(285.08707, 978.6687, "LB4-AllowedPath29"));
+        lb4.add(new Waypoint(130.43709, 944.30206, "LB4-AllowedPath30"));
+        lb4.add(new Waypoint(129.65604, 703.73541, "LB4-AllowedPath31"));
+        lb4.add(new Waypoint(294.45978, 699.04907, "LB4-AllowedPath32"));
+        lb4.add(new Waypoint(293.67871, 664.68243, "LB4-AllowedPath33"));
+        lb4.add(new Waypoint(294.45978, 720.91876, "LB4-AllowedPath34"));
+        lb4.add(new Waypoint(298.36508, 763.87708, "LB4-AllowedPath35"));
+        lb4.add(new Waypoint(468.63626, 768.56348, "LB4-AllowedPath36"));
+        lb4.add(new Waypoint(469.41733, 686.55212, "LB4-AllowedPath37"));
+        lb4.add(new Waypoint(460.04459, 617.03772, "LB4-AllowedPath38"));
+        lb4.add(new Waypoint(298.36508, 622.50513, "LB4-AllowedPath39"));
+        lb4.add(new Waypoint(460.04459, 428.02112, "LB4-AllowedPath40"));
+        lb4.add(new Waypoint(299.92722, 426.45898, "LB4-AllowedPath41"));
+        lb4.add(new Waypoint(267.12265, 414.74307, "LB4-AllowedPath42"));
+        lb4.add(new Waypoint(292.11661, 332.73175, "LB4-AllowedPath43"));
+        lb4.add(new Waypoint(131.99921, 335.07492, "LB4-AllowedPath44"));
+        lb4.add(new Waypoint(131.21815, 338.19916, "LB4-AllowedPath45"));
+        lb4.add(new Waypoint(292.11661, 328.82645, "LB4-AllowedPath46"));
+        lb4.add(new Waypoint(296.80295, 280.4007, "LB4-AllowedPath47"));
+        lb4.add(new Waypoint(465.51202, 271.02795, "LB4-AllowedPath48"));
+        lb4.add(new Waypoint(463.94989, 360.06885, "LB4-AllowedPath49"));
+        lb4.add(new Waypoint(451.45291, 272.59009, "LB4-AllowedPath50"));
+        lb4.add(new Waypoint(492.06805, 268.68478, "LB4-AllowedPath51"));
+        lb4.add(new Waypoint(126.53179, 124.96967, "LB4-AllowedPath52"));
+        lb4.add(new Waypoint(164.02269, 101.53786, "LB4-AllowedPath53"));
+        lb4.add(new Waypoint(164.02269, 74.200737, "LB4-AllowedPath54"));
+        lb4.add(new Waypoint(450.67188, 74.200737, "LB4-AllowedPath55"));
+        lb4.add(new Waypoint(302.27039, 74.200737, "LB4-AllowedPath56"));
         WAYPOINTS.put("LB-4", lb4);
 
         // ── LB-5 ──
         List<Waypoint> lb5 = new ArrayList<>();
-        lb5.add(new Waypoint(552.953, 254.54636, "AllowedPath1"));
-        lb5.add(new Waypoint(621.09308, 254.54636, "AllowedPath2"));
-        lb5.add(new Waypoint(658.68762, 253.76314, "AllowedPath3"));
-        lb5.add(new Waypoint(817.68121, 257.67923, "AllowedPath4"));
-        lb5.add(new Waypoint(810.6322, 296.84021, "AllowedPath5"));
-        lb5.add(new Waypoint(814.54834, 327.38577, "AllowedPath6"));
-        lb5.add(new Waypoint(820.03088, 404.9245, "AllowedPath7"));
-        lb5.add(new Waypoint(863.89117, 403.35806, "AllowedPath8"));
-        lb5.add(new Waypoint(937.51379, 401.00839, "AllowedPath9"));
-        lb5.add(new Waypoint(1011.1364, 397.87552, "AllowedPath10"));
-        lb5.add(new Waypoint(942.21313, 498.12762, "AllowedPath11"));
-        lb5.add(new Waypoint(946.12921, 541.98792, "AllowedPath12"));
-        lb5.add(new Waypoint(946.91241, 639.89038, "AllowedPath13"));
-        lb5.add(new Waypoint(1011.9197, 637.54071, "AllowedPath14"));
-        lb5.add(new Waypoint(821.59729, 634.40784, "AllowedPath15"));
-        lb5.add(new Waypoint(813.76514, 678.26813, "AllowedPath16"));
-        lb5.add(new Waypoint(814.54834, 711.16333, "AllowedPath17"));
-        lb5.add(new Waypoint(813.76514, 739.35925, "AllowedPath18"));
-        lb5.add(new Waypoint(814.54834, 786.35242, "AllowedPath19"));
-        lb5.add(new Waypoint(733.09351, 788.70209, "AllowedPath20"));
-        lb5.add(new Waypoint(655.55475, 788.70209, "AllowedPath21"));
-        lb5.add(new Waypoint(723.69489, 787.91888, "AllowedPath22"));
-        lb5.add(new Waypoint(820.03088, 434.68686, "AllowedPath23"));
-        lb5.add(new Waypoint(826.45135, 603.17969, "AllowedPath24"));
-        lb5.add(new Waypoint(552.98682, 784.91241, "AllowedPath25"));
-        lb5.add(new Waypoint(455.1973, 797.89337, "AllowedPath26"));
-        lb5.add(new Waypoint(466.44742, 728.6618, "AllowedPath27"));
-        lb5.add(new Waypoint(463.85123, 675.00739, "AllowedPath28"));
-        lb5.add(new Waypoint(456.06268, 620.48755, "AllowedPath29"));
-        lb5.add(new Waypoint(286.44543, 626.54535, "AllowedPath30"));
-        lb5.add(new Waypoint(281.25308, 673.27661, "AllowedPath31"));
-        lb5.add(new Waypoint(283.84927, 713.08472, "AllowedPath32"));
-        lb5.add(new Waypoint(462.98584, 596.25653, "AllowedPath33"));
-        lb5.add(new Waypoint(452.6011, 520.96722, "AllowedPath34"));
-        lb5.add(new Waypoint(456.06268, 439.62021, "AllowedPath35"));
-        lb5.add(new Waypoint(456.92807, 355.67697, "AllowedPath36"));
-        lb5.add(new Waypoint(453.46649, 298.56097, "AllowedPath37"));
-        lb5.add(new Waypoint(448.27414, 257.02203, "AllowedPath38"));
-        lb5.add(new Waypoint(887.89435, 289.04163, "AllowedPath39"));
+        lb5.add(new Waypoint(552.953, 254.54636, "LB5-AllowedPath1"));
+        lb5.add(new Waypoint(621.09308, 254.54636, "LB5-AllowedPath2"));
+        lb5.add(new Waypoint(658.68762, 253.76314, "LB5-AllowedPath3"));
+        lb5.add(new Waypoint(817.68121, 257.67923, "LB5-AllowedPath4"));
+        lb5.add(new Waypoint(810.6322, 296.84021, "LB5-AllowedPath5"));
+        lb5.add(new Waypoint(814.54834, 327.38577, "LB5-AllowedPath6"));
+        lb5.add(new Waypoint(820.03088, 404.9245, "LB5-AllowedPath7"));
+        lb5.add(new Waypoint(863.89117, 403.35806, "LB5-AllowedPath8"));
+        lb5.add(new Waypoint(937.51379, 401.00839, "LB5-AllowedPath9"));
+        lb5.add(new Waypoint(1011.1364, 397.87552, "LB5-AllowedPath10"));
+        lb5.add(new Waypoint(942.21313, 498.12762, "LB5-AllowedPath11"));
+        lb5.add(new Waypoint(946.12921, 541.98792, "LB5-AllowedPath12"));
+        lb5.add(new Waypoint(946.91241, 639.89038, "LB5-AllowedPath13"));
+        lb5.add(new Waypoint(1011.9197, 637.54071, "LB5-AllowedPath14"));
+        lb5.add(new Waypoint(821.59729, 634.40784, "LB5-AllowedPath15"));
+        lb5.add(new Waypoint(813.76514, 678.26813, "LB5-AllowedPath16"));
+        lb5.add(new Waypoint(814.54834, 711.16333, "LB5-AllowedPath17"));
+        lb5.add(new Waypoint(813.76514, 739.35925, "LB5-AllowedPath18"));
+        lb5.add(new Waypoint(814.54834, 786.35242, "LB5-AllowedPath19"));
+        lb5.add(new Waypoint(733.09351, 788.70209, "LB5-AllowedPath20"));
+        lb5.add(new Waypoint(655.55475, 788.70209, "LB5-AllowedPath21"));
+        lb5.add(new Waypoint(723.69489, 787.91888, "LB5-AllowedPath22"));
+        lb5.add(new Waypoint(820.03088, 434.68686, "LB5-AllowedPath23"));
+        lb5.add(new Waypoint(826.45135, 603.17969, "LB5-AllowedPath24"));
+        lb5.add(new Waypoint(552.98682, 784.91241, "LB5-AllowedPath25"));
+        lb5.add(new Waypoint(455.1973, 797.89337, "LB5-AllowedPath26"));
+        lb5.add(new Waypoint(466.44742, 728.6618, "LB5-AllowedPath27"));
+        lb5.add(new Waypoint(463.85123, 675.00739, "LB5-AllowedPath28"));
+        lb5.add(new Waypoint(456.06268, 620.48755, "LB5-AllowedPath29"));
+        lb5.add(new Waypoint(286.44543, 626.54535, "LB5-AllowedPath30"));
+        lb5.add(new Waypoint(281.25308, 673.27661, "LB5-AllowedPath31"));
+        lb5.add(new Waypoint(283.84927, 713.08472, "LB5-AllowedPath32"));
+        lb5.add(new Waypoint(462.98584, 596.25653, "LB5-AllowedPath33"));
+        lb5.add(new Waypoint(452.6011, 520.96722, "LB5-AllowedPath34"));
+        lb5.add(new Waypoint(456.06268, 439.62021, "LB5-AllowedPath35"));
+        lb5.add(new Waypoint(456.92807, 355.67697, "LB5-AllowedPath36"));
+        lb5.add(new Waypoint(453.46649, 298.56097, "LB5-AllowedPath37"));
+        lb5.add(new Waypoint(448.27414, 257.02203, "LB5-AllowedPath38"));
+        lb5.add(new Waypoint(887.89435, 289.04163, "LB5-AllowedPath39"));
         WAYPOINTS.put("LB-5", lb5);
 
         // ── Hall-9 (all coordinates pre-computed in root SVG space) ──
@@ -467,81 +467,81 @@ public class PathfindingService {
 
         // ── MB-S2 ──
         List<Waypoint> MBS2 = new ArrayList<>();
-        MBS2.add(new Waypoint(111.80209, 497.20117, "AllowedPath1"));
-        MBS2.add(new Waypoint(420.84851, 476.29507, "AllowedPath2"));
-        MBS2.add(new Waypoint(477.20404, 468.11444, "AllowedPath3"));
-        MBS2.add(new Waypoint(458.11588, 278.14178, "AllowedPath4"));
-        MBS2.add(new Waypoint(459.93381, 224.51314, "AllowedPath5"));
-        MBS2.add(new Waypoint(578.09863, 221.78625, "AllowedPath6"));
-        MBS2.add(new Waypoint(641.72583, 218.15042, "AllowedPath7"));
-        MBS2.add(new Waypoint(679.90216, 220.8773, "AllowedPath8"));
-        MBS2.add(new Waypoint(718.98743, 224.51314, "AllowedPath9"));
-        MBS2.add(new Waypoint(527.19684, 226.33105, "AllowedPath10"));
-        MBS2.add(new Waypoint(534.46851, 618.09283, "AllowedPath11"));
-        MBS2.add(new Waypoint(590.82404, 602.64056, "AllowedPath12"));
-        MBS2.add(new Waypoint(537.19543, 605.36743, "AllowedPath13"));
-        MBS2.add(new Waypoint(678.99316, 601.73157, "AllowedPath14"));
-        MBS2.add(new Waypoint(749.89209, 604.45844, "AllowedPath15"));
-        MBS2.add(new Waypoint(809.88342, 602.64056, "AllowedPath16"));
-        MBS2.add(new Waypoint(594.4599, 700.80823, "AllowedPath17"));
-        MBS2.add(new Waypoint(593.5509, 788.06842, "AllowedPath18"));
-        MBS2.add(new Waypoint(597.18677, 845.33289, "AllowedPath19"));
-        MBS2.add(new Waypoint(673.53943, 842.60602, "AllowedPath20"));
-        MBS2.add(new Waypoint(724.44116, 843.51495, "AllowedPath21"));
-        MBS2.add(new Waypoint(758.07269, 843.51495, "AllowedPath22"));
-        MBS2.add(new Waypoint(810.79242, 842.60602, "AllowedPath23"));
-        MBS2.add(new Waypoint(887.14502, 841.69702, "AllowedPath24"));
-        MBS2.add(new Waypoint(528.10583, 409.94101, "AllowedPath25"));
+        MBS2.add(new Waypoint(111.80209, 497.20117, "MBS2-AllowedPath1"));
+        MBS2.add(new Waypoint(420.84851, 476.29507, "MBS2-AllowedPath2"));
+        MBS2.add(new Waypoint(477.20404, 468.11444, "MBS2-AllowedPath3"));
+        MBS2.add(new Waypoint(458.11588, 278.14178, "MBS2-AllowedPath4"));
+        MBS2.add(new Waypoint(459.93381, 224.51314, "MBS2-AllowedPath5"));
+        MBS2.add(new Waypoint(578.09863, 221.78625, "MBS2-AllowedPath6"));
+        MBS2.add(new Waypoint(641.72583, 218.15042, "MBS2-AllowedPath7"));
+        MBS2.add(new Waypoint(679.90216, 220.8773, "MBS2-AllowedPath8"));
+        MBS2.add(new Waypoint(718.98743, 224.51314, "MBS2-AllowedPath9"));
+        MBS2.add(new Waypoint(527.19684, 226.33105, "MBS2-AllowedPath10"));
+        MBS2.add(new Waypoint(534.46851, 618.09283, "MBS2-AllowedPath11"));
+        MBS2.add(new Waypoint(590.82404, 602.64056, "MBS2-AllowedPath12"));
+        MBS2.add(new Waypoint(537.19543, 605.36743, "MBS2-AllowedPath13"));
+        MBS2.add(new Waypoint(678.99316, 601.73157, "MBS2-AllowedPath14"));
+        MBS2.add(new Waypoint(749.89209, 604.45844, "MBS2-AllowedPath15"));
+        MBS2.add(new Waypoint(809.88342, 602.64056, "MBS2-AllowedPath16"));
+        MBS2.add(new Waypoint(594.4599, 700.80823, "MBS2-AllowedPath17"));
+        MBS2.add(new Waypoint(593.5509, 788.06842, "MBS2-AllowedPath18"));
+        MBS2.add(new Waypoint(597.18677, 845.33289, "MBS2-AllowedPath19"));
+        MBS2.add(new Waypoint(673.53943, 842.60602, "MBS2-AllowedPath20"));
+        MBS2.add(new Waypoint(724.44116, 843.51495, "MBS2-AllowedPath21"));
+        MBS2.add(new Waypoint(758.07269, 843.51495, "MBS2-AllowedPath22"));
+        MBS2.add(new Waypoint(810.79242, 842.60602, "MBS2-AllowedPath23"));
+        MBS2.add(new Waypoint(887.14502, 841.69702, "MBS2-AllowedPath24"));
+        MBS2.add(new Waypoint(528.10583, 409.94101, "MBS2-AllowedPath25"));
         WAYPOINTS.put("MB-S2", MBS2);
 
         // ── Hall-1 (all coordinates pre-computed in root SVG space) ──
         List<Waypoint> hall1 = new ArrayList<>();
-        hall1.add(new Waypoint(1156.36795, 1440.61342, "AllowedPath1"));
-        hall1.add(new Waypoint(1160.18645, 1335.60292, "AllowedPath2"));
-        hall1.add(new Waypoint(1161.14115, 1227.72852, "AllowedPath3"));
-        hall1.add(new Waypoint(1163.72505, 1109.20572, "AllowedPath4"));
-        hall1.add(new Waypoint(1284.32705, 1104.31052, "AllowedPath5"));
-        hall1.add(new Waypoint(1084.95535, 1101.64032, "AllowedPath6"));
-        hall1.add(new Waypoint(1165.06015, 1067.81832, "AllowedPath7"));
-        hall1.add(new Waypoint(1117.88735, 1064.25812, "allowed-path-contains-stairs"));
-        hall1.add(new Waypoint(1101.42135, 1061.58792, "AllowedPath9"));
-        hall1.add(new Waypoint(1105.42655, 1013.97012, "AllowedPath10"));
-        hall1.add(new Waypoint(1183.75115, 1010.85502, "AllowedPath11"));
-        hall1.add(new Waypoint(1145.92405, 1011.30002, "AllowedPath12"));
-        hall1.add(new Waypoint(1181.08095, 986.37862, "AllowedPath13"));
-        hall1.add(new Waypoint(1074.71975, 982.37332, "AllowedPath14"));
-        hall1.add(new Waypoint(980.81928, 1012.63502, "AllowedPath15"));
-        hall1.add(new Waypoint(942.10205, 1016.64032, "AllowedPath16"));
-        hall1.add(new Waypoint(950.11249, 1101.64032, "AllowedPath17"));
-        hall1.add(new Waypoint(923.85596, 1101.19532, "AllowedPath18"));
-        hall1.add(new Waypoint(861.10730, 1102.08542, "AllowedPath19"));
-        hall1.add(new Waypoint(860.21723, 1157.71372, "AllowedPath20"));
-        hall1.add(new Waypoint(861.55231, 1029.99112, "AllowedPath21"));
-        hall1.add(new Waypoint(860.66223, 1046.90212, "AllowedPath22"));
-        hall1.add(new Waypoint(814.82453, 1032.66132, "AllowedPath23"));
-        hall1.add(new Waypoint(770.86804, 1103.80072, "AllowedPath24"));
-        hall1.add(new Waypoint(766.79566, 1011.15412, "AllowedPath25"));
-        hall1.add(new Waypoint(767.30475, 973.48452, "AllowedPath26"));
-        hall1.add(new Waypoint(734.21668, 977.55692, "AllowedPath27"));
-        hall1.add(new Waypoint(1109.03415, 1440.17722, "AllowedPath28"));
-        hall1.add(new Waypoint(1106.43435, 1405.73102, "AllowedPath29"));
-        hall1.add(new Waypoint(728.82623, 1414.83002, "AllowedPath30"));
-        hall1.add(new Waypoint(732.07587, 1477.22312, "AllowedPath31"));
-        hall1.add(new Waypoint(516.94977, 1416.12982, "AllowedPath32"));
-        hall1.add(new Waypoint(555.94544, 1417.42962, "AllowedPath33"));
-        hall1.add(new Waypoint(534.49780, 1347.88742, "AllowedPath34"));
-        hall1.add(new Waypoint(267.37744, 1360.23602, "AllowedPath35"));
-        hall1.add(new Waypoint(650.18500, 1418.72952, "AllowedPath36"));
-        hall1.add(new Waypoint(649.53504, 1349.83722, "AllowedPath37"));
-        hall1.add(new Waypoint(268.02738, 1225.70102, "AllowedPath38"));
-        hall1.add(new Waypoint(773.67127, 1223.75112, "AllowedPath39"));
-        hall1.add(new Waypoint(785.37000, 1416.77972, "AllowedPath40"));
-        hall1.add(new Waypoint(528.64844, 1229.60052, "AllowedPath41"));
-        hall1.add(new Waypoint(115.94423, 1189.95492, "allowed-path-with-stairs"));
-        hall1.add(new Waypoint(110.74481, 1106.76412, "AllowedPath43"));
-        hall1.add(new Waypoint(112.04466, 1084.66652, "AllowedPath44"));
-        hall1.add(new Waypoint(130.89258, 1085.31642, "AllowedPath45"));
-        hall1.add(new Waypoint(1330.03695, 1099.67682, "AllowedPath46"));
+        hall1.add(new Waypoint(1156.36795, 1440.61342, "H1-AllowedPath1"));
+        hall1.add(new Waypoint(1160.18645, 1335.60292, "H1-AllowedPath2"));
+        hall1.add(new Waypoint(1161.14115, 1227.72852, "H1-AllowedPath3"));
+        hall1.add(new Waypoint(1163.72505, 1109.20572, "H1-AllowedPath4"));
+        hall1.add(new Waypoint(1284.32705, 1104.31052, "H1-AllowedPath5"));
+        hall1.add(new Waypoint(1084.95535, 1101.64032, "H1-AllowedPath6"));
+        hall1.add(new Waypoint(1165.06015, 1067.81832, "H1-AllowedPath7"));
+        hall1.add(new Waypoint(1117.88735, 1064.25812, "H1-allowed-path-contains-stairs"));
+        hall1.add(new Waypoint(1101.42135, 1061.58792, "H1-AllowedPath9"));
+        hall1.add(new Waypoint(1105.42655, 1013.97012, "H1-AllowedPath10"));
+        hall1.add(new Waypoint(1183.75115, 1010.85502, "H1-AllowedPath11"));
+        hall1.add(new Waypoint(1145.92405, 1011.30002, "H1-AllowedPath12"));
+        hall1.add(new Waypoint(1181.08095, 986.37862, "H1-AllowedPath13"));
+        hall1.add(new Waypoint(1074.71975, 982.37332, "H1-AllowedPath14"));
+        hall1.add(new Waypoint(980.81928, 1012.63502, "H1-AllowedPath15"));
+        hall1.add(new Waypoint(942.10205, 1016.64032, "H1-AllowedPath16"));
+        hall1.add(new Waypoint(950.11249, 1101.64032, "H1-AllowedPath17"));
+        hall1.add(new Waypoint(923.85596, 1101.19532, "H1-AllowedPath18"));
+        hall1.add(new Waypoint(861.10730, 1102.08542, "H1-AllowedPath19"));
+        hall1.add(new Waypoint(860.21723, 1157.71372, "H1-AllowedPath20"));
+        hall1.add(new Waypoint(861.55231, 1029.99112, "H1-AllowedPath21"));
+        hall1.add(new Waypoint(860.66223, 1046.90212, "H1-AllowedPath22"));
+        hall1.add(new Waypoint(814.82453, 1032.66132, "H1-AllowedPath23"));
+        hall1.add(new Waypoint(770.86804, 1103.80072, "H1-AllowedPath24"));
+        hall1.add(new Waypoint(766.79566, 1011.15412, "H1-AllowedPath25"));
+        hall1.add(new Waypoint(767.30475, 973.48452, "H1-AllowedPath26"));
+        hall1.add(new Waypoint(734.21668, 977.55692, "H1-AllowedPath27"));
+        hall1.add(new Waypoint(1109.03415, 1440.17722, "H1-AllowedPath28"));
+        hall1.add(new Waypoint(1106.43435, 1405.73102, "H1-AllowedPath29"));
+        hall1.add(new Waypoint(728.82623, 1414.83002, "H1-AllowedPath30"));
+        hall1.add(new Waypoint(732.07587, 1477.22312, "H1-AllowedPath31"));
+        hall1.add(new Waypoint(516.94977, 1416.12982, "H1-AllowedPath32"));
+        hall1.add(new Waypoint(555.94544, 1417.42962, "H1-AllowedPath33"));
+        hall1.add(new Waypoint(534.49780, 1347.88742, "H1-AllowedPath34"));
+        hall1.add(new Waypoint(267.37744, 1360.23602, "H1-AllowedPath35"));
+        hall1.add(new Waypoint(650.18500, 1418.72952, "H1-AllowedPath36"));
+        hall1.add(new Waypoint(649.53504, 1349.83722, "H1-AllowedPath37"));
+        hall1.add(new Waypoint(268.02738, 1225.70102, "H1-AllowedPath38"));
+        hall1.add(new Waypoint(773.67127, 1223.75112, "H1-AllowedPath39"));
+        hall1.add(new Waypoint(785.37000, 1416.77972, "H1-AllowedPath40"));
+        hall1.add(new Waypoint(528.64844, 1229.60052, "H1-AllowedPath41"));
+        hall1.add(new Waypoint(115.94423, 1189.95492, "H1-allowed-path-with-stairs"));
+        hall1.add(new Waypoint(110.74481, 1106.76412, "H1-AllowedPath43"));
+        hall1.add(new Waypoint(112.04466, 1084.66652, "H1-AllowedPath44"));
+        hall1.add(new Waypoint(130.89258, 1085.31642, "H1-AllowedPath45"));
+        hall1.add(new Waypoint(1330.03695, 1099.67682, "H1-AllowedPath46"));
         WAYPOINTS.put("Hall-1", hall1);
     }
 
@@ -669,48 +669,71 @@ public class PathfindingService {
      * LB buildings use tiered alignment with max-neighbor limit;
      * other buildings use basic horizontal/vertical alignment.
      */
+    record Candidate(Waypoint target, double dist, int priority) {}
+
     private void addEdgesFor(
             SimpleWeightedGraph<Waypoint, DefaultWeightedEdge> graph,
             Waypoint wp, List<Waypoint> all, BuildingConfig config) {
 
-        record Candidate(Waypoint target, double dist, int priority) {}
-        List<Candidate> candidates = new ArrayList<>();
-
-        for (Waypoint other : all) {
-            if (wp.equals(other) || graph.containsEdge(wp, other)) continue;
-
-            double dist = wp.distanceTo(other);
-            double dx = Math.abs(wp.x - other.x);
-            double dy = Math.abs(wp.y - other.y);
-
-            if (config.strictAlignment) {
-                Alignment align = classify(dx, dy, config.alignThreshold);
-                if (align != Alignment.INVALID && dist <= align.maxDist) {
-                    candidates.add(new Candidate(other, dist, align.priority));
-                }
-            } else {
-                if (dist > config.searchRadius) continue;
-                boolean horiz = dy <= config.alignThreshold && dx > config.alignThreshold;
-                boolean vert = dx <= config.alignThreshold && dy > config.alignThreshold;
-                if (horiz || vert) {
-                    candidates.add(new Candidate(other, dist, 0));
-                }
-            }
-        }
+        List<Candidate> candidates = findCandidates(graph, wp, all, config);
 
         candidates.sort(Comparator.comparingInt(Candidate::priority)
                 .thenComparingDouble(Candidate::dist));
 
         int limit = config.maxNeighbors > 0 ? config.maxNeighbors : candidates.size();
+        addTopCandidateEdges(graph, wp, candidates, limit);
+    }
+
+    private List<Candidate> findCandidates(
+            SimpleWeightedGraph<Waypoint, DefaultWeightedEdge> graph,
+            Waypoint wp, List<Waypoint> all, BuildingConfig config) {
+
+        List<Candidate> candidates = new ArrayList<>();
+        for (Waypoint other : all) {
+            if (wp.equals(other) || graph.containsEdge(wp, other)) continue;
+            Candidate c = config.strictAlignment
+                    ? evaluateStrict(wp, other, config)
+                    : evaluateFlexible(wp, other, config);
+            if (c != null) {
+                candidates.add(c);
+            }
+        }
+        return candidates;
+    }
+
+    private Candidate evaluateStrict(Waypoint wp, Waypoint other, BuildingConfig config) {
+        double dist = wp.distanceTo(other);
+        double dx = Math.abs(wp.x - other.x);
+        double dy = Math.abs(wp.y - other.y);
+        Alignment align = classify(dx, dy, config.alignThreshold);
+        if (align != Alignment.INVALID && dist <= align.maxDist) {
+            return new Candidate(other, dist, align.priority);
+        }
+        return null;
+    }
+
+    private Candidate evaluateFlexible(Waypoint wp, Waypoint other, BuildingConfig config) {
+        double dist = wp.distanceTo(other);
+        if (dist > config.searchRadius) return null;
+        double dx = Math.abs(wp.x - other.x);
+        double dy = Math.abs(wp.y - other.y);
+        boolean horiz = dy <= config.alignThreshold && dx > config.alignThreshold;
+        boolean vert = dx <= config.alignThreshold && dy > config.alignThreshold;
+        return (horiz || vert) ? new Candidate(other, dist, 0) : null;
+    }
+
+    private void addTopCandidateEdges(
+            SimpleWeightedGraph<Waypoint, DefaultWeightedEdge> graph,
+            Waypoint wp, List<Candidate> candidates, int limit) {
+
         int added = 0;
         for (Candidate c : candidates) {
             if (added >= limit) break;
-            if (!graph.containsEdge(wp, c.target)) {
-                DefaultWeightedEdge edge = graph.addEdge(wp, c.target);
-                if (edge != null) {
-                    graph.setEdgeWeight(edge, c.dist);
-                    added++;
-                }
+            if (graph.containsEdge(wp, c.target)) continue;
+            DefaultWeightedEdge edge = graph.addEdge(wp, c.target);
+            if (edge != null) {
+                graph.setEdgeWeight(edge, c.dist);
+                added++;
             }
         }
     }

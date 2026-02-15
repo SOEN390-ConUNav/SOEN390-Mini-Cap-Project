@@ -165,4 +165,19 @@ class PathfindingServiceTest {
         assertNotEquals(a, b);
     }
 
+    @Test
+    void waypoint_toString_containsIdAndCoords() {
+        Waypoint wp = new Waypoint(10.5, 20.3, "test-wp");
+        String str = wp.toString();
+        assertTrue(str.contains("test-wp"));
+        assertTrue(str.contains("10.5"));
+        assertTrue(str.contains("20.3"));
+    }
+
+    @Test
+    void waypoint_notEqualToNull() {
+        Waypoint wp = new Waypoint(0, 0, "wp1");
+        assertNotEquals(null, wp);
+    }
+
 }

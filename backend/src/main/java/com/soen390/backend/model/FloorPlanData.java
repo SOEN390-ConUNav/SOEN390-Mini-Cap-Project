@@ -8,39 +8,56 @@ import java.util.Map;
  */
 public class FloorPlanData {
     
+    private static final String STAIRS_UP_1 = "Stairs-Up-1";
+    private static final String STAIRS_UP_2 = "Stairs-Up-2";
+    private static final String STAIRS_DOWN_1 = "Stairs-Down-1";
+    private static final String STAIRS_DOWN_2 = "Stairs-Down-2";
+    private static final String STAIRS_DOWN_3 = "Stairs-Down-3";
+    private static final String STAIRS_DOWN_4 = "Stairs-Down-4";
+    private static final String BATHROOM_MEN = "Bathroom-Men";
+    private static final String BATHROOM_MEN_1 = "Bathroom-Men-1";
+    private static final String BATHROOM_MEN_2 = "Bathroom-Men-2";
+    private static final String BATHROOM_WOMEN = "Bathroom-Women";
+    private static final String BATHROOM_WOMEN_1 = "Bathroom-Women-1";
+    private static final String BATHROOM_WOMEN_2 = "Bathroom-Women-2";
+    private static final String ELEVATOR = "Elevator";
+    private static final String ELEVATOR_1 = "Elevator-1";
+    private static final String ELEVATOR_2 = "Elevator-2";
+    private static final String EMERGENCY_EXIT = "Emergency-Exit";
+    private static final String EMERGENCY_EXIT_1 = "Emergency-Exit-1";
+    private static final String EMERGENCY_EXIT_2 = "Emergency-Exit-2";
+    private static final String EMERGENCY_EXIT_3 = "Emergency-Exit-3";
+    private static final String EMERGENCY_EXIT_4 = "Emergency-Exit-4";
+    private static final String EMERGENCY_EXIT_5 = "Emergency-Exit-5";
+
     private Map<String, Point> roomPoints;
     private Map<String, java.util.List<String>> roomEntranceGroups;
     private String buildingId;
     private String floor;
-    
+
     public FloorPlanData(String buildingId, String floor) {
         this.buildingId = buildingId;
         this.floor = floor;
         this.roomPoints = new HashMap<>();
         this.roomEntranceGroups = new HashMap<>();
-        
-        if ("Hall-8".equals(buildingId) && "8".equals(floor)) {
-        initializeHall8Data();
-        } else if ("Hall-9".equals(buildingId) && "9".equals(floor)) {
-            initializeHall9Data();
-        } else if ("VL-1".equals(buildingId) && "1".equals(floor)) {
-            initializeVL1Data();
-        } else if ("VL-2".equals(buildingId) && "2".equals(floor)) {
-            initializeVL2Data();
-        } else if ("LB-2".equals(buildingId) && "2".equals(floor)) {
-            initializeLB2Data();
-        } else if ("LB-3".equals(buildingId) && "3".equals(floor)) {
-            initializeLB3Data();
-        } else if ("LB-4".equals(buildingId) && "4".equals(floor)) {
-            initializeLB4Data();
-        } else if ("LB-5".equals(buildingId) && "5".equals(floor)) {
-            initializeLB5Data();
-        } else if ("Hall-2".equals(buildingId) && "2".equals(floor)) {
-            initializeHall2Data();
-        } else if ("MB-S2".equals(buildingId) && "S2".equals(floor)) {
-            initializeMBS2Data();
-        } else if ("Hall-1".equals(buildingId) && "1".equals(floor)) {
-            initializeHall1Data();
+
+        Map<String, Runnable> initializers = Map.ofEntries(
+            Map.entry("Hall-8|8",  this::initializeHall8Data),
+            Map.entry("Hall-9|9",  this::initializeHall9Data),
+            Map.entry("Hall-2|2",  this::initializeHall2Data),
+            Map.entry("Hall-1|1",  this::initializeHall1Data),
+            Map.entry("VL-1|1",   this::initializeVL1Data),
+            Map.entry("VL-2|2",   this::initializeVL2Data),
+            Map.entry("LB-2|2",   this::initializeLB2Data),
+            Map.entry("LB-3|3",   this::initializeLB3Data),
+            Map.entry("LB-4|4",   this::initializeLB4Data),
+            Map.entry("LB-5|5",   this::initializeLB5Data),
+            Map.entry("MB-S2|S2", this::initializeMBS2Data)
+        );
+
+        Runnable initializer = initializers.get(buildingId + "|" + floor);
+        if (initializer != null) {
+            initializer.run();
         }
 
         buildRoomEntranceGroups();
@@ -184,9 +201,9 @@ public class FloorPlanData {
         roomPoints.put("H9-964", new Point(299.22025, 438.94730));
         roomPoints.put("H9-992", new Point(430.42730, 377.26291));
         roomPoints.put("H9-998", new Point(286.61077, 372.49178));
-        roomPoints.put("Bathroom-Men", new Point(642.31134, 262.66810));
-        roomPoints.put("Bathroom-Women", new Point(349.65829, 267.86686));
-        roomPoints.put("Elevator", new Point(362.26783, 369.42458));
+        roomPoints.put(BATHROOM_MEN, new Point(642.31134, 262.66810));
+        roomPoints.put(BATHROOM_WOMEN, new Point(349.65829, 267.86686));
+        roomPoints.put(ELEVATOR, new Point(362.26783, 369.42458));
         roomPoints.put("Emergency-Exit-985", new Point(717.05772, 679.65243));
         roomPoints.put("Emergency-Exit-975", new Point(304.39802, 695.86185));
     }
@@ -359,10 +376,10 @@ public class FloorPlanData {
         roomPoints.put("Maisonneuve-Entrance", new Point(429.76495, 1264.0145));
         roomPoints.put("Bishop-Entrance", new Point(1099.2245, 1196.6005));
         roomPoints.put("McKay-Exit", new Point(39.324898, 625.45312));
-        roomPoints.put("Elevator-1", new Point(823.01392, 989.67657));
+        roomPoints.put(ELEVATOR_1, new Point(823.01392, 989.67657));
         roomPoints.put("Emergency-Stairs", new Point(1050.5365, 973.75934));
-        roomPoints.put("Stairs-Up-1", new Point(664.77802, 691.93091));
-        roomPoints.put("Stairs-Down-1", new Point(632.9436, 948.47906));
+        roomPoints.put(STAIRS_UP_1, new Point(664.77802, 691.93091));
+        roomPoints.put(STAIRS_DOWN_1, new Point(632.9436, 948.47906));
         roomPoints.put("Stairs-Underground", new Point(1071.1353, 1087.0525));
         roomPoints.put("Tabling-Area", new Point(782.75269, 853.91205));
         roomPoints.put("Stand", new Point(809.90564, 682.56787));
@@ -388,19 +405,19 @@ public class FloorPlanData {
         roomPoints.put("LB-245-2", new Point(867.30133, 826.11493));
         roomPoints.put("LB-231-231.25", new Point(228.61418, 629.13666));
         roomPoints.put("LB-204-2", new Point(735.38556, 500.20544));
-        roomPoints.put("Bathroom-Men-1", new Point(244.73058, 318.14975));
-        roomPoints.put("Bathroom-Men-2", new Point(893.56506, 270.39746));
-        roomPoints.put("Bathroom-Women-1", new Point(244.73058, 395.74725));
-        roomPoints.put("Bathroom-Women-2", new Point(879.23938, 757.47101));
-        roomPoints.put("Elevator-1", new Point(334.26617, 422.01102));
-        roomPoints.put("Elevator-2", new Point(383.80917, 650.02832));
-        roomPoints.put("Stairs-Down-1", new Point(174.80748, 500.772));
-        roomPoints.put("Stairs-Up-1", new Point(176.86403, 528.53552));
-        roomPoints.put("Emergency-Exit-1", new Point(201.1566, 393.35965));
-        roomPoints.put("Emergency-Exit-2", new Point(910.87531, 684.05182));
-        roomPoints.put("Emergency-Exit-3", new Point(904.90625, 339.63831));
-        roomPoints.put("Emergency-Exit-4", new Point(365.90207, 987.27899));
-        roomPoints.put("Emergency-Exit-5", new Point(198.76898, 609.43884));
+        roomPoints.put(BATHROOM_MEN_1, new Point(244.73058, 318.14975));
+        roomPoints.put(BATHROOM_MEN_2, new Point(893.56506, 270.39746));
+        roomPoints.put(BATHROOM_WOMEN_1, new Point(244.73058, 395.74725));
+        roomPoints.put(BATHROOM_WOMEN_2, new Point(879.23938, 757.47101));
+        roomPoints.put(ELEVATOR_1, new Point(334.26617, 422.01102));
+        roomPoints.put(ELEVATOR_2, new Point(383.80917, 650.02832));
+        roomPoints.put(STAIRS_DOWN_1, new Point(174.80748, 500.772));
+        roomPoints.put(STAIRS_UP_1, new Point(176.86403, 528.53552));
+        roomPoints.put(EMERGENCY_EXIT_1, new Point(201.1566, 393.35965));
+        roomPoints.put(EMERGENCY_EXIT_2, new Point(910.87531, 684.05182));
+        roomPoints.put(EMERGENCY_EXIT_3, new Point(904.90625, 339.63831));
+        roomPoints.put(EMERGENCY_EXIT_4, new Point(365.90207, 987.27899));
+        roomPoints.put(EMERGENCY_EXIT_5, new Point(198.76898, 609.43884));
         roomPoints.put("Bookshelves-1", new Point(452.45312, 728.22272));
         roomPoints.put("Bookshelves-2", new Point(397.53796, 717.47845));
         roomPoints.put("Bookshelves-3", new Point(313.97144, 840.44061));
@@ -431,18 +448,18 @@ public class FloorPlanData {
         roomPoints.put("LB-316", new Point(169.077, 318.72812));
         roomPoints.put("LB-331-331.19-1", new Point(335.99557, 906.54053));
         roomPoints.put("LB-331-331.19-2", new Point(230.95198, 992.87769));
-        roomPoints.put("Bathroom-Men-1", new Point(925.96637, 274.12057));
-        roomPoints.put("Bathroom-Men-2", new Point(314.41129, 669.11322));
-        roomPoints.put("Bathroom-Women-1", new Point(937.47803, 782.79053));
-        roomPoints.put("Bathroom-Women-2", new Point(313.6918, 708.68445));
-        roomPoints.put("Elevator-1", new Point(419.45486, 690.69751));
-        roomPoints.put("Stairs-Down-1", new Point(580.61761, 232.39095));
-        roomPoints.put("Stairs-Up-1", new Point(555.43591, 231.67146));
-        roomPoints.put("Stairs-Down-2", new Point(584.215, 833.15387));
-        roomPoints.put("Stairs-Up-2", new Point(553.99697, 833.87335));
-        roomPoints.put("Emergency-Exit-1", new Point(925.96637, 700.7702));
-        roomPoints.put("Emergency-Exit-2", new Point(246.78047, 639.61469));
-        roomPoints.put("Emergency-Exit-3", new Point(364.77463, 998.63348));
+        roomPoints.put(BATHROOM_MEN_1, new Point(925.96637, 274.12057));
+        roomPoints.put(BATHROOM_MEN_2, new Point(314.41129, 669.11322));
+        roomPoints.put(BATHROOM_WOMEN_1, new Point(937.47803, 782.79053));
+        roomPoints.put(BATHROOM_WOMEN_2, new Point(313.6918, 708.68445));
+        roomPoints.put(ELEVATOR_1, new Point(419.45486, 690.69751));
+        roomPoints.put(STAIRS_DOWN_1, new Point(580.61761, 232.39095));
+        roomPoints.put(STAIRS_UP_1, new Point(555.43591, 231.67146));
+        roomPoints.put(STAIRS_DOWN_2, new Point(584.215, 833.15387));
+        roomPoints.put(STAIRS_UP_2, new Point(553.99697, 833.87335));
+        roomPoints.put(EMERGENCY_EXIT_1, new Point(925.96637, 700.7702));
+        roomPoints.put(EMERGENCY_EXIT_2, new Point(246.78047, 639.61469));
+        roomPoints.put(EMERGENCY_EXIT_3, new Point(364.77463, 998.63348));
         roomPoints.put("WaterFountain-1", new Point(919.49109, 252.53629));
         roomPoints.put("WaterFountain-2", new Point(920.93005, 741.06091));
         roomPoints.put("WaterFountain-3", new Point(293.54645, 694.29492));
@@ -504,21 +521,21 @@ public class FloorPlanData {
         roomPoints.put("LB-451", new Point(659.99603, 721.69983));
         roomPoints.put("LB-453", new Point(659.21503, 602.97864));
         roomPoints.put("LB-459", new Point(658.43396, 313.9863));
-        roomPoints.put("Bathroom-Men-1", new Point(928.68085, 274.15222));
-        roomPoints.put("Bathroom-Men-2", new Point(337.41809, 674.83618));
-        roomPoints.put("Bathroom-Women-1", new Point(946.6452, 768.56348));
-        roomPoints.put("Bathroom-Women-2", new Point(331.95068, 713.10815));
-        roomPoints.put("Elevator-1", new Point(431.92642, 673.27411));
-        roomPoints.put("Stairs-Down-1", new Point(592.04382, 231.97495));
-        roomPoints.put("Stairs-Down-2", new Point(524.87262, 230.41283));
-        roomPoints.put("Stairs-Up-1", new Point(565.48773, 229.63176));
-        roomPoints.put("Stairs-Down-3", new Point(588.13849, 821.67554));
-        roomPoints.put("Stairs-Down-4", new Point(523.31049, 827.92407));
-        roomPoints.put("Stairs-Up-2", new Point(560.80139, 824.01874));
-        roomPoints.put("Emergency-Exit-1", new Point(910.71643, 352.25824));
-        roomPoints.put("Emergency-Exit-2", new Point(946.6452, 695.1438));
-        roomPoints.put("Emergency-Exit-3", new Point(263.21738, 622.50513));
-        roomPoints.put("Emergency-Exit-4", new Point(322.57794, 981.79297));
+        roomPoints.put(BATHROOM_MEN_1, new Point(928.68085, 274.15222));
+        roomPoints.put(BATHROOM_MEN_2, new Point(337.41809, 674.83618));
+        roomPoints.put(BATHROOM_WOMEN_1, new Point(946.6452, 768.56348));
+        roomPoints.put(BATHROOM_WOMEN_2, new Point(331.95068, 713.10815));
+        roomPoints.put(ELEVATOR_1, new Point(431.92642, 673.27411));
+        roomPoints.put(STAIRS_DOWN_1, new Point(592.04382, 231.97495));
+        roomPoints.put(STAIRS_DOWN_2, new Point(524.87262, 230.41283));
+        roomPoints.put(STAIRS_UP_1, new Point(565.48773, 229.63176));
+        roomPoints.put(STAIRS_DOWN_3, new Point(588.13849, 821.67554));
+        roomPoints.put(STAIRS_DOWN_4, new Point(523.31049, 827.92407));
+        roomPoints.put(STAIRS_UP_2, new Point(560.80139, 824.01874));
+        roomPoints.put(EMERGENCY_EXIT_1, new Point(910.71643, 352.25824));
+        roomPoints.put(EMERGENCY_EXIT_2, new Point(946.6452, 695.1438));
+        roomPoints.put(EMERGENCY_EXIT_3, new Point(263.21738, 622.50513));
+        roomPoints.put(EMERGENCY_EXIT_4, new Point(322.57794, 981.79297));
         roomPoints.put("WaterFountain-1", new Point(927.89978, 253.06358));
         roomPoints.put("WaterFountain-2", new Point(923.99451, 727.9483));
         roomPoints.put("WaterFountain-3", new Point(306.95676, 694.36273));
@@ -552,10 +569,10 @@ public class FloorPlanData {
         roomPoints.put("H1-110", new Point(522.14917, 1197.75412));
         roomPoints.put("H1-110-2", new Point(266.07758, 1198.40402));
         roomPoints.put("H1-109s", new Point(131.54250, 1028.12282));
-        roomPoints.put("Elevator", new Point(926.97113, 1126.11672));
-        roomPoints.put("Bathroom-Men", new Point(695.02002, 1009.62702));
-        roomPoints.put("Bathroom-Women", new Point(697.05622, 965.33992));
-        roomPoints.put("Emergency-Exit", new Point(1325.65465, 1004.72742));
+        roomPoints.put(ELEVATOR, new Point(926.97113, 1126.11672));
+        roomPoints.put(BATHROOM_MEN, new Point(695.02002, 1009.62702));
+        roomPoints.put(BATHROOM_WOMEN, new Point(697.05622, 965.33992));
+        roomPoints.put(EMERGENCY_EXIT, new Point(1325.65465, 1004.72742));
         roomPoints.put("Maisonneuve-Entry", new Point(511.75034, 1462.92462));
         roomPoints.put("Disability-Entrance", new Point(558.54517, 1457.07522));
         roomPoints.put("Metro-Entry", new Point(1074.26885, 1470.20732));
@@ -583,15 +600,15 @@ public class FloorPlanData {
         roomPoints.put("LB-518", new Point(418.85074, 435.29321));
         roomPoints.put("LB-505-515-1", new Point(273.46454, 577.21783));
         roomPoints.put("LB-505-515-2", new Point(358.27316, 255.29126));
-        roomPoints.put("Bathroom-Men-1", new Point(838.04492, 323.46967));
-        roomPoints.put("Bathroom-Men-2", new Point(317.59964, 681.93054));
-        roomPoints.put("Bathroom-Women-1", new Point(315.00345, 709.62317));
-        roomPoints.put("Elevator-1", new Point(414.52377, 673.27661));
-        roomPoints.put("Stairs-Down-1", new Point(548.25366, 224.00079));
-        roomPoints.put("Stairs-Down-2", new Point(552.1214, 815.20123));
-        roomPoints.put("Emergency-Exit-1", new Point(946.91241, 293.70734));
-        roomPoints.put("Emergency-Exit-2", new Point(937.51379, 744.8418));
-        roomPoints.put("Emergency-Exit-3", new Point(235.38719, 623.94916));
+        roomPoints.put(BATHROOM_MEN_1, new Point(838.04492, 323.46967));
+        roomPoints.put(BATHROOM_MEN_2, new Point(317.59964, 681.93054));
+        roomPoints.put(BATHROOM_WOMEN_1, new Point(315.00345, 709.62317));
+        roomPoints.put(ELEVATOR_1, new Point(414.52377, 673.27661));
+        roomPoints.put(STAIRS_DOWN_1, new Point(548.25366, 224.00079));
+        roomPoints.put(STAIRS_DOWN_2, new Point(552.1214, 815.20123));
+        roomPoints.put(EMERGENCY_EXIT_1, new Point(946.91241, 293.70734));
+        roomPoints.put(EMERGENCY_EXIT_2, new Point(937.51379, 744.8418));
+        roomPoints.put(EMERGENCY_EXIT_3, new Point(235.38719, 623.94916));
         roomPoints.put("WaterFountain-1", new Point(832.56238, 350.09915));
         roomPoints.put("WaterFountain-2", new Point(831.77917, 669.65271));
         roomPoints.put("WaterFountain-3", new Point(301.15714, 655.10333));

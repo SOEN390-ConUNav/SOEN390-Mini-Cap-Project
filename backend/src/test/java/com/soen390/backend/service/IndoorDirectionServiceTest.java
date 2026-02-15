@@ -238,4 +238,25 @@ class IndoorDirectionServiceTest {
         assertFalse(rooms.isEmpty());
     }
 
+  
+
+    @Test
+    void getIndoorDirections_buildingNames_coveredForAllPrefixes() {
+        assertEquals("Vanier Library Building",
+                directionService.getIndoorDirections("VL-1", "VL-101", "VL-102", "1", "1").getBuildingName());
+        assertEquals("Webster Library Building",
+                directionService.getIndoorDirections("LB-2", "LB-204", "LB-259", "2", "2").getBuildingName());
+        assertEquals("John Molson School of Business",
+                directionService.getIndoorDirections("MB-S2", "MBS2-101", "MBS2-102", "S2", "S2").getBuildingName());
+    }
+
+    @Test
+    void stairMessage_stairsDown_detected() {
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "Stairs-Down-1", "2", "2");
+
+        assertNotNull(response.getStairMessage());
+        assertTrue(response.getStairMessage().toLowerCase().contains("stairs"));
+    }
+
 }
