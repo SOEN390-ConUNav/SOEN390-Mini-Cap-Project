@@ -22,11 +22,6 @@ import { NAVIGATION_STATE } from '../../const';
 import NavigationConfigView from '../../components/navigation-config/NavigationConfigView';
 import { styles as navStyles } from '../../components/BottomNav';
 import useNavigationEndpoints from '../../hooks/useNavigationEndpoints';
-import { TransportModeApi } from '../../type';
-import {
-  getOutdoorDirections,
-  OutdoorDirectionResponse,
-} from '../../api/outdoorDirectionsApi';
 import useNavigationConfig from '../../hooks/useNavigationConfig';
 import { getAllOutdoorDirectionsInfo } from '../../api';
 import { decodePolyline } from '../../utils/polylineDecode';
