@@ -134,7 +134,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
       params.shuttleCampus &&
       (params.shuttleCampus === 'SGW' || params.shuttleCampus === 'LOYOLA')
     ) {
-      const targetCampus = params.shuttleCampus as 'SGW' | 'LOYOLA';
+      const targetCampus = params.shuttleCampus;
       const coord = SHUTTLE_STOPS[targetCampus];
 
       setCampus(targetCampus);

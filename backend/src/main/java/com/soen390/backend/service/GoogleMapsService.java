@@ -54,7 +54,6 @@ public class GoogleMapsService {
             JsonNode steps = leg.path("steps");
 
             JsonNode step1 = leg.path("steps").get(0);
-            String modeOfTransport = step1.path("travel_mode").asText();
 
             return new OutdoorDirectionResponse(distance, duration, polyline, transportMode, processSteps(steps));
 
@@ -62,8 +61,6 @@ public class GoogleMapsService {
             throw e;
         } catch (NullPointerException | JsonProcessingException e) {
             throw new RuntimeException("Map data format error: The response from the map service was incomplete or unexpected.", e);
-        } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while communicating with the Google Maps service.", e);
         }
     }
 
