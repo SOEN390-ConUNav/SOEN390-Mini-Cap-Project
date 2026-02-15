@@ -53,8 +53,6 @@ public class GoogleMapsService {
 
             JsonNode steps = leg.path("steps");
 
-            JsonNode step1 = leg.path("steps").get(0);
-
             return new OutdoorDirectionResponse(distance, duration, polyline, transportMode, processSteps(steps));
 
         } catch (GoogleMapsDirectionsApiException e) {
