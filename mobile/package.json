@@ -7,7 +7,7 @@
     "android": "expo prebuild --clean && expo run:android",
     "ios": "expo prebuild --clean && expo run:ios",
     "web": "expo start --web",
-    "test": "jest --coverage"
+    "test": "jest --coverage --coverageDirectory='coverage'"
   },
   "jest": {
     "preset": "jest-expo/android",
