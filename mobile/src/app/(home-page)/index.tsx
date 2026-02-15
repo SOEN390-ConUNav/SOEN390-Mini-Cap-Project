@@ -28,6 +28,7 @@ import {
   OutdoorDirectionResponse,
 } from '../../api/outdoorDirectionsApi';
 import useNavigationConfig from '../../hooks/useNavigationConfig';
+import { getAllOutdoorDirectionsInfo } from '../../api';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -343,37 +344,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
       return;
     }
     setShowBuildingPopup(true);
-  };
-  const getAllOutdoorDirectionsInfo = async (
-    origin: { latitude: number; longitude: number },
-    destination: { latitude: number; longitude: number },
-  ) => {
-    const modes: TransportModeApi[] = [
-      'walking',
-      'bicycling',
-      'transit',
-      'driving',
-    ];
-
-    const originStr = `${origin.latitude},${origin.longitude}`;
-    const destStr = `${destination.latitude},${destination.longitude}`;
-
-    try {
-      // Run all requests in parallel
-      const results = await Promise.all(
-        modes.map((mode) => getOutdoorDirections(originStr, destStr, mode)),
-      );
-
-      // Filter out nulls if a specific mode failed
-      const validResults = results.filter(
-        (res): res is OutdoorDirectionResponse => res !== null,
-      );
-
-      return validResults;
-    } catch (error) {
-      console.error('Error fetching all transport modes:', error);
-      return [];
-    }
   };
 
   const onPressDirections = async () => {
