@@ -5,6 +5,7 @@ import NavigationTransportCard from './NavigationTransportCard';
 import NavigationPathRow from './NavigationPathRow';
 import useNavigationConfig from '../../hooks/useNavigationConfig';
 import { OutdoorDirectionResponse } from '../../api/outdoorDirectionsApi';
+import { TRANSPORT_MODE_API_MAP } from '../../type';
 
 interface NavigationConfigViewProps {
   readonly durations: OutdoorDirectionResponse[];
@@ -20,20 +21,13 @@ export default function NavigationConfigView({
   const { navigationMode, setNavigationMode } = useNavigationConfig();
   const getDurationForMode = (mode: string) => {
     const route = durations.find(
-      (d) => d.transportMode?.toLowerCase() === mode.toLowerCase(),
-    );
+          (d) => d.transportMode?.toLowerCase() === mode.toLowerCase(),
+        );
 
     return route ? route.duration : 'N/A';
   };
   const getSelectedDuration = () => {
-    const modeMapping: Record<string, string> = {
-      WALK: 'walking',
-      BIKE: 'bicycling',
-      BUS: 'transit',
-      SHUTTLE: 'shuttle',
-    };
-
-    const apiKey = modeMapping[navigationMode] || 'walking';
+    const apiKey = TRANSPORT_MODE_API_MAP[navigationMode] || 'walking';
     return getDurationForMode(apiKey);
   };
   const handleGo = () => {
@@ -53,21 +47,21 @@ export default function NavigationConfigView({
       <View style={styles.transportRow}>
         <NavigationTransportCard
           mode="WALK"
-          duration={getDurationForMode('walking')}
-          isSelected={navigationMode === 'WALK'}
-          onSelect={() => setNavigationMode('WALK')}
+          duration={getDurationForMode(TRANSPORT_MODE_API_MAP.WALK)}
+          isSelected={navigationMode === "WALK"}
+          onSelect={() => setNavigationMode("WALK")}
         />
         <NavigationTransportCard
           mode="BIKE"
-          duration={getDurationForMode('bicycling')}
-          isSelected={navigationMode === 'BIKE'}
-          onSelect={() => setNavigationMode('BIKE')}
+          duration={getDurationForMode(TRANSPORT_MODE_API_MAP.BIKE)}
+          isSelected={navigationMode === "BIKE"}
+          onSelect={() => setNavigationMode("BIKE")}
         />
         <NavigationTransportCard
           mode="BUS"
-          duration={getDurationForMode('transit')}
-          isSelected={navigationMode === 'BUS'}
-          onSelect={() => setNavigationMode('BUS')}
+          duration={getDurationForMode(TRANSPORT_MODE_API_MAP.BUS)}
+          isSelected={navigationMode === "BUS"}
+          onSelect={() => setNavigationMode("BUS")}
         />
         <NavigationTransportCard
           mode="SHUTTLE"
@@ -99,5 +93,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 5,
     backgroundColor: '#D9D9D9',
-  },
+  }
 });

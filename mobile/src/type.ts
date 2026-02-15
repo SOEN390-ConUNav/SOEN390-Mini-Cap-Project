@@ -1,10 +1,10 @@
 import {NAVIGATION_STATE} from "./const";
 
 export type NavigationState = typeof NAVIGATION_STATE[keyof typeof NAVIGATION_STATE];
-export type TransportMode = "WALK" | "BIKE" | "BUS" | "SHUTTLE";
+export type TransportMode = "WALK" | "BIKE" | "BUS" | "SHUTTLE" | "CAR";
 export type Coordinate = {latitude: number, longitude: number};
 
-export type TransportModeApi = "walking" | "driving" | "bicycling" | "transit";
+export type TransportModeApi = "walking" | "driving" | "bicycling" | "transit" | "shuttle";
 
 export type ManeuverTypeApi =
   | "TURN_SLIGHT_LEFT" | "TURN_SHARP_LEFT" | "TURN_LEFT"
@@ -15,3 +15,11 @@ export type ManeuverTypeApi =
   | "MERGE" | "FORK_LEFT" | "FORK_RIGHT"
   | "FERRY" | "FERRY_TRAIN"
   | "ROUNDABOUT_LEFT" | "ROUNDABOUT_RIGHT";
+
+export const TRANSPORT_MODE_API_MAP: Record<TransportMode, TransportModeApi> = {
+  WALK: 'walking',
+  BIKE: 'bicycling',
+  BUS: 'transit',
+  SHUTTLE: 'shuttle',
+  CAR: 'driving',
+};
