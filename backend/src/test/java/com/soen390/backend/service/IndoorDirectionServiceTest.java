@@ -1,5 +1,6 @@
 package com.soen390.backend.service;
 
+import com.soen390.backend.enums.IndoorManeuverType;
 import com.soen390.backend.object.IndoorDirectionResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -257,6 +258,51 @@ class IndoorDirectionServiceTest {
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().toLowerCase().contains("stairs"));
+    }
+
+    @Test
+    void stairMessage_genericStairs_detected() {
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "LB-2", "LB-204", "Arrival-Stairs", "2", "2");
+
+        assertNotNull(response.getStairMessage());
+        assertTrue(response.getStairMessage().toLowerCase().contains("stairs"));
+    }
+
+
+
+    @Test
+    void getBuildingName_unknownPrefix_returnsDefault() {
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "XX-1", "room1", "room2", "1", "1");
+
+        assertEquals("Building XX-1", response.getBuildingName());
+    }
+
+    @Test
+    void convertBuildingIdForPathfinding_nullFloor_returnsOriginal() {
+        List<String> rooms = directionService.getAvailableRooms("H", null);
+        assertNotNull(rooms);
+    }
+
+   
+
+    @Test
+    void indoorManeuverType_fromString_returnsCorrectType() {
+        assertEquals(IndoorManeuverType.ELEVATOR_UP, IndoorManeuverType.fromString("elevator-up"));
+        assertEquals(IndoorManeuverType.STAIRS_DOWN, IndoorManeuverType.fromString("stairs-down"));
+        assertEquals(IndoorManeuverType.ENTER_ROOM, IndoorManeuverType.fromString("enter-room"));
+    }
+
+    @Test
+    void indoorManeuverType_fromString_unknownReturnsStraight() {
+        assertEquals(IndoorManeuverType.STRAIGHT, IndoorManeuverType.fromString("nonexistent"));
+    }
+
+    @Test
+    void indoorManeuverType_getValue_returnsValue() {
+        assertEquals("elevator-up", IndoorManeuverType.ELEVATOR_UP.getValue());
+        assertEquals("straight", IndoorManeuverType.STRAIGHT.getValue());
     }
 
 }

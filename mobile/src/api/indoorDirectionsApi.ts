@@ -94,7 +94,7 @@ export async function getAvailableRooms(
     }
 
     const rooms = await response.json();
-    return Array.isArray(rooms) ? rooms.sort() : [];
+    return Array.isArray(rooms) ? rooms.sort((a: string, b: string) => a.localeCompare(b)) : [];
   } catch (error: any) {
     console.warn("Failed to fetch rooms from backend, using fallback:", error);
     return [];

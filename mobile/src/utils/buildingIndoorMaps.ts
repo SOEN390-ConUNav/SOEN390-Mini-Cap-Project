@@ -9,7 +9,7 @@ export function hasIndoorMaps(buildingId: BuildingId): boolean {
 
 export function getAvailableFloors(buildingId: BuildingId): string[] {
   const floorPlans = getBuildingFloorPlans(buildingId);
-  return floorPlans.map(plan => plan.floorNumber).sort();
+  return floorPlans.map(plan => plan.floorNumber).sort((a, b) => a.localeCompare(b));
 }
 
 
