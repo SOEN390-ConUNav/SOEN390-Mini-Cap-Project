@@ -189,4 +189,18 @@ class PathfindingServiceTest {
         assertFalse(all.isEmpty());
     }
 
+    @Test
+    void findPath_lb2_returnsConnectedPath() {
+        service.setBuilding("LB-2");
+        List<Waypoint> wps = service.getWaypointsForBuilding("LB-2");
+        Waypoint start = wps.get(0);
+        Waypoint end = wps.get(wps.size() / 2);
+
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
+        assertNotNull(path);
+        assertFalse(path.isEmpty());
+        assertEquals(start.id, path.get(0).id);
+        assertEquals(end.id, path.get(path.size() - 1).id);
+    }
+
 }

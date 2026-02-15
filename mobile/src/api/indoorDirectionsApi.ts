@@ -1,23 +1,10 @@
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+
 import { IndoorDirectionResponse, RoutePoint } from "../types/indoorDirections";
 
 
 const getDefaultApiUrl = () => {
- 
-  const envUrl = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-  
-
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8080';
-  } else if (Platform.OS === 'ios') {
-    return 'http://localhost:8080';
-  }
-
-  return 'http://localhost:8080';
+  return (Constants.expoConfig?.extra as any)?.API_BASE_URL;
 };
 
 const API_BASE_URL = getDefaultApiUrl();
