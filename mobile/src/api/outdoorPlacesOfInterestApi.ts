@@ -1,7 +1,11 @@
-import Constants from "expo-constants";
+import Constants from 'expo-constants';
+import { TransportModeApi } from '../type';
+import {
+  getOutdoorDirections,
+  OutdoorDirectionResponse,
+} from './outdoorDirectionsApi';
 
-const API_BASE_URL =
-    (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
 
 export interface NearbyPlace {
   id: string;
@@ -17,7 +21,7 @@ export interface NearbyPlace {
 export async function getNearbyPlaces(
   latitude: number,
   longitude: number,
-  placeType: string
+  placeType: string,
 ): Promise<NearbyPlace[]> {
   try {
     const response = await fetch(
@@ -25,7 +29,7 @@ export async function getNearbyPlaces(
         `?latitude=${latitude}` +
         `&longitude=${longitude}` +
         `&placeType=${placeType}`,
-      { method: "POST" }
+      { method: 'POST' },
     );
 
     if (!response.ok) {
@@ -36,8 +40,8 @@ export async function getNearbyPlaces(
 
     return (json.places ?? []).map((p: any, index: number) => ({
       id: index.toString(),
-      name: p.displayName?.text ?? "Unknown",
-      address: p.formattedAddress ?? "",
+      name: p.displayName?.text ?? 'Unknown',
+      address: p.formattedAddress ?? '',
       location: p.location,
       rating: p.rating,
     }));
@@ -45,3 +49,32 @@ export async function getNearbyPlaces(
     return [];
   }
 }
+export const getAllOutdoorDirectionsInfo = async (
+  origin: { latitude: number; longitude: number },
+  destination: { latitude: number; longitude: number },
+) => {
+  const modes: TransportModeApi[] = [
+    'walking',
+    'bicycling',
+    'transit',
+    'driving',
+  ];
+
+  const originStr = `${origin.latitude},${origin.longitude}`;
+  const destStr = `${destination.latitude},${destination.longitude}`;
+
+  try {
+    const results = await Promise.all(
+      modes.map((mode) => getOutdoorDirections(originStr, destStr, mode)),
+    );
+
+    const validResults = results.filter(
+      (res): res is OutdoorDirectionResponse => res !== null,
+    );
+
+    return validResults;
+  } catch (error) {
+    console.error('Error fetching all transport modes:', error);
+    return [];
+  }
+};
