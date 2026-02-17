@@ -11,6 +11,12 @@ interface RoomListModalProps {
   onClose: () => void;
 }
 
+function getModalTitle(selectingFor: 'start' | 'end' | null): string {
+  if (selectingFor === 'start') return 'Select Start Room';
+  if (selectingFor === 'end') return 'Select End Room';
+  return 'All Rooms';
+}
+
 export default function RoomListModal({
   visible,
   selectingFor,
@@ -20,6 +26,8 @@ export default function RoomListModal({
   onSelectRoom,
   onClose,
 }: RoomListModalProps) {
+  const modalTitle = getModalTitle(selectingFor);
+
   return (
     <Modal
       visible={visible}
@@ -30,9 +38,7 @@ export default function RoomListModal({
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>
-            {selectingFor === 'start' ? 'Select Start Room' : 
-             selectingFor === 'end' ? 'Select End Room' : 
-             'All Rooms'}
+            {modalTitle}
           </Text>
           <TextInput
             style={styles.searchInput}

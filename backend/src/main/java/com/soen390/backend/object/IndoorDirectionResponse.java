@@ -5,10 +5,7 @@ import java.util.List;
 public class IndoorDirectionResponse {
     private String distance;
     private String duration;
-    private String buildingName;
-    private String buildingId;
-    private String startFloor;
-    private String endFloor;
+    private BuildingInfo buildingInfo;
     private List<IndoorRouteStep> steps;
     private List<RoutePoint> routePoints; 
     private String stairMessage; // e.g. "You need to go up/down the stairs" or null
@@ -16,18 +13,12 @@ public class IndoorDirectionResponse {
     public IndoorDirectionResponse(
             String distance,
             String duration,
-            String buildingName,
-            String buildingId,
-            String startFloor,
-            String endFloor,
+            BuildingInfo buildingInfo,
             List<IndoorRouteStep> steps,
             List<RoutePoint> routePoints) {
         this.distance = distance;
         this.duration = duration;
-        this.buildingName = buildingName;
-        this.buildingId = buildingId;
-        this.startFloor = startFloor;
-        this.endFloor = endFloor;
+        this.buildingInfo = buildingInfo;
         this.steps = steps;
         this.routePoints = routePoints;
     }
@@ -49,19 +40,19 @@ public class IndoorDirectionResponse {
     }
 
     public String getBuildingName() {
-        return buildingName;
+        return buildingInfo.name();
     }
 
     public String getBuildingId() {
-        return buildingId;
+        return buildingInfo.id();
     }
 
     public String getStartFloor() {
-        return startFloor;
+        return buildingInfo.startFloor();
     }
 
     public String getEndFloor() {
-        return endFloor;
+        return buildingInfo.endFloor();
     }
 
     public List<IndoorRouteStep> getSteps() {
@@ -71,6 +62,11 @@ public class IndoorDirectionResponse {
     public List<RoutePoint> getRoutePoints() {
         return routePoints;
     }
+
+    /**
+     * Groups the four building-related fields that were previously separate constructor parameters.
+     */
+    public record BuildingInfo(String name, String id, String startFloor, String endFloor) {}
 
     public static class RoutePoint {
         private double x;

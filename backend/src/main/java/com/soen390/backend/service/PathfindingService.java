@@ -144,12 +144,12 @@ public class PathfindingService {
     }
 
     public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end) {
-        if (start == null || end == null) return null;
+        if (start == null || end == null) return Collections.emptyList();
 
         Graph<Waypoint, DefaultWeightedEdge> graph = graphs.get(currentBuildingId);
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
             log.error("Graph missing or vertices not found for {}", currentBuildingId);
-            return null;
+            return Collections.emptyList();
         }
 
         GraphPath<Waypoint, DefaultWeightedEdge> path =
@@ -157,7 +157,7 @@ public class PathfindingService {
 
         if (path == null) {
             log.error("No path found between waypoints: {} -> {}", start.id, end.id);
-            return null;
+            return Collections.emptyList();
         }
 
         return path.getVertexList();

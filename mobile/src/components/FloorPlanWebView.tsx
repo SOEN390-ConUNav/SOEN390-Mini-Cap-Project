@@ -486,10 +486,10 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
     }
     
     if (!routePoints || routePoints.length === 0) return;
-    
-      const pointsJson = JSON.stringify(routePoints);
-      webViewRef.current.injectJavaScript(`
-        (function() {
+
+    const pointsJson = JSON.stringify(routePoints);
+    webViewRef.current.injectJavaScript(`
+      (function() {
         if (typeof window.drawRouteFromPoints === 'function') {
           try {
             var result = window.drawRouteFromPoints(${pointsJson});

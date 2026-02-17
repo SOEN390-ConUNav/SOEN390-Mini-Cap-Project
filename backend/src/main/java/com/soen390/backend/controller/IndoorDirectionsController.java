@@ -4,7 +4,6 @@ import com.soen390.backend.exception.IndoorResourceNotFoundException;
 import com.soen390.backend.exception.InvalidIndoorRequestException;
 import com.soen390.backend.object.IndoorDirectionResponse;
 import com.soen390.backend.service.IndoorDirectionService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,8 +21,11 @@ public class IndoorDirectionsController {
     private static final Set<String> VALID_SHORT_CODES = Set.of(
             "H", "VL", "LB", "MB", "CC");
 
-    @Autowired
-    private IndoorDirectionService indoorDirectionService;
+    private final IndoorDirectionService indoorDirectionService;
+
+    public IndoorDirectionsController(IndoorDirectionService indoorDirectionService) {
+        this.indoorDirectionService = indoorDirectionService;
+    }
 
     @GetMapping
     public IndoorDirectionResponse getIndoorDirections(

@@ -22,7 +22,7 @@ export default function DirectionsPanel({ routeData, onClose }: DirectionsPanelP
       </View>
       <ScrollView style={styles.directionsList}>
         {routeData.steps.map((step, index) => (
-          <View key={index} style={styles.directionStep}>
+          <View key={`step-${step.instruction}-${step.floor ?? index}`} style={styles.directionStep}>
             <View style={styles.directionStepNumber}>
               <Text style={styles.directionStepNumberText}>{index + 1}</Text>
             </View>

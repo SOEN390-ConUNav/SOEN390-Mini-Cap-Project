@@ -28,7 +28,8 @@ class IndoorDirectionsControllerTest {
     @Test
     void getIndoorDirections_returnsOkWithRoute() throws Exception {
         IndoorDirectionResponse mockResponse = new IndoorDirectionResponse(
-                "—", "—", "Hall Building", "Hall-8", "8", "8",
+                "—", "—",
+                new IndoorDirectionResponse.BuildingInfo("Hall Building", "Hall-8", "8", "8"),
                 List.of(),
                 List.of(
                         new IndoorDirectionResponse.RoutePoint(100, 200, "H8-843"),
@@ -162,7 +163,8 @@ class IndoorDirectionsControllerTest {
     @Test
     void getIndoorDirections_emptyRoute_returns404() throws Exception {
         IndoorDirectionResponse emptyRouteResponse = new IndoorDirectionResponse(
-                "—", "—", "Hall Building", "Hall-8", "8", "8",
+                "—", "—",
+                new IndoorDirectionResponse.BuildingInfo("Hall Building", "Hall-8", "8", "8"),
                 List.of(), List.of());
 
         when(indoorDirectionService.getIndoorDirections(

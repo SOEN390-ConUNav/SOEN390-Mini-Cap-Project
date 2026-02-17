@@ -4,7 +4,6 @@ import com.soen390.backend.enums.IndoorManeuverType;
 import com.soen390.backend.object.IndoorDirectionResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -18,8 +17,7 @@ class IndoorDirectionServiceTest {
     @BeforeEach
     void setUp() {
         pathfindingService = new PathfindingService();
-        directionService = new IndoorDirectionService();
-        ReflectionTestUtils.setField(directionService, "pathfindingService", pathfindingService);
+        directionService = new IndoorDirectionService(pathfindingService);
     }
 
 

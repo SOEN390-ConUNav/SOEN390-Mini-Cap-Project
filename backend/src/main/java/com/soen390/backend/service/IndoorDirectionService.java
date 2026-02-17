@@ -5,7 +5,6 @@ import com.soen390.backend.model.FloorPlanData;
 import com.soen390.backend.object.IndoorDirectionResponse;
 import com.soen390.backend.object.IndoorRouteStep;
 import com.soen390.backend.enums.IndoorManeuverType;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -21,8 +20,11 @@ public class IndoorDirectionService {
     private static final String MSG_STAIRS_DOWN_GENERIC = "You will need to go down the stairs.";
     private static final String MSG_STAIRS_INVOLVED = "This route involves stairs.";
 
-    @Autowired
-    private PathfindingService pathfindingService;
+    private final PathfindingService pathfindingService;
+
+    public IndoorDirectionService(PathfindingService pathfindingService) {
+        this.pathfindingService = pathfindingService;
+    }
 
     private String detectStairMessageFromRoute(List<IndoorDirectionResponse.RoutePoint> routePoints) {
         for (IndoorDirectionResponse.RoutePoint rp : routePoints) {
@@ -41,7 +43,7 @@ public class IndoorDirectionService {
             String destinationFloor) {
 
         List<IndoorRouteStep> steps = generatePlaceholderSteps(
-                origin, destination, originFloor, destinationFloor);
+                destination, originFloor, destinationFloor);
 
         String buildingName = getBuildingName(buildingId);
         pathfindingService.setBuilding(buildingId);
@@ -50,15 +52,17 @@ public class IndoorDirectionService {
                 buildingId, origin, destination,
                 originFloor != null ? originFloor : "1");
 
-        String distance = calculateDistance(routePoints);
-        String duration = calculateDuration(routePoints);
+        String distance = calculateDistance();
+        String duration = calculateDuration();
        
 
-        IndoorDirectionResponse response = new IndoorDirectionResponse(
-                distance, duration, buildingName, buildingId,
+        IndoorDirectionResponse.BuildingInfo buildingInfo = new IndoorDirectionResponse.BuildingInfo(
+                buildingName, buildingId,
                 originFloor != null ? originFloor : "1",
-                destinationFloor != null ? destinationFloor : "1",
-                steps, routePoints);
+                destinationFloor != null ? destinationFloor : "1");
+
+        IndoorDirectionResponse response = new IndoorDirectionResponse(
+                distance, duration, buildingInfo, steps, routePoints);
 
         String effectiveFloor = originFloor != null ? originFloor : "1";
         String stairMsg = detectStairMessage(buildingId, origin, destination, effectiveFloor);
@@ -128,7 +132,7 @@ public class IndoorDirectionService {
      *  placeholder step-by-step text directions.
      */
     private List<IndoorRouteStep> generatePlaceholderSteps(
-            String origin, String destination,
+            String destination,
             String originFloor, String destinationFloor) {
 
         List<IndoorRouteStep> steps = new ArrayList<>();
@@ -337,7 +341,7 @@ public class IndoorDirectionService {
         List<PathfindingService.Waypoint> waypointPath =
                 pathfindingService.findPathThroughWaypoints(startWp, endWp);
 
-        if (waypointPath == null || waypointPath.isEmpty()) {
+        if (waypointPath.isEmpty()) {
             return new ArrayList<>();
         }
 
@@ -352,11 +356,11 @@ public class IndoorDirectionService {
         return routePoints;
     }
 
-    private String calculateDistance(List<IndoorDirectionResponse.RoutePoint> routePoints) {
+    private String calculateDistance() {
         return "—";
     }
 
-    private String calculateDuration(List<IndoorDirectionResponse.RoutePoint> routePoints) {
+    private String calculateDuration() {
         return "—";
     }
 

@@ -108,16 +108,16 @@ class PathfindingServiceTest {
     }
 
     @Test
-    void findPath_returnsNullForNullInput() {
+    void findPath_returnsEmptyForNullInput() {
         service.setBuilding("Hall-8");
-        assertNull(service.findPathThroughWaypoints(null, null));
+        assertTrue(service.findPathThroughWaypoints(null, null).isEmpty());
     }
 
     @Test
-    void findPath_returnsNullWhenGraphMissing() {
+    void findPath_returnsEmptyWhenGraphMissing() {
         service.setBuilding("Unknown-99");
         Waypoint fake = new Waypoint(0, 0, "fake");
-        assertNull(service.findPathThroughWaypoints(fake, fake));
+        assertTrue(service.findPathThroughWaypoints(fake, fake).isEmpty());
     }
 
     @ParameterizedTest
