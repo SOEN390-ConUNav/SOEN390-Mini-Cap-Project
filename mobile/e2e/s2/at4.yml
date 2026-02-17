@@ -6,3 +6,4 @@ appId: com.soen390.conunav
 - tapOn: "Search"
 - inputText: "Mcdona"
 - pressKey: Enter
+- assertVisible: "Mcdonald's"
