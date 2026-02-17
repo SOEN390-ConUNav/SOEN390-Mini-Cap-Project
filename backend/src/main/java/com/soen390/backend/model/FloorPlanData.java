@@ -40,40 +40,40 @@ public class FloorPlanData {
     private static final Map<String, String> CONTAINS_TO_POI_TYPE = new LinkedHashMap<>();
 
     static {
-        PREFIX_TO_POI_TYPE.put("bathroom-men", TYPE_BATHROOM_MEN);
-        PREFIX_TO_POI_TYPE.put("bathroom-women", TYPE_BATHROOM_WOMEN);
+        PREFIX_TO_POI_TYPE.put(TYPE_BATHROOM_MEN, TYPE_BATHROOM_MEN);
+        PREFIX_TO_POI_TYPE.put(TYPE_BATHROOM_WOMEN, TYPE_BATHROOM_WOMEN);
         PREFIX_TO_POI_TYPE.put("bathroom", TYPE_BATHROOM_MEN);
-        PREFIX_TO_POI_TYPE.put("elevator", TYPE_ELEVATOR);
-        PREFIX_TO_POI_TYPE.put("stairs-down", TYPE_STAIRS_DOWN);
-        PREFIX_TO_POI_TYPE.put("stairs-up", TYPE_STAIRS_UP);
+        PREFIX_TO_POI_TYPE.put(TYPE_ELEVATOR, TYPE_ELEVATOR);
+        PREFIX_TO_POI_TYPE.put(TYPE_STAIRS_DOWN, TYPE_STAIRS_DOWN);
+        PREFIX_TO_POI_TYPE.put(TYPE_STAIRS_UP, TYPE_STAIRS_UP);
         PREFIX_TO_POI_TYPE.put("stairs-underground", TYPE_STAIRS);
-        PREFIX_TO_POI_TYPE.put("stairs", TYPE_STAIRS);
-        PREFIX_TO_POI_TYPE.put("emergency-exit", TYPE_EMERGENCY_EXIT);
+        PREFIX_TO_POI_TYPE.put(TYPE_STAIRS, TYPE_STAIRS);
+        PREFIX_TO_POI_TYPE.put(TYPE_EMERGENCY_EXIT, TYPE_EMERGENCY_EXIT);
         PREFIX_TO_POI_TYPE.put("emergency-stairs", TYPE_EMERGENCY_EXIT);
         PREFIX_TO_POI_TYPE.put("maisonneuve", TYPE_EMERGENCY_EXIT);
         PREFIX_TO_POI_TYPE.put("bishop", TYPE_EMERGENCY_EXIT);
         PREFIX_TO_POI_TYPE.put("mckay", TYPE_EMERGENCY_EXIT);
         PREFIX_TO_POI_TYPE.put("waterfountain", TYPE_WATER_FOUNTAIN);
-        PREFIX_TO_POI_TYPE.put("computer-station", TYPE_COMPUTER_STATION);
+        PREFIX_TO_POI_TYPE.put(TYPE_COMPUTER_STATION, TYPE_COMPUTER_STATION);
         PREFIX_TO_POI_TYPE.put("computer-area", TYPE_COMPUTER_STATION);
-        PREFIX_TO_POI_TYPE.put("study-area", TYPE_STUDY_AREA);
+        PREFIX_TO_POI_TYPE.put(TYPE_STUDY_AREA, TYPE_STUDY_AREA);
         PREFIX_TO_POI_TYPE.put("sitting-area", TYPE_STUDY_AREA);
         PREFIX_TO_POI_TYPE.put("tabling-area", TYPE_STUDY_AREA);
         PREFIX_TO_POI_TYPE.put("entrance", TYPE_ENTRANCE_EXIT);
         PREFIX_TO_POI_TYPE.put("metro", TYPE_ENTRANCE_EXIT);
         PREFIX_TO_POI_TYPE.put("couch-area", TYPE_STUDY_AREA);
         PREFIX_TO_POI_TYPE.put("stand", TYPE_STUDY_AREA);
-        PREFIX_TO_POI_TYPE.put("printer", TYPE_PRINTER);
+        PREFIX_TO_POI_TYPE.put(TYPE_PRINTER, TYPE_PRINTER);
         PREFIX_TO_POI_TYPE.put("shelve", TYPE_BOOKSHELF);
         PREFIX_TO_POI_TYPE.put("disability", TYPE_ENTRANCE_EXIT);
         PREFIX_TO_POI_TYPE.put("art-showcase", TYPE_ENTRANCE_EXIT);
 
-        CONTAINS_TO_POI_TYPE.put("emergency-exit", TYPE_EMERGENCY_EXIT);
-        CONTAINS_TO_POI_TYPE.put("bathroom-men", TYPE_BATHROOM_MEN);
-        CONTAINS_TO_POI_TYPE.put("bathroom-women", TYPE_BATHROOM_WOMEN);
+        CONTAINS_TO_POI_TYPE.put(TYPE_EMERGENCY_EXIT, TYPE_EMERGENCY_EXIT);
+        CONTAINS_TO_POI_TYPE.put(TYPE_BATHROOM_MEN, TYPE_BATHROOM_MEN);
+        CONTAINS_TO_POI_TYPE.put(TYPE_BATHROOM_WOMEN, TYPE_BATHROOM_WOMEN);
         CONTAINS_TO_POI_TYPE.put("bathroom", TYPE_BATHROOM_MEN);
-        CONTAINS_TO_POI_TYPE.put("elevator", TYPE_ELEVATOR);
-        CONTAINS_TO_POI_TYPE.put("stairs", TYPE_STAIRS);
+        CONTAINS_TO_POI_TYPE.put(TYPE_ELEVATOR, TYPE_ELEVATOR);
+        CONTAINS_TO_POI_TYPE.put(TYPE_STAIRS, TYPE_STAIRS);
     }
 
     private Map<String, Point> roomPoints;
