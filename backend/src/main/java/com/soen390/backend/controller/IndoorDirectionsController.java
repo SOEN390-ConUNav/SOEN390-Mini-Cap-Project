@@ -1,15 +1,23 @@
 package com.soen390.backend.controller;
 
+import com.soen390.backend.exception.IndoorResourceNotFoundException;
+import com.soen390.backend.exception.InvalidIndoorRequestException;
 import com.soen390.backend.object.IndoorDirectionResponse;
 import com.soen390.backend.service.IndoorDirectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/directions/indoor")
 public class IndoorDirectionsController {
+
+    private static final Set<String> VALID_BUILDING_PREFIXES = Set.of(
+            "Hall-", "VL-", "LB-", "MB-", "CC-");
+    private static final Set<String> VALID_SHORT_CODES = Set.of(
+            "H", "VL", "LB", "MB", "CC");
 
     @Autowired
     private IndoorDirectionService indoorDirectionService;
@@ -22,45 +30,110 @@ public class IndoorDirectionsController {
             @RequestParam(required = false) String originFloor,
             @RequestParam(required = false) String destinationFloor) {
 
-        return indoorDirectionService.getIndoorDirections(
-                buildingId,
-                origin,
-                destination,
-                originFloor,
-                destinationFloor
-        );
+        validateNotBlank(buildingId, "buildingId");
+        validateNotBlank(origin, "origin");
+        validateNotBlank(destination, "destination");
+        validateBuildingId(buildingId);
+
+        if (origin.trim().equalsIgnoreCase(destination.trim())) {
+            throw new InvalidIndoorRequestException(
+                    "origin and destination must be different.");
+        }
+
+        IndoorDirectionResponse response = indoorDirectionService.getIndoorDirections(
+                buildingId, origin, destination, originFloor, destinationFloor);
+
+        if (response.getRoutePoints() == null || response.getRoutePoints().isEmpty()) {
+            throw new IndoorResourceNotFoundException(
+                    "No route found from '" + origin + "' to '" + destination
+                    + "' in building '" + buildingId + "'.");
+        }
+
+        return response;
     }
     
     @GetMapping("/rooms")
     public List<String> getAvailableRooms(
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
-        
-        return indoorDirectionService.getAvailableRooms(buildingId, floor);
+
+        validateNotBlank(buildingId, "buildingId");
+        validateBuildingId(buildingId);
+
+        List<String> rooms = indoorDirectionService.getAvailableRooms(buildingId, floor);
+        if (rooms.isEmpty()) {
+            throw new IndoorResourceNotFoundException(
+                    "No rooms found for building '" + buildingId
+                    + "'" + (floor != null ? " floor '" + floor + "'" : "") + ".");
+        }
+        return rooms;
     }
     
     @GetMapping("/waypoints")
     public List<WaypointResponse> getWaypoints(
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
-        
-        return indoorDirectionService.getWaypoints(buildingId, floor);
+
+        validateNotBlank(buildingId, "buildingId");
+        validateBuildingId(buildingId);
+
+        List<WaypointResponse> waypoints = indoorDirectionService.getWaypoints(buildingId, floor);
+        if (waypoints.isEmpty()) {
+            throw new IndoorResourceNotFoundException(
+                    "No waypoints found for building '" + buildingId
+                    + "'" + (floor != null ? " floor '" + floor + "'" : "") + ".");
+        }
+        return waypoints;
     }
     
     @GetMapping("/room-points")
     public List<RoomPointResponse> getRoomPoints(
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
-        
-        return indoorDirectionService.getRoomPoints(buildingId, floor);
+
+        validateNotBlank(buildingId, "buildingId");
+        validateBuildingId(buildingId);
+
+        List<RoomPointResponse> roomPoints = indoorDirectionService.getRoomPoints(buildingId, floor);
+        if (roomPoints.isEmpty()) {
+            throw new IndoorResourceNotFoundException(
+                    "No room points found for building '" + buildingId
+                    + "'" + (floor != null ? " floor '" + floor + "'" : "") + ".");
+        }
+        return roomPoints;
     }
 
     @GetMapping("/pois")
     public List<PoiResponse> getPointsOfInterest(
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
-        
+
+        validateNotBlank(buildingId, "buildingId");
+        validateBuildingId(buildingId);
+
         return indoorDirectionService.getPointsOfInterest(buildingId, floor);
+    }
+
+    private void validateNotBlank(String value, String paramName) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new InvalidIndoorRequestException(
+                    "'" + paramName + "' must not be blank.");
+        }
+    }
+
+    private void validateBuildingId(String buildingId) {
+        if (VALID_SHORT_CODES.contains(buildingId)) {
+            return;
+        }
+        for (String prefix : VALID_BUILDING_PREFIXES) {
+            if (buildingId.startsWith(prefix)) {
+                return;
+            }
+        }
+        throw new InvalidIndoorRequestException(
+                "Unknown building ID '" + buildingId
+                + "'. Valid prefixes: " + VALID_BUILDING_PREFIXES
+                + ", valid short codes: " + VALID_SHORT_CODES + ".");
     }
     
     public static class PoiResponse {

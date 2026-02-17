@@ -287,6 +287,85 @@ class IndoorDirectionServiceTest {
 
    
 
+
+
+    @Test
+    void stairMessage_H_buildingId_floor2_entranceOrigin_goUp() {
+ 
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "H", "McKay-Entrance", "H2-217", "2", "2");
+
+        assertNotNull(response.getStairMessage());
+        assertTrue(response.getStairMessage().contains("up"),
+                "McKay entrance → room in 'H' building floor 2 should say go up");
+    }
+
+    @Test
+    void stairMessage_hallEntrance_nonFloor2_noEntranceMessage() {
+
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-8", "McKay-Entrance", "H8-807", "8", "8");
+
+        if (response.getStairMessage() != null) {
+            assertFalse(response.getStairMessage().contains("main floor"),
+                    "Hall floor 8 should not produce entrance stair message");
+            assertFalse(response.getStairMessage().contains("exit level"),
+                    "Hall floor 8 should not produce entrance stair message");
+        }
+    }
+
+    @Test
+    void stairMessage_undergroundEntrance_asOrigin_goUp() {
+     
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-2", "Underground-Entrance", "H2-217", "2", "2");
+
+        assertNotNull(response.getStairMessage());
+        assertTrue(response.getStairMessage().contains("up"),
+                "Underground entrance → room should say go up");
+    }
+
+    @Test
+    void stairMessage_roomToMcKayEntrance_goDown() {
+ 
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "McKay-Entrance", "2", "2");
+
+        assertNotNull(response.getStairMessage());
+        assertTrue(response.getStairMessage().contains("down"),
+                "Room → McKay entrance should say go down");
+    }
+
+    @Test
+    void stairMessage_bothEntrances_noEntranceMessage() {
+    
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-2", "Maisonneuve-Entrance", "Bishop-Entrance", "2", "2");
+
+      
+        if (response.getStairMessage() != null) {
+            assertFalse(response.getStairMessage().contains("main floor"),
+                    "Entrance→Entrance should not say 'reach the main floor'");
+            assertFalse(response.getStairMessage().contains("exit level"),
+                    "Entrance→Entrance should not say 'reach the exit level'");
+        }
+    }
+
+    @Test
+    void stairMessage_nonHallBuilding_entranceNames_noEntranceMessage() {
+
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "LB-2", "Maisonneuve-Entrance", "LB-204", "2", "2");
+
+
+        if (response.getStairMessage() != null) {
+            assertFalse(response.getStairMessage().contains("main floor"),
+                    "Non-Hall building should not produce Hall entrance message");
+            assertFalse(response.getStairMessage().contains("exit level"),
+                    "Non-Hall building should not produce Hall entrance message");
+        }
+    }
+
     @Test
     void indoorManeuverType_fromString_returnsCorrectType() {
         assertEquals(IndoorManeuverType.ELEVATOR_UP, IndoorManeuverType.fromString("elevator-up"));

@@ -43,20 +43,24 @@ export interface FloorPlanWebViewRef {
 
 function getSvgAsset(buildingId: BuildingId, floorNumber: string): any {
   if (buildingId === 'H') {
-    if (floorNumber === '8') return require('../../assets/building_plans /h8.svg');
-    if (floorNumber === '9') return require('../../assets/building_plans /Hall-9.svg');
-    if (floorNumber === '2') return require('../../assets/building_plans /Hall-2.svg');
-    if (floorNumber === '1') return require('../../assets/building_plans /Hall-1.svg');
+    if (floorNumber === '8') return require('../../assets/building_plans/h8.svg');
+    if (floorNumber === '9') return require('../../assets/building_plans/Hall-9.svg');
+    if (floorNumber === '2') return require('../../assets/building_plans/Hall-2.svg');
+    if (floorNumber === '1') return require('../../assets/building_plans/Hall-1.svg');
   } else if (buildingId === 'VL') {
-    if (floorNumber === '1') return require('../../assets/building_plans /VL-1.svg');
-    if (floorNumber === '2') return require('../../assets/building_plans /VL-2.svg');
+    if (floorNumber === '1') return require('../../assets/building_plans/VL-1.svg');
+    if (floorNumber === '2') return require('../../assets/building_plans/VL-2.svg');
   } else if (buildingId === 'LB') {
-    if (floorNumber === '2') return require('../../assets/building_plans /LB2-n-s.svg');
-    if (floorNumber === '3') return require('../../assets/building_plans /LB3-n-s.svg');
-    if (floorNumber === '4') return require('../../assets/building_plans /LB4-n-s.svg');
-    if (floorNumber === '5') return require('../../assets/building_plans /LB5-n-s.svg');
+    if (floorNumber === '2') return require('../../assets/building_plans/LB2-n-s.svg');
+    if (floorNumber === '3') return require('../../assets/building_plans/LB3-n-s.svg');
+    if (floorNumber === '4') return require('../../assets/building_plans/LB4-n-s.svg');
+    if (floorNumber === '5') return require('../../assets/building_plans/LB5-n-s.svg');
   } else if (buildingId === 'MB') {
-    if (floorNumber === 'S2') return require('../../assets/building_plans /MB-S2.svg');
+    if (floorNumber === 'S2') return require('../../assets/building_plans/MB-S2.svg');
+    if (floorNumber === '1') return require('../../assets/building_plans/MB-1.svg');
+  }
+  if (buildingId === 'CC') {
+    if (floorNumber === '1') return require('../../assets/building_plans/CC1.svg');
   }
   
   return null;

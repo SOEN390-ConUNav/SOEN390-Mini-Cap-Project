@@ -15,6 +15,14 @@ public class IndoorDirectionService {
 
     @Autowired
     private PathfindingService pathfindingService;
+    private String detectStairMessageFromRoute(List<IndoorDirectionResponse.RoutePoint> routePoints) {
+        for (IndoorDirectionResponse.RoutePoint rp : routePoints) {
+            if (rp.getLabel() != null && rp.getLabel().toLowerCase().contains("stairs")) {
+                return "This route involves stairs.";
+            }
+        }
+        return null;
+    }
 
     public IndoorDirectionResponse getIndoorDirections(
             String buildingId,
@@ -35,6 +43,7 @@ public class IndoorDirectionService {
 
         String distance = calculateDistance(routePoints);
         String duration = calculateDuration(routePoints);
+       
 
         IndoorDirectionResponse response = new IndoorDirectionResponse(
                 distance, duration, buildingName, buildingId,
@@ -42,7 +51,11 @@ public class IndoorDirectionService {
                 destinationFloor != null ? destinationFloor : "1",
                 steps, routePoints);
 
-        String stairMsg = detectStairMessage(buildingId, origin, destination);
+        String effectiveFloor = originFloor != null ? originFloor : "1";
+        String stairMsg = detectStairMessage(buildingId, origin, destination, effectiveFloor);
+        if (stairMsg == null) {
+            stairMsg = detectStairMessageFromRoute(routePoints);
+        }
         if (stairMsg != null) {
             response.setStairMessage(stairMsg);
         }
@@ -53,11 +66,13 @@ public class IndoorDirectionService {
     /**
      * Detect if the route involves stairs and return an appropriate message.
      */
-    private String detectStairMessage(String buildingId, String origin, String destination) {
+    private String detectStairMessage(String buildingId, String origin, String destination, String floor) {
         String lo = origin.toLowerCase();
         String ld = destination.toLowerCase();
 
-        if ("H".equals(buildingId) || (buildingId != null && buildingId.startsWith("Hall-"))) {
+        boolean isHall = "H".equals(buildingId) || (buildingId != null && buildingId.startsWith("Hall-"));
+        boolean isSecondFloor = "2".equals(floor) || (buildingId != null && buildingId.endsWith("-2"));
+        if (isHall && isSecondFloor) {
             boolean originIsEntrance = lo.contains("maisonneuve") || lo.contains("bishop")
                 || lo.contains("mckay") || lo.contains("underground");
             boolean destIsEntrance = ld.contains("maisonneuve") || ld.contains("bishop")
@@ -137,6 +152,9 @@ public class IndoorDirectionService {
         } else if (buildingId != null && buildingId.startsWith("MB-")) {
             return "John Molson School of Business";
         }
+        else if (buildingId != null && buildingId.startsWith("CC-")) {
+            return "Central Building";
+        }
         return "Building " + buildingId;
     }
 
@@ -155,6 +173,7 @@ public class IndoorDirectionService {
         if ("VL".equals(buildingId)) return "VL-" + floor;
         if ("LB".equals(buildingId)) return "LB-" + floor;
         if ("MB".equals(buildingId)) return "MB-" + floor;
+        if ("CC".equals(buildingId)) return "CC-" + floor;
         return buildingId;
     }
 

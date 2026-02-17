@@ -118,4 +118,100 @@ class IndoorDirectionsControllerTest {
           
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void getIndoorDirections_blankBuildingId_returns400() throws Exception {
+        mockMvc.perform(get("/api/directions/indoor")
+                        .param("buildingId", "   ")
+                        .param("origin", "H8-843")
+                        .param("destination", "H8-807"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("buildingId")));
+    }
+
+    @Test
+    void getIndoorDirections_unknownBuildingId_returns400() throws Exception {
+        mockMvc.perform(get("/api/directions/indoor")
+                        .param("buildingId", "XX-99")
+                        .param("origin", "room1")
+                        .param("destination", "room2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("Unknown building ID")));
+    }
+
+    @Test
+    void getIndoorDirections_sameOriginAndDestination_returns400() throws Exception {
+        mockMvc.perform(get("/api/directions/indoor")
+                        .param("buildingId", "Hall-8")
+                        .param("origin", "H8-843")
+                        .param("destination", "H8-843"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("different")));
+    }
+
+    @Test
+    void getAvailableRooms_unknownBuilding_returns400() throws Exception {
+        mockMvc.perform(get("/api/directions/indoor/rooms")
+                        .param("buildingId", "ZZ"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("Unknown building ID")));
+    }
+
+
+
+    @Test
+    void getIndoorDirections_emptyRoute_returns404() throws Exception {
+        IndoorDirectionResponse emptyRouteResponse = new IndoorDirectionResponse(
+                "—", "—", "Hall Building", "Hall-8", "8", "8",
+                List.of(), List.of());
+
+        when(indoorDirectionService.getIndoorDirections(
+                eq("Hall-8"), eq("H8-843"), eq("H8-999"), eq("8"), eq("8")))
+                .thenReturn(emptyRouteResponse);
+
+        mockMvc.perform(get("/api/directions/indoor")
+                        .param("buildingId", "Hall-8")
+                        .param("origin", "H8-843")
+                        .param("destination", "H8-999")
+                        .param("originFloor", "8")
+                        .param("destinationFloor", "8"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", containsString("No route found")));
+    }
+
+    @Test
+    void getAvailableRooms_emptyResult_returns404() throws Exception {
+        when(indoorDirectionService.getAvailableRooms("H", "99"))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/directions/indoor/rooms")
+                        .param("buildingId", "H")
+                        .param("floor", "99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", containsString("No rooms found")));
+    }
+
+    @Test
+    void getWaypoints_emptyResult_returns404() throws Exception {
+        when(indoorDirectionService.getWaypoints("H", "99"))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/directions/indoor/waypoints")
+                        .param("buildingId", "H")
+                        .param("floor", "99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", containsString("No waypoints found")));
+    }
+
+    @Test
+    void getRoomPoints_emptyResult_returns404() throws Exception {
+        when(indoorDirectionService.getRoomPoints("H", "99"))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/directions/indoor/room-points")
+                        .param("buildingId", "H")
+                        .param("floor", "99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", containsString("No room points found")));
+    }
 }

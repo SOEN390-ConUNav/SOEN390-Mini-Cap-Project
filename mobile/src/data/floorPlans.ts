@@ -40,6 +40,8 @@ export const floorPlanRegistry: Record<string, FloorPlan> = {
   'LB-5': plan('LB-5',   'LB', '5', 'Webster Library Building - Floor 5', 1024, 1024),
   'MB-S2': plan('MB-S2',  'MB', 'S2', 'John Molson Building - Floor S2',     1024, 1024),
   'H-1': plan('Hall-1',  'H', '1', 'Hall Building - Floor 1',     1410, 1506),
+  'CC-1': plan('CC-1',  'CC', '1', 'Central Building - Floor 1',     1024, 1024),
+  'MB-1': plan('MB-1',  'MB', '1', 'John Molson Building - Floor 1',     1024, 1024),
 };
 
 export function getFloorPlan(buildingId: string, floorNumber: string): FloorPlan | null {
