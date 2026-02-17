@@ -271,14 +271,19 @@ public class PathfindingService {
     }
 
     private static Alignment classify(double dx, double dy, double strict) {
-        if ((dy <= strict && dx > strict) || (dx <= strict && dy > strict))
-            return Alignment.PERFECT;
-        if ((dy <= 10 && dx > dy * 3 && dx > strict) || (dx <= 10 && dy > dx * 3 && dy > strict))
-            return Alignment.NEAR_PERFECT;
-        if ((dy <= 25 && dx > dy * 5 && dx > strict) || (dx <= 25 && dy > dx * 5 && dy > strict))
-            return Alignment.MOSTLY;
-        if ((dy <= 40 && dx > dy * 3 && dx > strict) || (dx <= 40 && dy > dx * 3 && dy > strict))
-            return Alignment.LOOSE;
+        Alignment result = classifyAxis(dx, dy, strict);
+        if (result != Alignment.INVALID) {
+            return result;
+        }
+        return classifyAxis(dy, dx, strict);
+    }
+
+    /** Check if the minor axis is within tolerance and the major axis is dominant enough. */
+    private static Alignment classifyAxis(double minor, double major, double strict) {
+        if (minor <= strict && major > strict)                      return Alignment.PERFECT;
+        if (minor <= 10 && major > minor * 3 && major > strict)    return Alignment.NEAR_PERFECT;
+        if (minor <= 25 && major > minor * 5 && major > strict)    return Alignment.MOSTLY;
+        if (minor <= 40 && major > minor * 3 && major > strict)    return Alignment.LOOSE;
         return Alignment.INVALID;
     }
 
@@ -301,52 +306,69 @@ public class PathfindingService {
             SimpleWeightedGraph<Waypoint, DefaultWeightedEdge> graph,
             Set<Waypoint> comp1, Set<Waypoint> comp2, BuildingConfig config) {
 
-        Waypoint best1 = null, best2 = null;
-        double bestDist = Double.MAX_VALUE;
         double maxBridge = config.strictAlignment ? 400.0 : config.searchRadius * 3;
+        Waypoint[] best = findAlignedBridge(comp1, comp2, config, maxBridge);
+
+        if (best == null) {
+            best = findClosestBridge(comp1, comp2);
+        }
+
+        if (best != null && !graph.containsEdge(best[0], best[1])) {
+            DefaultWeightedEdge edge = graph.addEdge(best[0], best[1]);
+            if (edge != null) {
+                graph.setEdgeWeight(edge, best[0].distanceTo(best[1]));
+            }
+        }
+    }
+
+    
+    private Waypoint[] findAlignedBridge(
+            Set<Waypoint> comp1, Set<Waypoint> comp2, BuildingConfig config, double maxBridge) {
+
+        Waypoint best1 = null;
+        Waypoint best2 = null;
+        double bestDist = Double.MAX_VALUE;
 
         for (Waypoint a : comp1) {
             for (Waypoint b : comp2) {
                 double dist = a.distanceTo(b);
                 if (dist > maxBridge || dist >= bestDist) continue;
-
-                double dx = Math.abs(a.x - b.x);
-                double dy = Math.abs(a.y - b.y);
-
-                boolean valid;
-                if (config.strictAlignment) {
-                    valid = classify(dx, dy, config.alignThreshold) != Alignment.INVALID;
-                } else {
-                    valid = dy <= config.alignThreshold || dx <= config.alignThreshold;
-                }
-
-                if (valid) {
+                if (isValidBridgeAlignment(a, b, config)) {
                     bestDist = dist;
                     best1 = a;
                     best2 = b;
                 }
             }
         }
+        return best1 != null ? new Waypoint[]{best1, best2} : null;
+    }
 
-        if (best1 == null) {
-            for (Waypoint a : comp1) {
-                for (Waypoint b : comp2) {
-                    double d = a.distanceTo(b);
-                    if (d < bestDist) {
-                        bestDist = d;
-                        best1 = a;
-                        best2 = b;
-                    }
+    private boolean isValidBridgeAlignment(Waypoint a, Waypoint b, BuildingConfig config) {
+        double dx = Math.abs(a.x - b.x);
+        double dy = Math.abs(a.y - b.y);
+        if (config.strictAlignment) {
+            return classify(dx, dy, config.alignThreshold) != Alignment.INVALID;
+        }
+        return dy <= config.alignThreshold || dx <= config.alignThreshold;
+    }
+
+    /** Fallback: find the absolute closest pair of waypoints across two components. */
+    private Waypoint[] findClosestBridge(Set<Waypoint> comp1, Set<Waypoint> comp2) {
+        Waypoint best1 = null;
+        Waypoint best2 = null;
+        double bestDist = Double.MAX_VALUE;
+
+        for (Waypoint a : comp1) {
+            for (Waypoint b : comp2) {
+                double d = a.distanceTo(b);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best1 = a;
+                    best2 = b;
                 }
             }
         }
-
-        if (best1 != null && best2 != null && !graph.containsEdge(best1, best2)) {
-            DefaultWeightedEdge edge = graph.addEdge(best1, best2);
-            if (edge != null) {
-                graph.setEdgeWeight(edge, bestDist);
-            }
-        }
+        return best1 != null ? new Waypoint[]{best1, best2} : null;
     }
     
     public static class Waypoint {

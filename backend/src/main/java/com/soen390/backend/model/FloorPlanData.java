@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -17,6 +18,63 @@ public class FloorPlanData {
 
     private static final Logger log = LoggerFactory.getLogger(FloorPlanData.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+
+    private static final String TYPE_BATHROOM_MEN = "bathroom-men";
+    private static final String TYPE_BATHROOM_WOMEN = "bathroom-women";
+    private static final String TYPE_ELEVATOR = "elevator";
+    private static final String TYPE_STAIRS = "stairs";
+    private static final String TYPE_STAIRS_DOWN = "stairs-down";
+    private static final String TYPE_STAIRS_UP = "stairs-up";
+    private static final String TYPE_EMERGENCY_EXIT = "emergency-exit";
+    private static final String TYPE_WATER_FOUNTAIN = "water-fountain";
+    private static final String TYPE_COMPUTER_STATION = "computer-station";
+    private static final String TYPE_STUDY_AREA = "study-area";
+    private static final String TYPE_ENTRANCE_EXIT = "entrance-exit";
+    private static final String TYPE_PRINTER = "printer";
+    private static final String TYPE_BOOKSHELF = "bookshelf";
+
+    /** Ordered prefix → POI type mappings (first match wins). */
+    private static final Map<String, String> PREFIX_TO_POI_TYPE = new LinkedHashMap<>();
+    /** Fallback contains → POI type mappings. */
+    private static final Map<String, String> CONTAINS_TO_POI_TYPE = new LinkedHashMap<>();
+
+    static {
+        PREFIX_TO_POI_TYPE.put("bathroom-men", TYPE_BATHROOM_MEN);
+        PREFIX_TO_POI_TYPE.put("bathroom-women", TYPE_BATHROOM_WOMEN);
+        PREFIX_TO_POI_TYPE.put("bathroom", TYPE_BATHROOM_MEN);
+        PREFIX_TO_POI_TYPE.put("elevator", TYPE_ELEVATOR);
+        PREFIX_TO_POI_TYPE.put("stairs-down", TYPE_STAIRS_DOWN);
+        PREFIX_TO_POI_TYPE.put("stairs-up", TYPE_STAIRS_UP);
+        PREFIX_TO_POI_TYPE.put("stairs-underground", TYPE_STAIRS);
+        PREFIX_TO_POI_TYPE.put("stairs", TYPE_STAIRS);
+        PREFIX_TO_POI_TYPE.put("emergency-exit", TYPE_EMERGENCY_EXIT);
+        PREFIX_TO_POI_TYPE.put("emergency-stairs", TYPE_EMERGENCY_EXIT);
+        PREFIX_TO_POI_TYPE.put("maisonneuve", TYPE_EMERGENCY_EXIT);
+        PREFIX_TO_POI_TYPE.put("bishop", TYPE_EMERGENCY_EXIT);
+        PREFIX_TO_POI_TYPE.put("mckay", TYPE_EMERGENCY_EXIT);
+        PREFIX_TO_POI_TYPE.put("waterfountain", TYPE_WATER_FOUNTAIN);
+        PREFIX_TO_POI_TYPE.put("computer-station", TYPE_COMPUTER_STATION);
+        PREFIX_TO_POI_TYPE.put("computer-area", TYPE_COMPUTER_STATION);
+        PREFIX_TO_POI_TYPE.put("study-area", TYPE_STUDY_AREA);
+        PREFIX_TO_POI_TYPE.put("sitting-area", TYPE_STUDY_AREA);
+        PREFIX_TO_POI_TYPE.put("tabling-area", TYPE_STUDY_AREA);
+        PREFIX_TO_POI_TYPE.put("entrance", TYPE_ENTRANCE_EXIT);
+        PREFIX_TO_POI_TYPE.put("metro", TYPE_ENTRANCE_EXIT);
+        PREFIX_TO_POI_TYPE.put("couch-area", TYPE_STUDY_AREA);
+        PREFIX_TO_POI_TYPE.put("stand", TYPE_STUDY_AREA);
+        PREFIX_TO_POI_TYPE.put("printer", TYPE_PRINTER);
+        PREFIX_TO_POI_TYPE.put("shelve", TYPE_BOOKSHELF);
+        PREFIX_TO_POI_TYPE.put("disability", TYPE_ENTRANCE_EXIT);
+        PREFIX_TO_POI_TYPE.put("art-showcase", TYPE_ENTRANCE_EXIT);
+
+        CONTAINS_TO_POI_TYPE.put("emergency-exit", TYPE_EMERGENCY_EXIT);
+        CONTAINS_TO_POI_TYPE.put("bathroom-men", TYPE_BATHROOM_MEN);
+        CONTAINS_TO_POI_TYPE.put("bathroom-women", TYPE_BATHROOM_WOMEN);
+        CONTAINS_TO_POI_TYPE.put("bathroom", TYPE_BATHROOM_MEN);
+        CONTAINS_TO_POI_TYPE.put("elevator", TYPE_ELEVATOR);
+        CONTAINS_TO_POI_TYPE.put("stairs", TYPE_STAIRS);
+    }
 
     private Map<String, Point> roomPoints;
     private Map<String, java.util.List<String>> roomEntranceGroups;
@@ -189,39 +247,17 @@ public class FloorPlanData {
 
     private static String getPoiType(String roomId) {
         String lower = roomId.toLowerCase();
-        if (lower.startsWith("bathroom-men"))    return "bathroom-men";
-        if (lower.startsWith("bathroom-women"))  return "bathroom-women";
-        if (lower.startsWith("bathroom"))        return "bathroom-men";
-        if (lower.startsWith("elevator"))        return "elevator";
-        if (lower.startsWith("stairs-down"))     return "stairs-down";
-        if (lower.startsWith("stairs-up"))       return "stairs-up";
-        if (lower.startsWith("stairs-underground")) return "stairs";
-        if (lower.startsWith("stairs"))          return "stairs";
-        if (lower.startsWith("emergency-exit"))  return "emergency-exit";
-        if (lower.startsWith("emergency-stairs"))return "emergency-exit";
-        if (lower.startsWith("maisonneuve"))     return "emergency-exit";
-        if (lower.startsWith("bishop"))          return "emergency-exit";
-        if (lower.startsWith("mckay"))           return "emergency-exit";
-        if (lower.startsWith("waterfountain"))   return "water-fountain";
-        if (lower.startsWith("computer-station"))return "computer-station";
-        if (lower.startsWith("computer-area"))   return "computer-station";
-        if (lower.startsWith("study-area"))      return "study-area";
-        if (lower.startsWith("sitting-area"))    return "study-area";
-        if (lower.startsWith("tabling-area"))    return "study-area";
-        if (lower.startsWith("entrance"))        return "entrance-exit";
-        if (lower.startsWith("metro"))           return "entrance-exit";
-        if (lower.startsWith("couch-area"))      return "study-area";
-        if (lower.startsWith("stand"))           return "study-area";
-        if (lower.startsWith("printer"))         return "printer";
-        if (lower.startsWith("shelve"))          return "bookshelf";
-        if (lower.startsWith("disability"))      return "entrance-exit";
-        if (lower.startsWith("art-showcase"))    return "entrance-exit";
-        if (lower.contains("emergency-exit"))    return "emergency-exit";
-        if (lower.contains("bathroom-men"))      return "bathroom-men";
-        if (lower.contains("bathroom-women"))    return "bathroom-women";
-        if (lower.contains("bathroom"))          return "bathroom-men";
-        if (lower.contains("elevator"))          return "elevator";
-        if (lower.contains("stairs"))            return "stairs";
+
+        for (Map.Entry<String, String> entry : PREFIX_TO_POI_TYPE.entrySet()) {
+            if (lower.startsWith(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        for (Map.Entry<String, String> entry : CONTAINS_TO_POI_TYPE.entrySet()) {
+            if (lower.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
         return null;
     }
 

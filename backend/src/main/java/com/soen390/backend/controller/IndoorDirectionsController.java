@@ -14,6 +14,9 @@ import java.util.Set;
 @RequestMapping("/api/directions/indoor")
 public class IndoorDirectionsController {
 
+    private static final String PARAM_BUILDING_ID = "buildingId";
+    private static final String FLOOR_LABEL = " floor '";
+
     private static final Set<String> VALID_BUILDING_PREFIXES = Set.of(
             "Hall-", "VL-", "LB-", "MB-", "CC-");
     private static final Set<String> VALID_SHORT_CODES = Set.of(
@@ -30,7 +33,7 @@ public class IndoorDirectionsController {
             @RequestParam(required = false) String originFloor,
             @RequestParam(required = false) String destinationFloor) {
 
-        validateNotBlank(buildingId, "buildingId");
+        validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateNotBlank(origin, "origin");
         validateNotBlank(destination, "destination");
         validateBuildingId(buildingId);
@@ -57,14 +60,14 @@ public class IndoorDirectionsController {
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
 
-        validateNotBlank(buildingId, "buildingId");
+        validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
         List<String> rooms = indoorDirectionService.getAvailableRooms(buildingId, floor);
         if (rooms.isEmpty()) {
             throw new IndoorResourceNotFoundException(
                     "No rooms found for building '" + buildingId
-                    + "'" + (floor != null ? " floor '" + floor + "'" : "") + ".");
+                    + "'" + (floor != null ? FLOOR_LABEL + floor + "'" : "") + ".");
         }
         return rooms;
     }
@@ -74,14 +77,14 @@ public class IndoorDirectionsController {
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
 
-        validateNotBlank(buildingId, "buildingId");
+        validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
         List<WaypointResponse> waypoints = indoorDirectionService.getWaypoints(buildingId, floor);
         if (waypoints.isEmpty()) {
             throw new IndoorResourceNotFoundException(
                     "No waypoints found for building '" + buildingId
-                    + "'" + (floor != null ? " floor '" + floor + "'" : "") + ".");
+                    + "'" + (floor != null ? FLOOR_LABEL + floor + "'" : "") + ".");
         }
         return waypoints;
     }
@@ -91,14 +94,14 @@ public class IndoorDirectionsController {
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
 
-        validateNotBlank(buildingId, "buildingId");
+        validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
         List<RoomPointResponse> roomPoints = indoorDirectionService.getRoomPoints(buildingId, floor);
         if (roomPoints.isEmpty()) {
             throw new IndoorResourceNotFoundException(
                     "No room points found for building '" + buildingId
-                    + "'" + (floor != null ? " floor '" + floor + "'" : "") + ".");
+                    + "'" + (floor != null ? FLOOR_LABEL + floor + "'" : "") + ".");
         }
         return roomPoints;
     }
@@ -108,7 +111,7 @@ public class IndoorDirectionsController {
             @RequestParam String buildingId,
             @RequestParam(required = false) String floor) {
 
-        validateNotBlank(buildingId, "buildingId");
+        validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
         return indoorDirectionService.getPointsOfInterest(buildingId, floor);

@@ -35,6 +35,7 @@ export default function IndoorNavigation() {
       setCurrentFloor(params.floor);
     }
   }, [params.floor, availableFloors]);
+
   
 
   const mapViewRef = useRef<FloorPlanWebViewRef>(null);
@@ -53,6 +54,24 @@ export default function IndoorNavigation() {
   const handleClearRoute = useCallback(() => {
     mapViewRef.current?.clearRoute();
   }, []);
+
+  // Reset all search/route state when the building changes
+  const prevBuildingRef = useRef(buildingId);
+  useEffect(() => {
+    if (prevBuildingRef.current !== buildingId) {
+      prevBuildingRef.current = buildingId;
+      setStartRoom('');
+      setEndRoom('');
+      setSearchQuery('');
+      setRouteData(null);
+      setShowRouteDetails(false);
+      setShowRoomList(false);
+      setSelectingFor(null);
+      handleClearRoute();
+      const newDefault = getDefaultFloor(buildingId);
+      setCurrentFloor(newDefault);
+    }
+  }, [buildingId, handleClearRoute]);
 
   const handleFloorChange = useCallback((newFloor: string) => {
     setCurrentFloor(newFloor);

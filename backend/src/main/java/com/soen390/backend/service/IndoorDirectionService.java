@@ -13,12 +13,21 @@ import java.util.*;
 @Service
 public class IndoorDirectionService {
 
+    private static final String KEYWORD_STAIRS = "stairs";
+    private static final String PREFIX_HALL = "Hall-";
+    private static final String MSG_STAIRS_UP = "You will need to go up the stairs to reach the main floor.";
+    private static final String MSG_STAIRS_DOWN = "You will need to go down the stairs to reach the exit level.";
+    private static final String MSG_STAIRS_UP_GENERIC = "You will need to go up the stairs.";
+    private static final String MSG_STAIRS_DOWN_GENERIC = "You will need to go down the stairs.";
+    private static final String MSG_STAIRS_INVOLVED = "This route involves stairs.";
+
     @Autowired
     private PathfindingService pathfindingService;
+
     private String detectStairMessageFromRoute(List<IndoorDirectionResponse.RoutePoint> routePoints) {
         for (IndoorDirectionResponse.RoutePoint rp : routePoints) {
-            if (rp.getLabel() != null && rp.getLabel().toLowerCase().contains("stairs")) {
-                return "This route involves stairs.";
+            if (rp.getLabel() != null && rp.getLabel().toLowerCase().contains(KEYWORD_STAIRS)) {
+                return MSG_STAIRS_INVOLVED;
             }
         }
         return null;
@@ -70,37 +79,49 @@ public class IndoorDirectionService {
         String lo = origin.toLowerCase();
         String ld = destination.toLowerCase();
 
-        boolean isHall = "H".equals(buildingId) || (buildingId != null && buildingId.startsWith("Hall-"));
+        String hallStairMsg = detectHallSecondFloorStairs(buildingId, floor, lo, ld);
+        if (hallStairMsg != null) {
+            return hallStairMsg;
+        }
+        return detectGenericStairs(lo, ld);
+    }
+
+    private String detectHallSecondFloorStairs(String buildingId, String floor, String lo, String ld) {
+        boolean isHall = "H".equals(buildingId) || (buildingId != null && buildingId.startsWith(PREFIX_HALL));
         boolean isSecondFloor = "2".equals(floor) || (buildingId != null && buildingId.endsWith("-2"));
-        if (isHall && isSecondFloor) {
-            boolean originIsEntrance = lo.contains("maisonneuve") || lo.contains("bishop")
-                || lo.contains("mckay") || lo.contains("underground");
-            boolean destIsEntrance = ld.contains("maisonneuve") || ld.contains("bishop")
-                || ld.contains("mckay") || ld.contains("underground");
-
-            if (originIsEntrance && !destIsEntrance) {
-                return "You will need to go up the stairs to reach the main floor.";
-            }
-            if (!originIsEntrance && destIsEntrance) {
-                return "You will need to go down the stairs to reach the exit level.";
-            }
+        if (!isHall || !isSecondFloor) {
+            return null;
         }
-
-        boolean originIsStairs = lo.contains("stairs");
-        boolean destIsStairs = ld.contains("stairs");
-        if (originIsStairs || destIsStairs) {
-            if (lo.contains("stairs-up") || ld.contains("stairs-up")
-                || lo.contains("stairs-to")) {
-                return "You will need to go up the stairs.";
-            }
-            if (lo.contains("stairs-down") || ld.contains("stairs-down")
-                || lo.contains("stairs-coming") || lo.contains("stairs-from")) {
-                return "You will need to go down the stairs.";
-            }
-            return "This route involves stairs.";
+        boolean originIsEntrance = isHallEntrance(lo);
+        boolean destIsEntrance = isHallEntrance(ld);
+        if (originIsEntrance && !destIsEntrance) {
+            return MSG_STAIRS_UP;
         }
-
+        if (!originIsEntrance && destIsEntrance) {
+            return MSG_STAIRS_DOWN;
+        }
         return null;
+    }
+
+    private static boolean isHallEntrance(String label) {
+        return label.contains("maisonneuve") || label.contains("bishop")
+                || label.contains("mckay") || label.contains("underground");
+    }
+
+    private String detectGenericStairs(String lo, String ld) {
+        boolean originIsStairs = lo.contains(KEYWORD_STAIRS);
+        boolean destIsStairs = ld.contains(KEYWORD_STAIRS);
+        if (!originIsStairs && !destIsStairs) {
+            return null;
+        }
+        if (lo.contains("stairs-up") || ld.contains("stairs-up") || lo.contains("stairs-to")) {
+            return MSG_STAIRS_UP_GENERIC;
+        }
+        if (lo.contains("stairs-down") || ld.contains("stairs-down")
+                || lo.contains("stairs-coming") || lo.contains("stairs-from")) {
+            return MSG_STAIRS_DOWN_GENERIC;
+        }
+        return MSG_STAIRS_INVOLVED;
     }
 
     /**
@@ -143,7 +164,7 @@ public class IndoorDirectionService {
     }
 
     private String getBuildingName(String buildingId) {
-        if (buildingId != null && buildingId.startsWith("Hall-")) {
+        if (buildingId != null && buildingId.startsWith(PREFIX_HALL)) {
             return "Hall Building";
         } else if (buildingId != null && buildingId.startsWith("VL-")) {
             return "Vanier Library Building";
@@ -165,11 +186,11 @@ public class IndoorDirectionService {
         if (buildingId == null || floor == null) {
             return buildingId;
         }
-        if (buildingId.startsWith("Hall-") || buildingId.startsWith("VL-")
+        if (buildingId.startsWith(PREFIX_HALL) || buildingId.startsWith("VL-")
                 || buildingId.startsWith("MB-")) {
             return buildingId;
         }
-        if ("H".equals(buildingId))  return "Hall-" + floor;
+        if ("H".equals(buildingId))  return PREFIX_HALL + floor;
         if ("VL".equals(buildingId)) return "VL-" + floor;
         if ("LB".equals(buildingId)) return "LB-" + floor;
         if ("MB".equals(buildingId)) return "MB-" + floor;
