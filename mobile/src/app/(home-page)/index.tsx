@@ -167,19 +167,19 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }
   };
 
-  const onPressIndoorMaps = () => {
-    if (selectedBuildingId) {
-      setShowBuildingPopup(false);
-
-      const defaultFloor = getDefaultFloor(selectedBuildingId);
-      router.push({
+    const onPressIndoorMaps = () => {
+        if (selectedBuildingId) {
+            setShowBuildingPopup(false);
+          
+            const defaultFloor = getDefaultFloor(selectedBuildingId);
+            router.push({
         pathname: '/indoor-navigation',
-        params: {
-          buildingId: selectedBuildingId,
-          floor: defaultFloor,
-        },
-      });
-    }
+                params: { 
+                    buildingId: selectedBuildingId,
+                    floor: defaultFloor,
+                },
+            });
+        }
   };
 
   const stopWatchingLocation = () => {

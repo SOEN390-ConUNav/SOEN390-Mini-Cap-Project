@@ -1,3 +1,7 @@
+jest.mock('expo-constants', () => ({
+  expoConfig: { extra: { API_BASE_URL: 'http://mock-api' } },
+}));
+
 import {
   getIndoorDirections,
   getAvailableRooms,
@@ -5,8 +9,6 @@ import {
   getPointsOfInterest,
   getWaypoints,
 } from '../api/indoorDirectionsApi';
-
-
 
 const mockFetch = (body: unknown, ok = true, status = 200) => {
   (global.fetch as jest.Mock).mockResolvedValueOnce({
