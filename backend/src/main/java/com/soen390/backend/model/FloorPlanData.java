@@ -94,11 +94,18 @@ public class FloorPlanData {
     /**
      * Load room coordinates from /floorplans/{buildingId}.json
      */
+    /** Strip newlines and control characters to prevent log injection. */
+    private static String sanitize(String input) {
+        if (input == null) return "null";
+        return input.replaceAll("[\\r\\n\\t]", "_");
+    }
+
     private void loadRoomsFromJson(String buildingId) {
+        String safePath = sanitize("floorplans/" + buildingId + ".json");
         String path = "floorplans/" + buildingId + ".json";
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(path)) {
             if (is == null) {
-                log.warn("No floor plan JSON found at {}", path);
+                log.warn("No floor plan JSON found at {}", safePath);
                 return;
             }
             JsonNode root = MAPPER.readTree(is);
@@ -106,13 +113,13 @@ public class FloorPlanData {
             // Verify the floor matches what's in the JSON
             JsonNode floorNode = root.get("floor");
             if (floorNode != null && !floorNode.asText().equals(this.floor)) {
-                log.warn("Floor mismatch: requested {} but JSON has {} in {}", this.floor, floorNode.asText(), path);
+                log.warn("Floor mismatch: requested {} but JSON has {} in {}", sanitize(this.floor), floorNode.asText(), safePath);
                 return;
             }
 
             JsonNode roomsNode = root.get("rooms");
             if (roomsNode == null || !roomsNode.isObject()) {
-                log.warn("No 'rooms' object in {}", path);
+                log.warn("No 'rooms' object in {}", safePath);
                 return;
             }
             Iterator<Map.Entry<String, JsonNode>> fields = roomsNode.fields();
@@ -124,9 +131,9 @@ public class FloorPlanData {
                 double y = coords.get("y").asDouble();
                 roomPoints.put(roomId, new Point(x, y));
             }
-            log.info("Loaded {} rooms from {}", roomPoints.size(), path);
+            log.info("Loaded {} rooms from {}", roomPoints.size(), safePath);
         } catch (Exception e) {
-            log.error("Failed to load floor plan data from {}", path, e);
+            log.error("Failed to load floor plan data from {}", safePath, e);
         }
     }
 

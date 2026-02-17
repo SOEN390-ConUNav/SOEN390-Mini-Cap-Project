@@ -143,12 +143,18 @@ public class PathfindingService {
         return nearest;
     }
 
+    /** Strip newlines and control characters to prevent log injection. */
+    private static String sanitize(String input) {
+        if (input == null) return "null";
+        return input.replaceAll("[\\r\\n\\t]", "_");
+    }
+
     public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end) {
         if (start == null || end == null) return Collections.emptyList();
 
         Graph<Waypoint, DefaultWeightedEdge> graph = graphs.get(currentBuildingId);
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
-            log.error("Graph missing or vertices not found for {}", currentBuildingId);
+            log.error("Graph missing or vertices not found for {}", sanitize(currentBuildingId));
             return Collections.emptyList();
         }
 
@@ -156,7 +162,7 @@ public class PathfindingService {
                 new DijkstraShortestPath<>(graph).getPath(start, end);
 
         if (path == null) {
-            log.error("No path found between waypoints: {} -> {}", start.id, end.id);
+            log.error("No path found between waypoints: {} -> {}", sanitize(start.id), sanitize(end.id));
             return Collections.emptyList();
         }
 

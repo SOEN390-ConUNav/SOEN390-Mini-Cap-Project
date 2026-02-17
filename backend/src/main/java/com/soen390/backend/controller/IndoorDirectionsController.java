@@ -40,18 +40,24 @@ public class IndoorDirectionsController {
         validateNotBlank(destination, "destination");
         validateBuildingId(buildingId);
 
-        if (origin.trim().equalsIgnoreCase(destination.trim())) {
+        String safeBuildingId = sanitize(buildingId);
+        String safeOrigin = sanitize(origin);
+        String safeDestination = sanitize(destination);
+        String safeOriginFloor = sanitize(originFloor);
+        String safeDestFloor = sanitize(destinationFloor);
+
+        if (safeOrigin.trim().equalsIgnoreCase(safeDestination.trim())) {
             throw new InvalidIndoorRequestException(
                     "origin and destination must be different.");
         }
 
         IndoorDirectionResponse response = indoorDirectionService.getIndoorDirections(
-                buildingId, origin, destination, originFloor, destinationFloor);
+                safeBuildingId, safeOrigin, safeDestination, safeOriginFloor, safeDestFloor);
 
         if (response.getRoutePoints() == null || response.getRoutePoints().isEmpty()) {
             throw new IndoorResourceNotFoundException(
-                    "No route found from '" + origin + "' to '" + destination
-                    + "' in building '" + buildingId + "'.");
+                    "No route found from '" + safeOrigin + "' to '" + safeDestination
+                    + "' in building '" + safeBuildingId + "'.");
         }
 
         return response;
@@ -65,11 +71,14 @@ public class IndoorDirectionsController {
         validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
-        List<String> rooms = indoorDirectionService.getAvailableRooms(buildingId, floor);
+        String safeBuildingId = sanitize(buildingId);
+        String safeFloor = sanitize(floor);
+
+        List<String> rooms = indoorDirectionService.getAvailableRooms(safeBuildingId, safeFloor);
         if (rooms.isEmpty()) {
             throw new IndoorResourceNotFoundException(
-                    "No rooms found for building '" + buildingId
-                    + "'" + (floor != null ? FLOOR_LABEL + floor + "'" : "") + ".");
+                    "No rooms found for building '" + safeBuildingId
+                    + "'" + (safeFloor != null ? FLOOR_LABEL + safeFloor + "'" : "") + ".");
         }
         return rooms;
     }
@@ -82,11 +91,14 @@ public class IndoorDirectionsController {
         validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
-        List<WaypointResponse> waypoints = indoorDirectionService.getWaypoints(buildingId, floor);
+        String safeBuildingId = sanitize(buildingId);
+        String safeFloor = sanitize(floor);
+
+        List<WaypointResponse> waypoints = indoorDirectionService.getWaypoints(safeBuildingId, safeFloor);
         if (waypoints.isEmpty()) {
             throw new IndoorResourceNotFoundException(
-                    "No waypoints found for building '" + buildingId
-                    + "'" + (floor != null ? FLOOR_LABEL + floor + "'" : "") + ".");
+                    "No waypoints found for building '" + safeBuildingId
+                    + "'" + (safeFloor != null ? FLOOR_LABEL + safeFloor + "'" : "") + ".");
         }
         return waypoints;
     }
@@ -99,11 +111,14 @@ public class IndoorDirectionsController {
         validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
-        List<RoomPointResponse> roomPoints = indoorDirectionService.getRoomPoints(buildingId, floor);
+        String safeBuildingId = sanitize(buildingId);
+        String safeFloor = sanitize(floor);
+
+        List<RoomPointResponse> roomPoints = indoorDirectionService.getRoomPoints(safeBuildingId, safeFloor);
         if (roomPoints.isEmpty()) {
             throw new IndoorResourceNotFoundException(
-                    "No room points found for building '" + buildingId
-                    + "'" + (floor != null ? FLOOR_LABEL + floor + "'" : "") + ".");
+                    "No room points found for building '" + safeBuildingId
+                    + "'" + (safeFloor != null ? FLOOR_LABEL + safeFloor + "'" : "") + ".");
         }
         return roomPoints;
     }
@@ -116,7 +131,13 @@ public class IndoorDirectionsController {
         validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateBuildingId(buildingId);
 
-        return indoorDirectionService.getPointsOfInterest(buildingId, floor);
+        return indoorDirectionService.getPointsOfInterest(sanitize(buildingId), sanitize(floor));
+    }
+
+    /** Strip newlines and control characters to prevent log injection. */
+    private static String sanitize(String input) {
+        if (input == null) return null;
+        return input.replaceAll("[\\r\\n\\t]", "");
     }
 
     private void validateNotBlank(String value, String paramName) {
