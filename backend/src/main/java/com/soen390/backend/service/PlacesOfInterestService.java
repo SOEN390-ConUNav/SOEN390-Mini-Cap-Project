@@ -55,10 +55,7 @@ public class PlacesOfInterestService {
     }
 
     public String searchPlacesByText(String query) {
-        // Build the request body
-        Map<String, Object> body = Map.of(
-                "textQuery", query
-        );
+        Map<String, Object> body = Map.of("textQuery", query);
 
         String rawJson;
         try {
@@ -73,6 +70,10 @@ public class PlacesOfInterestService {
 
         } catch (Exception e) {
             throw new RuntimeException("Google Places Text Search returned an empty response", e);
+        }
+
+        if (rawJson == null || rawJson.trim().isEmpty()) {
+            throw new RuntimeException("Google Places Text Search returned an empty response");
         }
 
         return rawJson;
