@@ -8,14 +8,9 @@ export interface LabeledCoordinate extends Coordinate {
 interface NavigationEndpointsState {
     origin: LabeledCoordinate | null;
     destination: LabeledCoordinate | null;
-
     setOrigin: (endpoint: LabeledCoordinate | null) => void;
     setDestination: (endpoint: LabeledCoordinate | null) => void;
-
-    /** Swap origin ↔ destination in one atomic update */
     swap: () => void;
-
-    /** Reset both endpoints (e.g. on back/cancel) */
     clear: () => void;
 }
 

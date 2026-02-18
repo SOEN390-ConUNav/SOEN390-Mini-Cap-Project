@@ -3,9 +3,9 @@ import React from "react";
 import { StyleSheet, View, ActivityIndicator, Text } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import RouteRow from "./RouteRow";
-import SwapButton from "./SwapButton";
-import CircleIconButton from "./CircleIconButton";
-import useNavigationInfo from "../hooks/useNavigationInfo";
+import SwapButton from "../SwapButton";
+import CircleIconButton from "../CircleIconButton";
+import useNavigationInfo from "../../hooks/useNavigationInfo";
 
 const BURGUNDY = "#800020";
 

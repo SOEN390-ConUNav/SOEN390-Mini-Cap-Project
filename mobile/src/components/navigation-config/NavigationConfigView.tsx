@@ -5,15 +5,33 @@ import NavigationTransportCard from "./NavigationTransportCard";
 import NavigationPathRow from "./NavigationPathRow";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
+import { OutdoorDirectionResponse } from '../../api/outdoorDirectionsApi';
+import { TRANSPORT_MODE_API_MAP } from '../../type';
 
 interface NavigationConfigViewProps {
-    visible: boolean;
-    onClose: () => void;
+  readonly durations: OutdoorDirectionResponse[];
+  readonly visible: boolean;
+  readonly onClose: () => void;
 }
 
-export default function NavigationConfigView({visible, onClose}: NavigationConfigViewProps) {
+export default function NavigationConfigView({
+  durations,
+  visible,
+  onClose,
+}: NavigationConfigViewProps) {
     const {navigationMode, setNavigationMode} = useNavigationConfig();
     const {isLoading} = useNavigationInfo();
+    const getDurationForMode = (mode: string) => {
+        const route = durations.find(
+            (d) => d.transportMode?.toLowerCase() === mode.toLowerCase(),
+        );
+
+        return route ? route.duration : 'N/A';
+    };
+    const getSelectedDuration = () => {
+        const apiKey = TRANSPORT_MODE_API_MAP[navigationMode] || 'walking';
+        return getDurationForMode(apiKey);
+    };
     const handleGo = () => {
         // Logic to start the actual turn-by-turn navigation
         console.log("Start navigation with mode:", navigationMode);
@@ -29,7 +47,7 @@ export default function NavigationConfigView({visible, onClose}: NavigationConfi
         >
             {isLoading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#0000ff"/>
+                    <ActivityIndicator size="large" color="#800020"/>
                     <Text>Calculating Route...</Text>
                 </View>
             ) : (
@@ -38,19 +56,19 @@ export default function NavigationConfigView({visible, onClose}: NavigationConfi
                     <View style={styles.transportRow}>
                         <NavigationTransportCard
                             mode="WALK"
-                            duration="5 mins"
+                            duration={getDurationForMode(TRANSPORT_MODE_API_MAP.WALK)}
                             isSelected={navigationMode === "WALK"}
                             onSelect={() => setNavigationMode("WALK")}
                         />
                         <NavigationTransportCard
                             mode="BIKE"
-                            duration="5 mins"
+                            duration={getDurationForMode(TRANSPORT_MODE_API_MAP.BIKE)}
                             isSelected={navigationMode === "BIKE"}
                             onSelect={() => setNavigationMode("BIKE")}
                         />
                         <NavigationTransportCard
                             mode="BUS"
-                            duration="N/A"
+                            duration={getDurationForMode(TRANSPORT_MODE_API_MAP.BUS)}
                             isSelected={navigationMode === "BUS"}
                             onSelect={() => setNavigationMode("BUS")}
                         />
@@ -63,7 +81,7 @@ export default function NavigationConfigView({visible, onClose}: NavigationConfi
                     </View>
 
                     {/* 2. Stats & Action Row */}
-                    <NavigationPathRow handleGo={handleGo}/>
+                    <NavigationPathRow duration={getSelectedDuration()} handleGo={handleGo} />
                 </>
             )}
         </BottomDrawer>

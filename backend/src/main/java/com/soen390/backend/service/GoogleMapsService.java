@@ -1,6 +1,7 @@
 package com.soen390.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.soen390.backend.exception.GoogleMapsDirectionsEmptyException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.object.RouteStep;
 import com.soen390.backend.enums.ManeuverType;
@@ -34,7 +35,6 @@ public class GoogleMapsService {
                 "&destination=" + destination +
                 "&mode=" + transportMode +
                 "&key=" + apiKey;
-
         String json = restTemplate.getForObject(url, String.class);
 
         try {
@@ -53,25 +53,18 @@ public class GoogleMapsService {
 
             JsonNode steps = leg.path("steps");
 
-            JsonNode step1 = leg.path("steps").get(0);
-            String modeOfTransport = step1.path("travel_mode").asText();
-            TransportMode mode = TransportMode.valueOf(modeOfTransport.toLowerCase());
+            return new OutdoorDirectionResponse(distance, duration, polyline, transportMode, processSteps(steps));
 
-            return new OutdoorDirectionResponse(distance, duration, polyline, mode, processSteps(steps));
-
-        }
-        catch (GoogleMapsDirectionsApiException e) {
+        } catch (GoogleMapsDirectionsEmptyException empty) {
+            return null;
+        } catch (GoogleMapsDirectionsApiException e) {
             throw e;
-        }
-        catch (NullPointerException | JsonProcessingException e) {
+        } catch (NullPointerException | JsonProcessingException e) {
             throw new RuntimeException("Map data format error: The response from the map service was incomplete or unexpected.", e);
-        }
-        catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while communicating with the Google Maps service.", e);
         }
     }
 
-    private List<RouteStep> processSteps(JsonNode steps){
+    private List<RouteStep> processSteps(JsonNode steps) {
 
         List<RouteStep> stepList = new ArrayList<>();
 
@@ -85,7 +78,7 @@ public class GoogleMapsService {
 
             String stepPolyline = step.path("polyline").path("points").asText();
 
-            ManeuverType maneuverType= handleMissingManeuver(step);
+            ManeuverType maneuverType = handleMissingManeuver(step);
 
             stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur, maneuverType, stepPolyline));
         }
@@ -93,7 +86,7 @@ public class GoogleMapsService {
 
     }
 
-    private ManeuverType handleMissingManeuver(JsonNode step){
+    private ManeuverType handleMissingManeuver(JsonNode step) {
         ManeuverType maneuverType;
         if (!step.path("maneuver").isTextual()) {
             maneuverType = ManeuverType.STRAIGHT;
@@ -104,8 +97,11 @@ public class GoogleMapsService {
         return maneuverType;
     }
 
-    private void checkResponseStatus(String status){
-        if(!status.equals("OK")){
+    private void checkResponseStatus(String status) {
+        if (status.equals("ZERO_RESULTS")){
+            throw new GoogleMapsDirectionsEmptyException("No routes found");
+        }
+        if (!status.equals("OK")) {
             throw new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations.");
         }
     }

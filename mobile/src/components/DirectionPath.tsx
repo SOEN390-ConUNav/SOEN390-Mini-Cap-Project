@@ -1,103 +1,97 @@
-import React, {useEffect, useState} from 'react';
-import {Polyline, Marker} from 'react-native-maps';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Polyline, Marker } from 'react-native-maps';
+import { Ionicons } from "@expo/vector-icons";
 import polyline from "@mapbox/polyline";
-import {Coordinate} from "../type";
+import { Coordinate } from "../type";
 import useNavigationConfig from "../hooks/useNavigationConfig";
-import {useMemo} from "react";
-import useNavigationInfo from "../hooks/useNavigationInfo";
-import {API_BASE_URL} from "../const";
+import { TRANSPORT_MODE_API_MAP } from "../type";
+
+const BURGUNDY = "#800020";
 
 interface DirectionPathProps {
     origin: Coordinate | null;
     destination: Coordinate | null;
 }
 
-export default function DirectionPath({origin, destination}: DirectionPathProps) {
-    const [routeCoords, setRouteCoords] = useState<Coordinate[]>([]);
-    const {navigationMode} = useNavigationConfig();
-    const {setPathDistance, setPathDuration, setIsLoading} = useNavigationInfo();
+function EndPin() {
+    return (
+        <View style={styles.endPin}>
+            <Ionicons name="location" size={28} color={BURGUNDY} />
+        </View>
+    );
+}
 
-    const directionsMode = useMemo(() => {
-        switch (navigationMode) {
-            case "BUS":
-                return "transit";
-            case "WALK":
-                return "walking";
-            case "BIKE":
-                return "bicycling";
-            case "SHUTTLE":
-                return "transit";
-            default:
-                return "driving";
-        }
+const decodeToCoords = (encoded: string): Coordinate[] =>
+    polyline.decode(encoded).map(([lat, lng]) => ({ latitude: lat, longitude: lng }));
+
+export default function DirectionPath({ origin, destination }: DirectionPathProps) {
+    const [tracksViewChanges, setTracksViewChanges] = useState(true);
+    const { navigationMode, allOutdoorRoutes } = useNavigationConfig();
+
+    // Stop tracking after markers have rendered
+    useEffect(() => {
+        const timer = setTimeout(() => setTracksViewChanges(false), 500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Re-enable tracking when mode changes so the marker re-renders
+    useEffect(() => {
+        setTracksViewChanges(true);
+        const timer = setTimeout(() => setTracksViewChanges(false), 500);
+        return () => clearTimeout(timer);
     }, [navigationMode]);
 
-    useEffect(() => {
-        const getRoute = async () => {
-            setIsLoading(true);
-            try {
-                const originStr = `${origin!.latitude},${origin!.longitude}`;
-                const destinationStr = `${destination!.latitude},${destination!.longitude}`;
-                const rawOutdoorDirectionResponse = await fetch(
-                    `${API_BASE_URL}/api/directions/outdoor` +
-                    `?origin=${encodeURIComponent(originStr)}` +
-                    `&destination=${encodeURIComponent(destinationStr)}` +
-                    `&transportMode=${directionsMode}`
-                );
-                const outdoorDirection = await rawOutdoorDirectionResponse.json();
+    const routeCoords = useMemo(() => {
+        if (!allOutdoorRoutes?.length) return [];
 
-                if (!outdoorDirection.polyline) {
-                    console.log("No polyline returned");
-                    console.log(outdoorDirection)
-                    return;
-                }
+        const apiMode = TRANSPORT_MODE_API_MAP[navigationMode];
+        const route = allOutdoorRoutes.find(
+            (r) => r.transportMode?.toLowerCase() === apiMode?.toLowerCase()
+        );
 
+        if (!route) return [];
 
-                let allCoordinates: Coordinate[] = [];
+        // Prefer step-level polylines for accuracy, fall back to overview
+        if (route.steps?.length) {
+            return route.steps.flatMap((step) => decodeToCoords(step.polyline));
+        }
 
-                // See @backend/service/GoogleMapsService.java
-                if (outdoorDirection.steps) {
-                    outdoorDirection.steps.forEach((step: any) => {
-                        // Decode the polyline for this specific step
-                        const stepPoints = polyline.decode(step.polyline);
-
-                        const stepCoords = stepPoints.map((point: number[]) => ({
-                            latitude: point[0],
-                            longitude: point[1]
-                        }));
-                        allCoordinates = [...allCoordinates, ...stepCoords];
-                    });
-                } else if (outdoorDirection.polyline) {
-                    // Fallback to overview if steps are missing
-                    const points = polyline.decode(outdoorDirection.polyline);
-                    allCoordinates = points.map(point => ({ latitude: point[0], longitude: point[1] }));
-                }
-
-                setRouteCoords(allCoordinates);
-
-                if (outdoorDirection.distance !== undefined) {
-                    setPathDistance(outdoorDirection.distance);
-                }
-                if (outdoorDirection.duration !== undefined) {
-                    setPathDuration(outdoorDirection.duration);
-                }
-            } catch (error) {
-                console.error("Error fetching route:", error);
-            } finally {
-                setIsLoading(false);
-            }
-
-        };
-        getRoute();
-    }, [origin, destination, directionsMode, setPathDistance, setPathDuration]);
+        return route.polyline ? decodeToCoords(route.polyline) : [];
+    }, [allOutdoorRoutes, navigationMode]);
 
     return (
         <>
             <Polyline
                 coordinates={routeCoords}
                 strokeWidth={3}
-                strokeColor="red"
+                strokeColor={BURGUNDY}
+                lineDashPattern={navigationMode === 'WALK' ? [5, 5] : undefined}
             />
+            {destination && (
+                <Marker
+                    coordinate={destination}
+                    anchor={{ x: 0.5, y: 1 }}
+                    tracksViewChanges={tracksViewChanges}
+                    zIndex={10}
+                >
+                    <EndPin />
+                </Marker>
+            )}
         </>
     );
 }
+
+const styles = StyleSheet.create({
+    endPin: {
+        width: 28,
+        height: 36,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 4,
+    },
+});

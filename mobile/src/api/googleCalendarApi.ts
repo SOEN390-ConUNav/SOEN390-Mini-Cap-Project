@@ -1,12 +1,10 @@
-import Constants from "expo-constants";
-
+import {API_BASE_URL} from "../const";
 type CalendarSelectionPayload = {
   id: string;
   summary?: string;
   primary?: boolean;
 };
 
-const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
 
 function requireApiBaseUrl(): string {
   if (!API_BASE_URL) {

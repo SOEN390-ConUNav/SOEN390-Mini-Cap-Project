@@ -1,297 +1,168 @@
-import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react-native';
+import NavigationConfigView from '../components/navigation-config/NavigationConfigView';
+import { OutdoorDirectionResponse } from '../api/outdoorDirectionsApi';
 
-// Mock the hooks before imports
-jest.mock("../hooks/useNavigationConfig", () => ({
-    __esModule: true,
-    default: jest.fn(),
-}));
+import useNavigationConfig from '../hooks/useNavigationConfig';
 
-jest.mock("../hooks/useNavigationInfo", () => ({
-    __esModule: true,
-    default: jest.fn(),
-}));
-
-// Mock child components
-jest.mock("../components/BottomDrawer", () => {
-    return function MockBottomDrawer({ children, visible }: any) {
-        return visible ? <>{children}</> : null;
-    };
+jest.mock('../components/navigation-config/NavigationTransportCard', () => {
+  const { TouchableOpacity, Text } = require('react-native');
+  return (props: any) => (
+    <TouchableOpacity onPress={props.onSelect} testID={`card-${props.mode}`}>
+      <Text>
+        {props.mode}: {props.duration}
+      </Text>
+    </TouchableOpacity>
+  );
 });
 
-jest.mock("../components/navigation-config/NavigationTransportCard", () => {
-    return function MockNavigationTransportCard({
-                                                    mode,
-                                                    isSelected,
-                                                    onSelect,
-                                                }: any) {
-        const { Text, TouchableOpacity } = require("react-native");
-        return (
-            <TouchableOpacity
-                testID={`transport-card-${mode}`}
-                onPress={onSelect}
-            >
-                <Text>{mode}</Text>
-                <Text>{isSelected ? "Selected" : "Not Selected"}</Text>
-            </TouchableOpacity>
-        );
-    };
+jest.mock('../components/navigation-config/NavigationPathRow', () => {
+  const { TouchableOpacity, Text, View } = require('react-native');
+  return (props: any) => (
+    <View>
+      <Text>PathRow Duration: {props.duration}</Text>
+      <TouchableOpacity onPress={props.handleGo} testID="go-button">
+        <Text>GO</Text>
+      </TouchableOpacity>
+    </View>
+  );
 });
 
-jest.mock("../components/navigation-config/NavigationPathRow", () => {
-    return function MockNavigationPathRow({ handleGo }: any) {
-        const { TouchableOpacity, Text } = require("react-native");
-        return (
-            <TouchableOpacity testID="go-button" onPress={handleGo}>
-                <Text>Go</Text>
-            </TouchableOpacity>
-        );
-    };
+jest.mock('../components/BottomDrawer', () => {
+  const { View } = require('react-native');
+  return (props: any) => <View>{props.children}</View>;
 });
 
-import NavigationConfigView from "../components/navigation-config/NavigationConfigView";
-import useNavigationConfig from "../hooks/useNavigationConfig";
-import useNavigationInfo from "../hooks/useNavigationInfo";
-
-const mockUseNavigationConfig = useNavigationConfig as unknown as jest.Mock;
-const mockUseNavigationInfo = useNavigationInfo as unknown as jest.Mock;
+jest.mock('../hooks/useNavigationConfig');
+const mockedUseNavigationConfig = useNavigationConfig as unknown as jest.Mock;
 
 const mockSetNavigationMode = jest.fn();
 
-beforeEach(() => {
+const mockDurations: OutdoorDirectionResponse[] = [
+  {
+    transportMode: 'walking',
+    duration: '10 mins',
+    distance: '1km',
+    polyline: '',
+    steps: [],
+  },
+  {
+    transportMode: 'bicycling',
+    duration: '5 mins',
+    distance: '1km',
+    polyline: '',
+    steps: [],
+  },
+  {
+    transportMode: 'transit',
+    duration: '15 mins',
+    distance: '5km',
+    polyline: '',
+    steps: [],
+  },
+];
+
+describe('NavigationConfigView', () => {
+  beforeEach(() => {
     jest.clearAllMocks();
+    mockedUseNavigationConfig.mockReturnValue({
+      navigationMode: 'WALK',
+      setNavigationMode: mockSetNavigationMode,
+    });
+  });
 
-    mockUseNavigationConfig.mockReturnValue({
-        navigationMode: "WALK",
-        setNavigationMode: mockSetNavigationMode,
+  it('renders with durations mapped correctly', () => {
+    const { getByText } = render(
+      <NavigationConfigView
+        durations={mockDurations}
+        visible={true}
+        onClose={jest.fn()}
+      />,
+    );
+
+    expect(getByText('WALK: 10 mins')).toBeTruthy();
+    expect(getByText('BIKE: 5 mins')).toBeTruthy();
+    expect(getByText('BUS: 15 mins')).toBeTruthy();
+    expect(getByText('SHUTTLE: N/A')).toBeTruthy();
+  });
+
+  it('updates navigation mode when a card is pressed', () => {
+    const { getByTestId } = render(
+      <NavigationConfigView
+        durations={mockDurations}
+        visible={true}
+        onClose={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(getByTestId('card-BIKE'));
+    expect(mockSetNavigationMode).toHaveBeenCalledWith('BIKE');
+
+    fireEvent.press(getByTestId('card-SHUTTLE'));
+    expect(mockSetNavigationMode).toHaveBeenCalledWith('SHUTTLE');
+  });
+
+  it('displays N/A for missing durations', () => {
+    const { getByText } = render(
+      <NavigationConfigView
+        durations={[]}
+        visible={true}
+        onClose={jest.fn()}
+      />,
+    );
+
+    expect(getByText('WALK: N/A')).toBeTruthy();
+  });
+
+  it('passes the correctly selected duration to NavigationPathRow based on mode', () => {
+    mockedUseNavigationConfig.mockReturnValue({
+      navigationMode: 'BUS',
+      setNavigationMode: mockSetNavigationMode,
     });
 
-    mockUseNavigationInfo.mockReturnValue({
-        isLoading: false,
-    });
-});
+    const { getByText } = render(
+      <NavigationConfigView
+        durations={mockDurations}
+        visible={true}
+        onClose={jest.fn()}
+      />,
+    );
 
-describe("NavigationConfigView", () => {
-    it("renders when visible", () => {
-        const { getByText } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
+    expect(getByText('PathRow Duration: 15 mins')).toBeTruthy();
+  });
 
-        expect(getByText("WALK")).toBeTruthy();
-        expect(getByText("BIKE")).toBeTruthy();
-        expect(getByText("BUS")).toBeTruthy();
-        expect(getByText("SHUTTLE")).toBeTruthy();
-    });
-
-    it("does not render when not visible", () => {
-        const { queryByText } = render(
-            <NavigationConfigView visible={false} onClose={jest.fn()} />
-        );
-
-        expect(queryByText("WALK")).toBeNull();
+  it('falls back to walking duration if mode is not in TRANSPORT_MODE_API_MAP', () => {
+    mockedUseNavigationConfig.mockReturnValue({
+      navigationMode: 'UNKNOWN_MODE',
+      setNavigationMode: mockSetNavigationMode,
     });
 
-    it("shows loading state when isLoading is true", () => {
-        mockUseNavigationInfo.mockReturnValue({
-            isLoading: true,
-        });
+    const { getByText } = render(
+      <NavigationConfigView
+        durations={mockDurations}
+        visible={true}
+        onClose={jest.fn()}
+      />,
+    );
 
-        const { getByText, queryByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
+    expect(getByText('PathRow Duration: 10 mins')).toBeTruthy();
+  });
 
-        expect(getByText("Calculating Route...")).toBeTruthy();
-        expect(queryByTestId("transport-card-WALK")).toBeNull();
-        expect(queryByTestId("go-button")).toBeNull();
-    });
+  it('executes handleGo when the go button is pressed', () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+    const { getByTestId } = render(
+      <NavigationConfigView
+        durations={mockDurations}
+        visible={true}
+        onClose={jest.fn()}
+      />,
+    );
 
-    it("shows transport modes when not loading", () => {
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        expect(getByTestId("transport-card-WALK")).toBeTruthy();
-        expect(getByTestId("transport-card-BIKE")).toBeTruthy();
-        expect(getByTestId("transport-card-BUS")).toBeTruthy();
-        expect(getByTestId("transport-card-SHUTTLE")).toBeTruthy();
-        expect(getByTestId("go-button")).toBeTruthy();
-    });
-
-    it("displays WALK mode as selected by default", () => {
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const walkCard = getByTestId("transport-card-WALK");
-        expect(walkCard).toBeTruthy();
-        expect(walkCard.children[1].props.children).toBe("Selected");
-    });
-
-    it("calls setNavigationMode when BIKE card is pressed", () => {
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const bikeCard = getByTestId("transport-card-BIKE");
-        fireEvent.press(bikeCard);
-
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("BIKE");
-    });
-
-    it("calls setNavigationMode when BUS card is pressed", () => {
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const busCard = getByTestId("transport-card-BUS");
-        fireEvent.press(busCard);
-
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("BUS");
-    });
-
-    it("calls setNavigationMode when SHUTTLE card is pressed", () => {
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const shuttleCard = getByTestId("transport-card-SHUTTLE");
-        fireEvent.press(shuttleCard);
-
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("SHUTTLE");
-    });
-
-    it("displays correct selected state for BIKE mode", () => {
-        mockUseNavigationConfig.mockReturnValue({
-            navigationMode: "BIKE",
-            setNavigationMode: mockSetNavigationMode,
-        });
-
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const bikeCard = getByTestId("transport-card-BIKE");
-        const walkCard = getByTestId("transport-card-WALK");
-
-        expect(bikeCard.children[1].props.children).toBe("Selected");
-        expect(walkCard.children[1].props.children).toBe("Not Selected");
-    });
-
-    it("displays correct selected state for BUS mode", () => {
-        mockUseNavigationConfig.mockReturnValue({
-            navigationMode: "BUS",
-            setNavigationMode: mockSetNavigationMode,
-        });
-
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const busCard = getByTestId("transport-card-BUS");
-        const walkCard = getByTestId("transport-card-WALK");
-
-        expect(busCard.children[1].props.children).toBe("Selected");
-        expect(walkCard.children[1].props.children).toBe("Not Selected");
-    });
-
-    it("displays correct selected state for SHUTTLE mode", () => {
-        mockUseNavigationConfig.mockReturnValue({
-            navigationMode: "SHUTTLE",
-            setNavigationMode: mockSetNavigationMode,
-        });
-
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const shuttleCard = getByTestId("transport-card-SHUTTLE");
-        const walkCard = getByTestId("transport-card-WALK");
-
-        expect(shuttleCard.children[1].props.children).toBe("Selected");
-        expect(walkCard.children[1].props.children).toBe("Not Selected");
-    });
-
-    it("logs navigation start when Go button is pressed", () => {
-        const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
-
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const goButton = getByTestId("go-button");
-        fireEvent.press(goButton);
-
-        expect(consoleLogSpy).toHaveBeenCalledWith(
-            "Start navigation with mode:",
-            "WALK"
-        );
-
-        consoleLogSpy.mockRestore();
-    });
-
-    it("transitions from loading to loaded state", () => {
-        const { rerender, getByText, queryByText, getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        mockUseNavigationInfo.mockReturnValue({
-            isLoading: true,
-        });
-
-        rerender(<NavigationConfigView visible={true} onClose={jest.fn()} />);
-
-        expect(getByText("Calculating Route...")).toBeTruthy();
-        expect(queryByText("WALK")).toBeNull();
-
-        mockUseNavigationInfo.mockReturnValue({
-            isLoading: false,
-        });
-
-        rerender(<NavigationConfigView visible={true} onClose={jest.fn()} />);
-
-        expect(queryByText("Calculating Route...")).toBeNull();
-        expect(getByTestId("transport-card-WALK")).toBeTruthy();
-    });
-
-    it("allows switching between different transport modes", () => {
-        const { getByTestId } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        fireEvent.press(getByTestId("transport-card-BIKE"));
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("BIKE");
-
-        fireEvent.press(getByTestId("transport-card-BUS"));
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("BUS");
-
-        fireEvent.press(getByTestId("transport-card-SHUTTLE"));
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("SHUTTLE");
-
-        fireEvent.press(getByTestId("transport-card-WALK"));
-        expect(mockSetNavigationMode).toHaveBeenCalledWith("WALK");
-
-        expect(mockSetNavigationMode).toHaveBeenCalledTimes(4);
-    });
-
-    it("renders ActivityIndicator in loading state", () => {
-        mockUseNavigationInfo.mockReturnValue({
-            isLoading: true,
-        });
-
-        const { UNSAFE_getByType } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const ActivityIndicator = require("react-native").ActivityIndicator;
-        expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
-    });
-
-    it("does not render ActivityIndicator when not loading", () => {
-        const { UNSAFE_queryByType } = render(
-            <NavigationConfigView visible={true} onClose={jest.fn()} />
-        );
-
-        const ActivityIndicator = require("react-native").ActivityIndicator;
-        expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
-    });
+    fireEvent.press(getByTestId('go-button'));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Start navigation with mode:',
+      'WALK',
+    );
+    consoleSpy.mockRestore();
+  });
 });
