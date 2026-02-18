@@ -17,12 +17,12 @@ import NavigationConfigView from "../../components/navigation-config/NavigationC
 import {styles as navStyles} from "../../components/BottomNav";
 import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
 import DirectionPath from "../../components/DirectionPath";
+import {reverseGeocode} from "../../services/handleGeocode";
 
 const SGW_CENTER = {latitude: 45.4973, longitude: -73.5790};
 const LOYOLA_CENTER = {latitude: 45.4582, longitude: -73.6405};
 const CAMPUS_REGION_DELTA = {latitudeDelta: 0.01, longitudeDelta: 0.01};
 
-// Shuttle stop coordinates
 const SHUTTLE_STOPS = {
     SGW: { latitude: 45.497122, longitude: -73.578471 },
     LOYOLA: { latitude: 45.45844144049705, longitude: -73.63831707854963 },
@@ -36,16 +36,13 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
 
-interface HomePageIndexProps {
-}
-
-export default function HomePageIndex(props: HomePageIndexProps) {
+export default function HomePageIndex() {
     const navigation = useNavigation();
     const params = useLocalSearchParams<{ shuttleCampus?: string }>();
 
     const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
     const {setNavigationState, isNavigating, isConfiguring, isSearching} = useNavigationState();
-    const {origin, setOrigin, destination, setDestination} = useNavigationEndpoints();
+    const {origin, setOrigin, destination, setDestination, swap, clear} = useNavigationEndpoints();
     const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
     const [showEnableLocation, setShowEnableLocation] = useState(true);
 
@@ -55,7 +52,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         ...CAMPUS_REGION_DELTA,
     });
 
-    // Shuttle stop state
     const [shuttleStop, setShuttleStop] = useState<{
         campus: "SGW" | "LOYOLA";
         coordinate: { latitude: number; longitude: number };
@@ -72,12 +68,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const mapRef = useRef<MapView>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
-    // Check permission status on mount
     useEffect(() => {
         checkLocationPermission();
     }, []);
 
-    // Handle shuttle navigation from route params
     useEffect(() => {
         if (params.shuttleCampus && (params.shuttleCampus === 'SGW' || params.shuttleCampus === 'LOYOLA')) {
             const targetCampus = params.shuttleCampus as "SGW" | "LOYOLA";
@@ -85,21 +79,17 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
             setCampus(targetCampus);
             setShuttleStop({ campus: targetCampus, coordinate: coord });
-
-            // Clear any building focus when showing shuttle stop
             setSelectedBuildingId(null);
             setOutlineMode(false);
             setShowBuildingPopup(false);
         }
     }, [params.shuttleCampus]);
 
-    // Animate to shuttle stop when it's set and map is ready
     useEffect(() => {
         if (!shuttleStop) return;
         if (showEnableLocation) return;
         if (!mapReady) return;
 
-        // Let overlays/markers render before camera jump
         requestAnimationFrame(() => {
             animateToRegion({
                 latitude: shuttleStop.coordinate.latitude,
@@ -107,8 +97,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                 ...CAMPUS_REGION_DELTA,
             });
         });
-
-        // Unfreeze briefly during camera movement
         scheduleFreezeMarkers();
     }, [shuttleStop, showEnableLocation, mapReady]);
 
@@ -122,11 +110,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     useEffect(() => {
         const shouldHideTabBar = isConfiguring || isNavigating;
-
         navigation.setOptions({
-            tabBarStyle: shouldHideTabBar
-                ? {display: "none"}
-                : navStyles.tabBarStyle,
+            tabBarStyle: shouldHideTabBar ? {display: "none"} : navStyles.tabBarStyle,
         });
     }, [isConfiguring, isNavigating, navigation]);
 
@@ -237,12 +222,9 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             ...CAMPUS_REGION_DELTA,
         });
 
-        // Clear building focus
         setSelectedBuildingId(null);
         setOutlineMode(false);
         setShowBuildingPopup(false);
-
-        // Clear shuttle stop when manually changing campus
         setShuttleStop(null);
 
         setNavigationState(NAVIGATION_STATE.IDLE);
@@ -253,10 +235,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const enterOutlineForBuilding = (b: Building) => {
         scheduleFreezeMarkers();
-
-        // Clear shuttle stop when focusing on a building
         setShuttleStop(null);
-
         setSelectedBuildingId(b.id);
         setOutlineMode(true);
         setShowBuildingPopup(false);
@@ -270,7 +249,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const onPressBuilding = (b: Building) => {
         if (selectedBuildingId !== b.id || !outlineMode) {
-            setDestination({longitude: b.marker.longitude, latitude: b.marker.latitude})
+            setDestination({ longitude: b.marker.longitude, latitude: b.marker.latitude, label: b.name });
             enterOutlineForBuilding(b);
             return;
         }
@@ -279,10 +258,11 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
     const onPressDirections = async () => {
         setShowBuildingPopup(false);
-        const currLocation = await getOneFix();
-        setOrigin({longitude: currLocation.longitude, latitude: currLocation.latitude});
+        const fix = await getOneFix();
+        const label = await reverseGeocode(fix).catch(() => "Current Location");
+        setOrigin({ latitude: fix.latitude, longitude: fix.longitude, label });
         setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
-    }
+    };
 
     const handleRegionChangeComplete = (r: Region) => {
         setRegion(r);
@@ -340,7 +320,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
                     scheduleFreezeMarkers();
                 }}
             >
-                {/* Shuttle stop marker (only when set) */}
                 {shuttleStop && (
                     <Marker
                         coordinate={shuttleStop.coordinate}
@@ -402,7 +381,23 @@ export default function HomePageIndex(props: HomePageIndexProps) {
             </View>
 
             <View style={styles.searchWrapper}>
-                <SearchBar placeholder="Search" onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}/>
+                <SearchBar
+                    placeholder="Search"
+                    onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
+                    isConfiguring={isConfiguring}
+                    isNavigating={isNavigating}
+                    // origin.label is resolved at write-time; null origin = "Current Location"
+                    originLabel={origin?.label ?? "Current Location"}
+                    destinationLabel={destination?.label ?? "Select destination"}
+                    onBack={() => {
+                        setNavigationState(NAVIGATION_STATE.IDLE);
+                        setSelectedBuildingId(null);
+                        setOutlineMode(false);
+                        setShowBuildingPopup(false);
+                        clear();
+                    }}
+                    onSwap={swap}
+                />
             </View>
 
             <SearchPanel visible={isSearching}

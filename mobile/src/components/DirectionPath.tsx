@@ -8,8 +8,8 @@ import useNavigationInfo from "../hooks/useNavigationInfo";
 import {API_BASE_URL} from "../const";
 
 interface DirectionPathProps {
-    origin: Coordinate;
-    destination: Coordinate;
+    origin: Coordinate | null;
+    destination: Coordinate | null;
 }
 
 export default function DirectionPath({origin, destination}: DirectionPathProps) {
@@ -36,8 +36,8 @@ export default function DirectionPath({origin, destination}: DirectionPathProps)
         const getRoute = async () => {
             setIsLoading(true);
             try {
-                const originStr = `${origin.latitude},${origin.longitude}`;
-                const destinationStr = `${destination.latitude},${destination.longitude}`;
+                const originStr = `${origin!.latitude},${origin!.longitude}`;
+                const destinationStr = `${destination!.latitude},${destination!.longitude}`;
                 const rawOutdoorDirectionResponse = await fetch(
                     `${API_BASE_URL}/api/directions/outdoor` +
                     `?origin=${encodeURIComponent(originStr)}` +
