@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useLocalSearchParams } from 'expo-router';
+import { useNavigation, useLocalSearchParams, useRouter } from 'expo-router';
+import { hasIndoorMaps, getDefaultFloor } from '../../utils/buildingIndoorMaps';
 import MapView, {
   Marker,
   Polygon,
@@ -48,6 +49,7 @@ interface HomePageIndexProps {}
 
 export default function HomePageIndex(props: HomePageIndexProps) {
   const navigation = useNavigation();
+  const router = useRouter();
   const params = useLocalSearchParams<{ shuttleCampus?: string }>();
 
   const [campus, setCampus] = useState<'SGW' | 'LOYOLA'>('SGW');
@@ -163,6 +165,21 @@ export default function HomePageIndex(props: HomePageIndexProps) {
       setShowEnableLocation(false);
       await startWatchingLocation();
     }
+  };
+
+    const onPressIndoorMaps = () => {
+        if (selectedBuildingId) {
+            setShowBuildingPopup(false);
+          
+            const defaultFloor = getDefaultFloor(selectedBuildingId);
+            router.push({
+        pathname: '/indoor-navigation',
+                params: { 
+                    buildingId: selectedBuildingId,
+                    floor: defaultFloor,
+                },
+            });
+        }
   };
 
   const stopWatchingLocation = () => {
@@ -466,12 +483,14 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           id={selectedBuilding.id}
           name={selectedBuilding.name}
           addressLines={selectedBuilding.addressLines}
+          buildingId={selectedBuilding.id}
           openingHours={selectedBuilding.openingHours.label}
           hasStudySpots={selectedBuilding.hasStudySpots}
           image={selectedBuilding.image}
           accessibility={selectedBuilding.accessibility}
           onClose={() => setShowBuildingPopup(false)}
           onDirections={() => onPressDirections()}
+          onIndoorMaps={hasIndoorMaps(selectedBuilding.id) ? () => onPressIndoorMaps() : undefined}
         />
       )}
 

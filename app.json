@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.fouad1234.soen390minicapproject1"
+  },
+  "ios": {
+    "bundleIdentifier": "com.fouad1234.soen390minicapproject1"
+  }
+}

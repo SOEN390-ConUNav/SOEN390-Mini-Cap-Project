@@ -386,5 +386,28 @@ export const BUILDINGS: Building[] = [
       isAccessible: true,
     },
   },
+  {
+    id: "VE",
+    name: "Vanier Extension",
+    marker: { latitude: 45.45879485505858, longitude: -73.63867369960231 },
+    addressLines: ["7141 Sherbrooke St. W."],
+    polygon: [
+      { latitude: 45.458858927217726, longitude: -73.63876617347758 },
+      { latitude: 45.45877033359568, longitude: -73.63882481544726 },
+      { latitude: 45.45863190578257, longitude: -73.63846619724802 },
+      { latitude: 45.458718917590474, longitude: -73.63839740570666 },
+    ],
+
+    openingHours: { label: "Mon–Sun Open 24 hours" },
+    hasStudySpots: false,
+
+    image: require("../../assets/buildings/ve.jpg"),
+
+    accessibility: {
+      hasElevator: true,
+      hasParking: false,
+      isAccessible: true,
+    },
+  },
 
 ];
