@@ -24,7 +24,7 @@ describe('outdoorDirectionsApi', () => {
 
     (fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => mockData,
+      text: async () => JSON.stringify(mockData),
     });
 
     const result = await getOutdoorDirections(
