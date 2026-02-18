@@ -55,7 +55,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const [campus, setCampus] = useState<'SGW' | 'LOYOLA'>('SGW');
   const { setNavigationState, isNavigating, isConfiguring, isSearching } =
     useNavigationState();
-  const { setOrigin, setDestination } = useNavigationEndpoints();
+  const { destination, setOrigin, setDestination } = useNavigationEndpoints();
   const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
     useNavigationConfig();
 
@@ -87,6 +87,12 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+
+  type LatLng = {
+    latitude: number;
+    longitude: number;
+    name?: string;
+  };
 
   // Check permission status on mount
   useEffect(() => {
@@ -356,6 +362,61 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }
   };
 
+  const handleSelectLocation = async ({
+    latitude,
+    longitude,
+    name,
+  }: LatLng) => {
+    try {
+      // get current location for origin
+      const currentPos = await Location.getCurrentPositionAsync({});
+
+      const originCoords = {
+        latitude: currentPos.coords.latitude,
+        longitude: currentPos.coords.longitude,
+      };
+
+      const destCoords = { latitude, longitude, name };
+
+      setOrigin(originCoords);
+      setDestination(destCoords);
+
+      const routes = await getAllOutdoorDirectionsInfo(
+        originCoords,
+        destCoords
+      );
+
+      setAllOutdoorRoutes(routes);
+
+      // show routing UI
+      setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+
+      // Fit map to show full route
+      const coordinates = decodePolyline(
+        routes.find(r => r.transportMode?.toLowerCase() === 'walking')?.polyline || ''
+      );
+
+      if (coordinates.length > 0) {
+        mapRef.current?.fitToCoordinates(coordinates, {
+          edgePadding: {
+            top: 100,
+            right: 50,
+            bottom: 150,
+            left: 50,
+          },
+          animated: true,
+        });
+      }
+      
+    } catch (error) {
+      Alert.alert(
+        "Navigation error",
+        "Unable to fetch directions to this location."
+      );
+    }
+  };
+
+
   const currentRoutePolyline = React.useMemo(() => {
     if (!isConfiguring && !isNavigating) return null;
 
@@ -444,6 +505,17 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           />
         )}
 
+        {/* Destination marker */}
+        {destination && (
+          <Marker
+            coordinate={{
+              latitude: destination.latitude,
+              longitude: destination.longitude,
+            }}
+            title={destination.name ?? "Destination"}
+          />
+        )}
+
         {BUILDINGS.map((b) => (
           <Marker
             key={b.id}
@@ -519,6 +591,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
       <SearchPanel
         visible={isSearching}
         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        onSelectLocation={handleSelectLocation}
       />
       <NavigationConfigView
         durations={allOutdoorRoutes}

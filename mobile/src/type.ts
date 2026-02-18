@@ -2,7 +2,7 @@ import {NAVIGATION_STATE} from "./const";
 
 export type NavigationState = typeof NAVIGATION_STATE[keyof typeof NAVIGATION_STATE];
 export type TransportMode = "WALK" | "BIKE" | "BUS" | "SHUTTLE" | "CAR";
-export type Coordinate = {latitude: number, longitude: number};
+export type Coordinate = {latitude: number, longitude: number, name?: string}; //optional name for destination marker
 
 export type TransportModeApi = "walking" | "driving" | "bicycling" | "transit" | "shuttle";
 
