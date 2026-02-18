@@ -65,6 +65,11 @@ const SVG_ASSETS: Record<string, Record<string, any>> = {
   CC: {
     '1': require('../../assets/building_plans/CC1.svg'),
   },
+  VE: {
+    '1': require('../../assets/building_plans/VE-1.svg'),
+    '2': require('../../assets/building_plans/VE-2.svg'),
+  },
+
 };
 
 function getSvgAsset(buildingId: BuildingId, floorNumber: string): any {

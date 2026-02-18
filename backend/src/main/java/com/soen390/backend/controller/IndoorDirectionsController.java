@@ -17,9 +17,9 @@ public class IndoorDirectionsController {
     private static final String FLOOR_LABEL = " floor '";
 
     private static final Set<String> VALID_BUILDING_PREFIXES = Set.of(
-            "Hall-", "VL-", "LB-", "MB-", "CC-");
+            "Hall-", "VL-", "LB-", "MB-", "CC-", "VE-" );
     private static final Set<String> VALID_SHORT_CODES = Set.of(
-            "H", "VL", "LB", "MB", "CC");
+            "H", "VL", "LB", "MB", "CC", "VE");
 
     private final IndoorDirectionService indoorDirectionService;
 

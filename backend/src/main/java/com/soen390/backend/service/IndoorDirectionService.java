@@ -199,6 +199,7 @@ public class IndoorDirectionService {
         if ("LB".equals(buildingId)) return "LB-" + floor;
         if ("MB".equals(buildingId)) return "MB-" + floor;
         if ("CC".equals(buildingId)) return "CC-" + floor;
+        if ("VE".equals(buildingId)) return "VE-" + floor;
         return buildingId;
     }
 

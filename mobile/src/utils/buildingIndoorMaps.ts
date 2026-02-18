@@ -18,7 +18,11 @@ export function getBackendBuildingId(buildingId: BuildingId, floorNumber?: strin
     const floor = floorNumber || '8';
     return `Hall-${floor}`;
   }
-  
+  if (buildingId === 'VE') {
+    const floor = floorNumber || '1';
+    return `VE-${floor}`;
+  }
+
   if (buildingId === 'VL') {
     const floor = floorNumber || '1';
     return `VL-${floor}`;

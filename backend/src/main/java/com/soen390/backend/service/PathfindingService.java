@@ -32,16 +32,16 @@ public class PathfindingService {
     private static final Map<String, List<Waypoint>> WAYPOINTS = new HashMap<>();
     private static final Map<String, BuildingConfig> CONFIGS = new HashMap<>();
 
-    /** All known building IDs that have JSON floor plan files */
-    private static final String[] BUILDING_IDS = {
+   
+    private static final String[] FLOOR_PLAN_IDS = {
         "Hall-8", "Hall-9", "Hall-2", "Hall-1",
-        "VL-1", "VL-2",
+        "VL-1", "VL-2", "VE-1","VE-2",
         "LB-2", "LB-3", "LB-4", "LB-5",
         "MB-S2", "MB-1", "CC-1"
     };
 
     static {
-        for (String buildingId : BUILDING_IDS) {
+        for (String buildingId : FLOOR_PLAN_IDS) {
             loadBuildingFromJson(buildingId);
         }
     }
