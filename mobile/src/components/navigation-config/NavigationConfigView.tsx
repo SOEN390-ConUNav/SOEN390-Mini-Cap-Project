@@ -39,6 +39,7 @@ export default function NavigationConfigView({
     const handleGo = () => {
         // Logic to start the actual turn-by-turn navigation
         console.log("Start navigation with mode:", navigationMode);
+        onGo();
     };
 
     return (

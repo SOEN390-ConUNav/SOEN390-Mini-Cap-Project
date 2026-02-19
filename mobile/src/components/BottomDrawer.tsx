@@ -82,7 +82,9 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     contentContainer: {
-        padding: 36,
+        paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 12,
         alignItems: 'center',
     },
     handleWrapper: {

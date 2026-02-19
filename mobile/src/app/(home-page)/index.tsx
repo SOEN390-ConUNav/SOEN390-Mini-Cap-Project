@@ -22,8 +22,6 @@ import useNavigationConfig from '../../hooks/useNavigationConfig';
 import useNavigationInfo from '../../hooks/useNavigationInfo';
 import { getAllOutdoorDirectionsInfo } from '../../api';
 import { reverseGeocode } from "../../services/handleGeocode";
-import {isLoading} from "expo-font";
-import { decodePolyline } from '../../utils/polylineDecode';
 import NavigationInfoBottom from '../../components/navigation-info/NavigationInfoBottom';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
@@ -410,7 +408,7 @@ export default function HomePageIndex() {
         </View>
 
         <SearchPanel visible={isSearching} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)} />
-        <NavigationConfigView durations={allOutdoorRoutes} visible={isConfiguring} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)} />
+        <NavigationConfigView durations={allOutdoorRoutes} visible={isConfiguring} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)} onGo={() => setNavigationState(NAVIGATION_STATE.NAVIGATING)}/>
         <FloatingActionButton onPress={onPressFab} />
 
       <View style={styles.campusWrapper}>
