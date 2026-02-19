@@ -72,10 +72,6 @@ public class PlacesOfInterestService {
             throw new RuntimeException("Google Places Text Search returned an empty response", e);
         }
 
-//        if (rawJson == null || rawJson.trim().isEmpty()) {
-//            throw new RuntimeException("Google Places Text Search returned an empty response");
-//        }
-
         return rawJson;
     }
 
