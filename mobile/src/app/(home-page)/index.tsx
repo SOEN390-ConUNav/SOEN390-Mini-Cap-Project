@@ -26,6 +26,7 @@ import useNavigationEndpoints from '../../hooks/useNavigationEndpoints';
 import useNavigationConfig from '../../hooks/useNavigationConfig';
 import { getAllOutdoorDirectionsInfo } from '../../api';
 import { decodePolyline } from '../../utils/polylineDecode';
+import NavigationInfoBottom from '../../components/navigation-info/NavigationInfoBottom';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -524,12 +525,16 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         durations={allOutdoorRoutes}
         visible={isConfiguring}
         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        onGo={()=>setNavigationState(NAVIGATION_STATE.NAVIGATING)}
       />
 
       <FloatingActionButton onPress={onPressFab} />
 
       <View style={styles.campusWrapper}>
         <CampusSwitcher value={campus} onChange={onChangeCampus} />
+      </View>
+      <View>
+        <NavigationInfoBottom visible={isNavigating} onClose={()=>null}/>
       </View>
     </View>
   );
