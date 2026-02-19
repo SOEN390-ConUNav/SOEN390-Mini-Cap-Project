@@ -76,16 +76,15 @@ class PlacesOfInterestServiceTest {
     }
 
     @Test
-    void searchPlacesByText_ThrowsException_WhenResponseIsBlank() {
+    void searchPlacesByText_ReturnsBlank_WhenResponseIsBlank() {
         mockServer.expect(requestTo("https://places.googleapis.com/v1/places:searchText"))
                 .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            placesService.searchPlacesByText("pizza");
-        });
+        String result = placesService.searchPlacesByText("pizza");
 
-        assertTrue(exception.getMessage().contains("Google Places Text Search returned"));
+        assertNull(result);
         mockServer.verify();
     }
+
 
 }

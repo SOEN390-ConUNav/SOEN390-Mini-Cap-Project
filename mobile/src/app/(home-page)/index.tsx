@@ -26,6 +26,7 @@ import useNavigationEndpoints from '../../hooks/useNavigationEndpoints';
 import useNavigationConfig from '../../hooks/useNavigationConfig';
 import { getAllOutdoorDirectionsInfo } from '../../api';
 import { decodePolyline } from '../../utils/polylineDecode';
+import { NamedCoordinate } from '../../type';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -88,11 +89,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
-  type LatLng = {
-    latitude: number;
-    longitude: number;
-    name?: string;
-  };
 
   // Check permission status on mount
   useEffect(() => {
@@ -366,7 +362,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     latitude,
     longitude,
     name,
-  }: LatLng) => {
+  }: NamedCoordinate) => {
     try {
       // get current location for origin
       const currentPos = await Location.getCurrentPositionAsync({});
