@@ -49,6 +49,9 @@ jobs:
       - name: Install frontend dependencies
         working-directory: mobile
         run: npm ci
+      - name: Run frontend tests for coverage
+        working-directory: mobile
+        run: npm test -- --coverage --watchAll=false
 
       # Optional: build frontend (not required for Sonar warnings, but good CI hygiene)
       # - name: Build frontend

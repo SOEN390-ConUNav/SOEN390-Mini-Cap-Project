@@ -18,7 +18,7 @@ import {
   requestGoogleOAuthExchange,
   requestGoogleState,
   requestSetGoogleSelectedCalendar,
-} from "../api/googleCalendarApi";
+} from "../api";
 
 const BURGUNDY = "#800020";
 const ACCENT_RED = "#800020";

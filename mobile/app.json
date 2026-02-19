@@ -3,14 +3,11 @@
     "name": "ConUNav",
     "slug": "mobile",
     "version": "1.0.0",
+    "scheme": "conunav",
     "orientation": "portrait",
     "icon": "./assets/adaptive-icon2.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "scheme": "unimap",
-    "plugins": [
-      "@react-native-google-signin/google-signin"
-    ],
     "splash": {
       "image": "./assets/adaptive-icon2.png",
       "resizeMode": "contain",
@@ -34,7 +31,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/adaptive-icon2.png"
+      "favicon": "./assets/adaptive-icon2.png",
+      "output": "server"
     }
   }
 }

@@ -1,0 +1,21 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Enable Location"
+- tapOn: "Search"
+- tapOn: "Search"
+- inputText: "Mcdona"
+- pressKey: Enter
+- tapOn: "Mcdona"
+- eraseText
+- inputText: "burger king"
+- pressKey: Enter
+- tapOn: "burger king"
+- eraseText
+- inputText: "wendys"
+- pressKey: Enter
+- tapOn: "wendys"
+- eraseText
+- assertVisible: "Mcdona"
+- assertVisible: "burger king" 
+- assertVisible: "wendys" 

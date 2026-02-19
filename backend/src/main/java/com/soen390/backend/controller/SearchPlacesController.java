@@ -1,7 +1,6 @@
 package com.soen390.backend.controller;
 
 import com.soen390.backend.service.PlacesOfInterestService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,8 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SearchPlacesController {
 
-    @Autowired
-    private PlacesOfInterestService placesOfInterestService;
+    private final PlacesOfInterestService placesOfInterestService;
+
+    public SearchPlacesController(PlacesOfInterestService placesOfInterestService) {
+        this.placesOfInterestService = placesOfInterestService;
+    }
 
     @GetMapping("/api/places/search")
     public ResponseEntity<String> searchPlaces(

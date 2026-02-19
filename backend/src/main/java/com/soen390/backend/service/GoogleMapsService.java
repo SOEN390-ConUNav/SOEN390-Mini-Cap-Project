@@ -53,25 +53,16 @@ public class GoogleMapsService {
 
             JsonNode steps = leg.path("steps");
 
-            JsonNode step1 = leg.path("steps").get(0);
-            String modeOfTransport = step1.path("travel_mode").asText();
-            TransportMode mode = TransportMode.valueOf(modeOfTransport.toLowerCase());
+            return new OutdoorDirectionResponse(distance, duration, polyline, transportMode, processSteps(steps));
 
-            return new OutdoorDirectionResponse(distance, duration, polyline, mode, processSteps(steps));
-
-        }
-        catch (GoogleMapsDirectionsApiException e) {
+        } catch (GoogleMapsDirectionsApiException e) {
             throw e;
-        }
-        catch (NullPointerException | JsonProcessingException e) {
+        } catch (NullPointerException | JsonProcessingException e) {
             throw new RuntimeException("Map data format error: The response from the map service was incomplete or unexpected.", e);
-        }
-        catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while communicating with the Google Maps service.", e);
         }
     }
 
-    private List<RouteStep> processSteps(JsonNode steps){
+    private List<RouteStep> processSteps(JsonNode steps) {
 
         List<RouteStep> stepList = new ArrayList<>();
 
@@ -83,15 +74,15 @@ public class GoogleMapsService {
             String stepDist = step.path("distance").path("text").asText();
             String stepDur = step.path("duration").path("text").asText();
 
-            ManeuverType maneuverType= handleMissingManeuver(step);
+            ManeuverType maneuverType = handleMissingManeuver(step);
 
-            stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur,maneuverType));
+            stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur, maneuverType));
         }
         return stepList;
 
     }
 
-    private ManeuverType handleMissingManeuver(JsonNode step){
+    private ManeuverType handleMissingManeuver(JsonNode step) {
         ManeuverType maneuverType;
         if (!step.path("maneuver").isTextual()) {
             maneuverType = ManeuverType.STRAIGHT;
@@ -102,8 +93,8 @@ public class GoogleMapsService {
         return maneuverType;
     }
 
-    private void checkResponseStatus(String status){
-        if(!status.equals("OK")){
+    private void checkResponseStatus(String status) {
+        if (!status.equals("OK")) {
             throw new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations.");
         }
     }

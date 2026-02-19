@@ -4,39 +4,53 @@ import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Foundation from '@expo/vector-icons/Foundation';
+import { BuildingId } from "../data/buildings";
+import { hasIndoorMaps } from "../utils/buildingIndoorMaps";
 
 const BURGUNDY = "#800020";
+
+const defaultAccessibility = {
+  hasElevator: false,
+  hasParking: false,
+  isAccessible: false,
+};
 
 export default function BuildingPopup({
   id,
   name,
-  addressLines,
-  openingHours,
-  hasStudySpots,
+  addressLines = [],
+  buildingId,
+  openingHours = "",
+  hasStudySpots = false,
   image,
   accessibility,
   onClose,
   onDirections,
+  onIndoorMaps,
 }: {
   id: string;
   name: string;
-  addressLines: string[];
-  openingHours: string;
-  hasStudySpots: boolean;
+  addressLines?: string[];
+  buildingId: BuildingId;
+  openingHours?: string;
+  hasStudySpots?: boolean;
   image: any;
-  accessibility: {
+  accessibility?: {
     hasElevator: boolean;
     hasParking: boolean;
     isAccessible: boolean;
   };
   onClose: () => void;
   onDirections: () => void;
+  onIndoorMaps?: () => void;
 }) {
+  const showIndoorMaps = hasIndoorMaps(buildingId);
+  const acc = accessibility ?? defaultAccessibility;
   return (
     <View style={styles.backdrop}>
       <View style={styles.card}>
         {/* Image */}
-        <Image source={image} style={styles.image} resizeMode="cover" />
+        {image != null && <Image source={image} style={styles.image} resizeMode="cover" />}
 
         {/* Header */}
         <View style={styles.headerRow}>
@@ -47,17 +61,17 @@ export default function BuildingPopup({
           <View style={styles.headerRight}>
             {/* Accessibility icons (conditional) */}
             <View style={styles.iconsRow}>
-              {accessibility.hasParking && (
+              {acc.hasParking && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>P</Text>
                 </View>
               )}
 
-              {accessibility.hasElevator && (
+              {acc.hasElevator && (
                 <Foundation name="elevator" size={20} color={BURGUNDY} />
               )}
 
-              {accessibility.isAccessible && (
+              {acc.isAccessible && (
                 <FontAwesome name="wheelchair" size={20} color={BURGUNDY} />
               )}
             </View>
@@ -69,7 +83,7 @@ export default function BuildingPopup({
         </View>
 
         {/* Address */}
-        {addressLines.map((line, idx) => (
+        {(addressLines ?? []).map((line, idx) => (
           <Text key={idx} style={styles.address}>
             {line}
           </Text>
@@ -86,11 +100,19 @@ export default function BuildingPopup({
           <Text style={styles.metaValue}>{hasStudySpots ? "Yes" : "No"}</Text>
         </View>
 
-        {/* Directions button */}
-        <Pressable onPress={onDirections} style={styles.directionsBtn}>
-          <FontAwesome5 name="directions" size={18} color="#fff" />
-          <Text style={styles.directionsText}>Directions</Text>
-        </Pressable>
+        <View style={styles.buttonRow}>
+          <Pressable onPress={onDirections} style={styles.directionsBtn}>
+            <FontAwesome5 name="directions" size={18} color="white" />
+            <Text style={styles.directionsText}>Directions</Text>
+          </Pressable>
+          
+          {showIndoorMaps && onIndoorMaps && (
+            <Pressable onPress={onIndoorMaps} style={styles.indoorMapsBtn}>
+              <Ionicons name="map" size={18} color="white" />
+              <Text style={styles.indoorMapsText}>Indoor Maps</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -184,10 +206,14 @@ const styles = StyleSheet.create({
   },
   muted: { color: "#444", fontWeight: "600" },
 
-  directionsBtn: {
-    marginTop: 12,
+  buttonRow: {
+    marginTop: 14,
     marginBottom: 14,
-    alignSelf: "flex-end",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  directionsBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -198,4 +224,14 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   directionsText: { color: "#fff", fontWeight: "800" },
+  indoorMapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: BURGUNDY,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  indoorMapsText: { color: "#fff", fontWeight: "800" },
 });

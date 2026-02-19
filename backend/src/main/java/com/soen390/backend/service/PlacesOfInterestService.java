@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -26,7 +25,7 @@ public class PlacesOfInterestService {
 
     public String getNearbyPlaces(int maxResultCount, double radius, double lat, double lng, PlaceType placeType) {
         Map<String, Object> body = Map.of(
-                "includedTypes", placeType,
+                "includedTypes", placeType.toString().toLowerCase(),
                 "maxResultCount", maxResultCount,
                 "locationRestriction", Map.of(
                         "circle", Map.of(

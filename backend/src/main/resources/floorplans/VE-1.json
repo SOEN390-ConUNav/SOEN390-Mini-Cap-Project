@@ -1,0 +1,27 @@
+{
+    "buildingId": "VE-1",
+    "floor": "1",
+    "rooms": {
+      "Entrance/exit": { "x": 374.35339, "y": 899.6366 },
+      "Room-1": { "x": 370.78812, "y": 783.17108 },
+      "Room-2": { "x": 265.01843, "y": 758.21417 },
+      "Room-3": { "x": 259.07632, "y": 640.56024 },
+      "Room-4": { "x": 680.96667, "y": 514.58734 }
+    },
+    "waypoints": [
+      { "id": "Allowed-path-1", "x": 374.35339, "y": 837.83856 },
+      { "id": "Allowed-path-2", "x": 276.90268, "y": 849.72278 },
+      { "id": "Allowed-path-3", "x": 209.16254, "y": 850.91119 },
+      { "id": "Allowed-path-4", "x": 198.46672, "y": 651.25604 },
+      { "id": "Allowed-path-5", "x": 193.71303, "y": 535.979 },
+      { "id": "Allowed-path-6", "x": 415.94821, "y": 520.52948 },
+      { "id": "Allowed-path-7", "x": 596.58856, "y": 514.58734 }
+    ],
+    "pathfindingConfig": {
+      "searchRadius": 300.0,
+      "alignThreshold": 20.0,
+      "maxNeighbors": 0,
+      "strictAlignment": false
+    }
+  }
+  
