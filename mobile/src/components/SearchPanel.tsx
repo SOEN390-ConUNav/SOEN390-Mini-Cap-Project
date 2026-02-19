@@ -29,6 +29,12 @@ const PLACE_TYPES = [
     {label: "Subway", value: "subway_station"},
 ];
 
+type SearchPanelProps = {
+  visible: boolean;
+  onClose: () => void;
+  onSelectLocation: (location: { latitude: number; longitude: number; name?: string }) => void;
+};
+
 async function getUserLocation() {
     const {status} = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") throw new Error("Location denied");
@@ -41,7 +47,7 @@ async function getUserLocation() {
 }
 
 
-export default function SearchPanel({visible, onClose,}: { visible: boolean; onClose: () => void; }) {
+export default function SearchPanel({visible, onClose, onSelectLocation,}: SearchPanelProps) {
     const [query, setQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
@@ -200,7 +206,7 @@ export default function SearchPanel({visible, onClose,}: { visible: boolean; onC
                                 data={searchResults}
                                 keyExtractor={(item) => item.id}
                                 renderItem={({item}) => (
-                                    <TouchableOpacity style={styles.poiItem}>
+                                    <TouchableOpacity style={styles.poiItem} onPress={() => { onSelectLocation({...item.location, name: item.name}); onClose(); }}>
                                         <View style={styles.poiTextContainer}>
                                             <Text style={styles.placeName}>{item.name}</Text>
                                             <Text style={styles.address}>{item.address}</Text>
@@ -241,7 +247,7 @@ export default function SearchPanel({visible, onClose,}: { visible: boolean; onC
                                             </Text>
                                         </View>
 
-                                        <TouchableOpacity style={styles.directionsButton}>
+                                        <TouchableOpacity style={styles.directionsButton} onPress={() => { onSelectLocation({...item.location, name: item.name}); onClose(); }}>
                                             <Ionicons name="navigate" size={18} color="#fff"/>
                                         </TouchableOpacity>
                                     </View>
