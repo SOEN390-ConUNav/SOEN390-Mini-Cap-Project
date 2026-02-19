@@ -613,7 +613,12 @@ const styles = StyleSheet.create({
   enableLocationSkip: { paddingVertical: 14, alignItems: 'center' },
   enableLocationSkipText: { color: '#777', fontWeight: '600' },
   searchWrapper: { position: 'absolute', top: 50, left: 16, right: 16 },
-  upcomingEventWrapper: { position: 'absolute', top: 108, left: 16, right: 16 },
+  upcomingEventWrapper: {
+    position: 'absolute',
+    bottom: 144,
+    width: 300,
+    alignSelf: 'center',
+  },
   overlayHidden: { opacity: 0 },
   campusWrapper: {
     position: 'absolute',
