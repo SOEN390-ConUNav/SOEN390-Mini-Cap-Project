@@ -1,11 +1,9 @@
-import Constants from 'expo-constants';
+import {API_BASE_URL} from "../const";
 import { TransportModeApi } from '../type';
 import {
-  getOutdoorDirections,
-  OutdoorDirectionResponse,
+    getOutdoorDirections,
+    OutdoorDirectionResponse,
 } from './outdoorDirectionsApi';
-
-const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
 
 export interface NearbyPlace {
   id: string;

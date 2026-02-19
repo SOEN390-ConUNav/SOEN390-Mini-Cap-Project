@@ -1,13 +1,12 @@
-import Constants from 'expo-constants';
 import { TransportModeApi, ManeuverTypeApi } from '../type';
-
-const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+import { API_BASE_URL } from "../const";
 
 export interface Step {
   instruction: string;
   distance: string;
   duration: string;
   maneuverType: ManeuverTypeApi;
+  polyline: string; // now returned per-step from backend
 }
 
 export interface OutdoorDirectionResponse {
@@ -18,24 +17,20 @@ export interface OutdoorDirectionResponse {
   steps: Step[];
 }
 
-/**
- * @param origin - Starting location string (Required)
- * @param destination - Ending location string (Required)
- * @param mode - Transport mode: walking, driving, bicycling, or transit (Required)
- */
 export const getOutdoorDirections = async (
-  origin: string,
-  destination: string,
-  mode: TransportModeApi = 'walking',
+    origin: string,
+    destination: string,
+    mode: TransportModeApi = 'walking',
 ): Promise<OutdoorDirectionResponse | null> => {
   try {
     const url = `${API_BASE_URL}/api/directions/outdoor?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&transportMode=${mode}`;
     const response = await fetch(url);
 
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
-    }
-    const data: OutdoorDirectionResponse = await response.json();
+    if (!response.ok) throw new Error(`Error: ${response.status}`);
+    const text = await response.text();
+    if (!text) return null;
+
+    const data: OutdoorDirectionResponse = JSON.parse(text);
     return data;
   } catch (error) {
     console.error('Failed to fetch directions:', error);

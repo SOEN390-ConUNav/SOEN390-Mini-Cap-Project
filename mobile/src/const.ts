@@ -7,3 +7,4 @@ export const NAVIGATION_STATE = {
     NAVIGATING: 'NAVIGATING'
 } as const;
 export const GOOGLE_MAPS_APIKEY = Constants.expoConfig?.extra?.googleMapsApiKey;
+export const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL;

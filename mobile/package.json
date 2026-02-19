@@ -21,6 +21,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.8",
+    "@mapbox/polyline": "^1.2.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-google-signin/google-signin": "^16.1.1",
     "dotenv": "^17.2.3",
@@ -54,6 +55,7 @@
     "@babel/parser": "^7.29.0",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
+    "@types/mapbox__polyline": "^1.0.5",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "^54.0.10",
     "expo-doctor": "^1.17.14",

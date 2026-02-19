@@ -21,7 +21,6 @@ public class OutdoorDirectionsController {
             @RequestParam String origin,
             @RequestParam String destination,
             @RequestParam TransportMode transportMode) {
-
-        return mapsService.getDirections(origin, destination, transportMode);
+        return mapsService.getDirections(origin, destination, transportMode) ;
     }
 }

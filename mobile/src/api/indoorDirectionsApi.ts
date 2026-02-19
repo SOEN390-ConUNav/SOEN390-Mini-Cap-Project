@@ -1,13 +1,6 @@
-import Constants from "expo-constants";
-
 import { IndoorDirectionResponse, RoutePoint } from "../types/indoorDirections";
+import {API_BASE_URL} from "../const";
 
-
-const getDefaultApiUrl = () => {
-  return (Constants.expoConfig?.extra as any)?.API_BASE_URL;
-};
-
-const API_BASE_URL = getDefaultApiUrl();
 
 
 /**
