@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Button,
   ActivityIndicator,
   AppState,
   AppStateStatus,
@@ -21,7 +20,21 @@ import {
   requestSetGoogleSelectedCalendar,
 } from "../api/googleCalendarApi";
 
-export default function UpcomingEventButton() {
+const BURGUNDY = "#800020";
+const ACCENT_RED = "#800020";
+
+export default function UpcomingEventButton({
+  onMainButtonPress,
+  onOpenEventDetails,
+}: {
+  onMainButtonPress?: () => void;
+  onOpenEventDetails?: (payload: {
+    title: string;
+    detailsText: string;
+    onChangeCalendar: () => void;
+    onLogout: () => void;
+  }) => void;
+}) {
   const googleWebClientId = (Constants.expoConfig?.extra as any)?.GOOGLE_WEB_CLIENT_ID as string | undefined;
   const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
   const [calendars, setCalendars] = useState<any[]>([]);
@@ -29,7 +42,6 @@ export default function UpcomingEventButton() {
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
   const [nextEvent, setNextEvent] = useState<any | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
-  const [showEventDetails, setShowEventDetails] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   const clearLocalGoogleState = () => {
@@ -38,7 +50,6 @@ export default function UpcomingEventButton() {
     setShowCalendarPicker(false);
     setNextEvent(null);
     setEventDetailsText("");
-    setShowEventDetails(false);
   };
 
   useEffect(() => {
@@ -111,7 +122,7 @@ export default function UpcomingEventButton() {
         setEventDetailsText(detailsTextFromBackend ?? "No event details available.");
       } else {
         setNextEvent(null);
-        setEventDetailsText(detailsTextFromBackend ?? "No upcoming events found in the next 7 days.");
+        setEventDetailsText(detailsTextFromBackend ?? "No upcoming event");
       }
 
       return state;
@@ -237,22 +248,39 @@ export default function UpcomingEventButton() {
   };
 
   const showRedEventButton = !!selectedCalendar;
-  const upcomingTitle = nextEvent ? ((nextEvent?.summary ?? "").trim() || "Upcoming event") : "No event in calendar";
+  const upcomingTitle = nextEvent ? ((nextEvent?.summary ?? "").trim() || "Upcoming event") : "No upcoming event";
+  const upcomingButtonLabel = nextEvent ? `Upcoming event: ${upcomingTitle}` : upcomingTitle;
 
   return (
     <View style={{ width: "100%" }}>
       {!showRedEventButton ? (
         <TouchableOpacity
-          style={styles.primaryBtn}
+          style={[styles.upcomingBtn, styles.importBtn]}
           onPress={() => {
+            onMainButtonPress?.();
             if (!isBusy) void startImportFlow();
           }}
         >
-          <Text style={styles.primaryBtnText}>Import schedule from Google Calendar</Text>
+          <Text style={styles.upcomingBtnText}>Import Google Calendar Schedule</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={styles.upcomingBtn} onPress={() => setShowEventDetails(true)}>
-          <Text style={styles.upcomingBtnText}>Upcoming event: {upcomingTitle}</Text>
+        <TouchableOpacity
+          style={[styles.upcomingBtn, styles.upcomingEventBtn]}
+          onPress={() => {
+            onMainButtonPress?.();
+            onOpenEventDetails?.({
+              title: upcomingTitle,
+              detailsText: eventDetailsText,
+              onChangeCalendar: () => {
+                void startImportFlow(true);
+              },
+              onLogout: () => {
+                void logoutGoogleForTesting();
+              },
+            });
+          }}
+        >
+          <Text style={styles.upcomingBtnText}>{upcomingButtonLabel}</Text>
         </TouchableOpacity>
       )}
 
@@ -263,7 +291,7 @@ export default function UpcomingEventButton() {
 
             {isCalendarLoading ? (
               <View style={styles.calendarLoadingBox}>
-                <ActivityIndicator size="small" color="#1976d2" />
+                <ActivityIndicator size="small" color={BURGUNDY} />
                 <Text style={styles.calendarLoadingText}>Refreshing calendars...</Text>
               </View>
             ) : (
@@ -286,44 +314,13 @@ export default function UpcomingEventButton() {
             )}
 
             <View style={{ height: 12 }} />
-            <Button title="Cancel" onPress={() => setShowCalendarPicker(false)} />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showEventDetails} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.detailsCard}>
-            <View style={styles.detailsHeader}>
-              <Text style={styles.detailsTitle}>{upcomingTitle}</Text>
-              <TouchableOpacity
-                style={styles.detailsCloseBtn}
-                onPress={() => setShowEventDetails(false)}
-                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-              >
-                <Text style={styles.detailsCloseText}>X</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.detailsBody}>{eventDetailsText}</Text>
-
-            <View style={{ height: 12 }} />
-            <TouchableOpacity
-              style={styles.changeCalendarBtn}
-              onPress={() => {
-                setShowEventDetails(false);
-                void startImportFlow(true);
-              }}
-            >
-              <Text style={styles.changeCalendarBtnText}>Change calendar</Text>
-            </TouchableOpacity>
-            <View style={{ height: 8 }} />
-            <TouchableOpacity style={styles.logoutBtn} onPress={logoutGoogleForTesting}>
-              <Text style={styles.logoutBtnText}>Log out of Google</Text>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCalendarPicker(false)}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
     </View>
   );
 }
@@ -344,18 +341,27 @@ const styles = StyleSheet.create({
   },
 
   upcomingBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 22,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#c62828",
+    borderColor: ACCENT_RED,
     backgroundColor: "white",
     alignItems: "center",
-    width: "100%",
+    width: "80%",
+    alignSelf: "center",
+  },
+  importBtn: {
+    width: "67%",
+  },
+  upcomingEventBtn: {
+    width: "67%",
   },
   upcomingBtnText: {
-    color: "#c62828",
+    color: ACCENT_RED,
     fontWeight: "700",
+    textAlign: "center",
+    fontSize: 12,
   },
 
   modalBackdrop: {
@@ -366,91 +372,63 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: ACCENT_RED,
+    padding: 14,
     maxHeight: "70%",
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     marginBottom: 12,
+    color: BURGUNDY,
+    textAlign: "center",
   },
   calendarLoadingBox: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 24,
+    borderWidth: 1,
+    borderColor: ACCENT_RED,
+    borderRadius: 16,
+    backgroundColor: "rgba(128, 0, 32, 0.05)",
   },
   calendarLoadingText: {
     marginTop: 10,
     fontSize: 13,
-    color: "#555",
+    color: BURGUNDY,
   },
   calendarRow: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: ACCENT_RED,
+    borderRadius: 16,
+    backgroundColor: "white",
+    marginBottom: 10,
   },
   calendarName: {
-    fontSize: 16,
+    fontSize: 15,
+    color: BURGUNDY,
+    fontWeight: "600",
   },
   calendarMeta: {
     fontSize: 12,
-    opacity: 0.7,
+    color: ACCENT_RED,
+    marginTop: 2,
+  },
+  cancelBtn: {
+    borderWidth: 1,
+    borderColor: ACCENT_RED,
+    borderRadius: 18,
+    paddingVertical: 9,
+    alignItems: "center",
+    backgroundColor: "white",
+  },
+  cancelBtnText: {
+    color: BURGUNDY,
+    fontWeight: "700",
   },
 
-  detailsCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-  },
-  detailsHeader: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  detailsCloseBtn: {
-    marginLeft: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#f2f2f2",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  detailsCloseText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#444",
-  },
-  detailsTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  detailsBody: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  changeCalendarBtn: {
-    backgroundColor: "#1976d2",
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  changeCalendarBtnText: {
-    color: "white",
-    fontWeight: "700",
-  },
-  logoutBtn: {
-    backgroundColor: "#c62828",
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  logoutBtnText: {
-    color: "white",
-    fontWeight: "700",
-  },
 });

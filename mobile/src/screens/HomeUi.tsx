@@ -10,6 +10,7 @@ import BottomNav from "../components/BottomNav";
 import FloatingActionButton from "../components/FloatingActionButton";
 import SearchPanel from "../components/SearchPanel";
 import UpcomingEventButton from "../components/UpcomingEventButton";
+import EventDetailsPopup from "../components/EventDetailsPopup";
 
 import SettingsScreen from "./SettingsScreen";
 import ShuttleScreen from "./ShuttleScreen";
@@ -64,6 +65,16 @@ export default function HomeUi() {
   const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
   const [outlineMode, setOutlineMode] = useState(false);
   const [showBuildingPopup, setShowBuildingPopup] = useState(false);
+  const [showEventDetailsPopup, setShowEventDetailsPopup] = useState(false);
+  const [eventDetailsTitle, setEventDetailsTitle] = useState("");
+  const [eventDetailsText, setEventDetailsText] = useState("");
+  const eventDetailsActionsRef = useRef<{
+    onChangeCalendar: () => void;
+    onLogout: () => void;
+  }>({
+    onChangeCalendar: () => {},
+    onLogout: () => {},
+  });
 
   // Marker optimization control (stable version)
   const [mapReady, setMapReady] = useState(false);
@@ -361,8 +372,32 @@ export default function HomeUi() {
         style={[styles.upcomingEventWrapper, !showMapOverlays && styles.overlayHidden]}
         pointerEvents={showMapOverlays ? "auto" : "none"}
       >
-        <UpcomingEventButton />
+        <UpcomingEventButton
+          onMainButtonPress={() => setShowBuildingPopup(false)}
+          onOpenEventDetails={({ title, detailsText, onChangeCalendar, onLogout }) => {
+            setShowBuildingPopup(false);
+            setEventDetailsTitle(title);
+            setEventDetailsText(detailsText);
+            eventDetailsActionsRef.current = { onChangeCalendar, onLogout };
+            setShowEventDetailsPopup(true);
+          }}
+        />
       </View>
+
+      <EventDetailsPopup
+        visible={showEventDetailsPopup}
+        title={eventDetailsTitle}
+        detailsText={eventDetailsText}
+        onClose={() => setShowEventDetailsPopup(false)}
+        onChangeCalendar={() => {
+          setShowEventDetailsPopup(false);
+          eventDetailsActionsRef.current.onChangeCalendar();
+        }}
+        onLogout={() => {
+          setShowEventDetailsPopup(false);
+          eventDetailsActionsRef.current.onLogout();
+        }}
+      />
 
       {showMapOverlays && (
         <>
@@ -388,7 +423,12 @@ export default function HomeUi() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#fff" },
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
-  upcomingEventWrapper: { position: "absolute", top: 108, left: 16, right: 16 },
+  upcomingEventWrapper: {
+    position: "absolute",
+    bottom: 144,
+    width: 300,
+    alignSelf: "center",
+  },
   overlayHidden: { opacity: 0 },
   campusWrapper: {
     position: "absolute",
