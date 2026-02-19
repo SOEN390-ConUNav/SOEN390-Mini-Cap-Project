@@ -1,4 +1,4 @@
-import { View, Text,StyleSheet } from 'react-native'
+import { View, Text,StyleSheet, Button, Pressable } from 'react-native'
 import React from 'react'
 import BottomDrawer from '../BottomDrawer';
 import useNavigationInfo from '../../hooks/useNavigationInfo';
@@ -6,9 +6,10 @@ import useNavigationInfo from '../../hooks/useNavigationInfo';
 interface NavigationInfoBottomProps {
     visible:boolean;
     onClose: () => void;
+    onPress: ()=> void;
 }
 
-const NavigationInfoBottom = ({visible, onClose}:NavigationInfoBottomProps) => {
+const NavigationInfoBottom = ({visible, onClose, onPress}:NavigationInfoBottomProps) => {
   const pathDistance = useNavigationInfo((state) => state.pathDistance);
   const pathDuration = useNavigationInfo((state) => state.pathDuration);
   const calculateETA = (durationStr: string) => {
@@ -44,12 +45,15 @@ const NavigationInfoBottom = ({visible, onClose}:NavigationInfoBottomProps) => {
     <BottomDrawer 
     visible={visible}
     onClose={onClose}
-    snapPoints={['25']}>
+    snapPoints={['40']}>
     <View >
       <Text style={styles.smallText}>Estimated Time Arrival</Text>
       <Text style={styles.bigText}>{calculateETA(pathDuration)}</Text>
       <Text style={styles.smallText}>Distance</Text>
       <Text style={styles.bigText}>{pathDistance}</Text>
+      <Pressable onPress={onPress}>
+        <Text> caca</Text>
+      </Pressable>
     </View>
     </BottomDrawer>
     
