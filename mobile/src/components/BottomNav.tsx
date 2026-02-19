@@ -57,6 +57,7 @@ export default function BottomNav() {
         <Tabs
             screenOptions={{
                 ...styles,
+                headerShown: false,
                 tabBarActiveTintColor: BURGUNDY,
                 tabBarInactiveTintColor: BURGUNDY,
                 tabBarShowLabel: false,

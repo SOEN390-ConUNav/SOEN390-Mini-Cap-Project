@@ -14,6 +14,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -96,6 +97,33 @@ public class GoogleOAuthServiceTest {
         GoogleTokenSession capturedSession = sessionCaptor.getValue();
         assertEquals("mock-access-token", capturedSession.getAccessToken());
         assertNull(capturedSession.getRefreshToken());
+    }
+
+    @Test
+    void testExchangeServerAuthCodeUsesDefaultExpiryWhenExpiresInMissing() {
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("access_token", "mock-access-token");
+        responseBody.put("refresh_token", "mock-refresh-token");
+
+        ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
+
+        when(restTemplate.exchange(
+                eq("https://oauth2.googleapis.com/token"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(responseEntity);
+
+        Instant before = Instant.now();
+        String sessionId = googleOAuthService.exchangeServerAuthCode("test-auth-code");
+        Instant after = Instant.now();
+
+        ArgumentCaptor<GoogleTokenSession> sessionCaptor = ArgumentCaptor.forClass(GoogleTokenSession.class);
+        verify(sessionService).put(eq(sessionId), sessionCaptor.capture());
+
+        Instant expiresAt = sessionCaptor.getValue().getExpiresAt();
+        assertTrue(expiresAt.isAfter(before.plusSeconds(3590)));
+        assertTrue(expiresAt.isBefore(after.plusSeconds(3610)));
     }
 
     @Test

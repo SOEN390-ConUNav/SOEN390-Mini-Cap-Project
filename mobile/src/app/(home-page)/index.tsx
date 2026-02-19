@@ -25,7 +25,7 @@ import NavigationConfigView from '../../components/navigation-config/NavigationC
 import { styles as navStyles } from '../../components/BottomNav';
 import useNavigationEndpoints from '../../hooks/useNavigationEndpoints';
 import useNavigationConfig from '../../hooks/useNavigationConfig';
-import { getAllOutdoorDirectionsInfo } from '../../api';
+import { getAllOutdoorDirectionsInfo, searchLocations } from '../../api';
 import { decodePolyline } from '../../utils/polylineDecode';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
@@ -92,9 +92,11 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
   const eventDetailsActionsRef = useRef<{
+    onDirections: () => void;
     onChangeCalendar: () => void;
     onLogout: () => void;
   }>({
+    onDirections: () => {},
     onChangeCalendar: () => {},
     onLogout: () => {},
   });
@@ -241,6 +243,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
   const onPressFab = async () => {
     try {
+      setShowEventDetailsPopup(false);
       if (hasLocationPermission === true) {
         const r = await getOneFix();
         animateToRegion(r);
@@ -281,6 +284,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   };
 
   const onChangeCampus = (next: 'SGW' | 'LOYOLA') => {
+    setShowEventDetailsPopup(false);
     setCampus(next);
     const target = next === 'SGW' ? SGW_CENTER : LOYOLA_CENTER;
 
@@ -338,16 +342,23 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
   const onPressDirections = async () => {
     setShowBuildingPopup(false);
-    const currLocation = await getOneFix();
-
     if (!selectedBuilding) return;
-    const originCoords = {
-      latitude: currLocation.latitude,
-      longitude: currLocation.longitude,
-    };
     const destCoords = {
       latitude: selectedBuilding.marker.latitude,
       longitude: selectedBuilding.marker.longitude,
+    };
+
+    await routeToDestination(destCoords);
+  };
+
+  const routeToDestination = async (destCoords: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    const currLocation = await getOneFix();
+    const originCoords = {
+      latitude: currLocation.latitude,
+      longitude: currLocation.longitude,
     };
 
     setOrigin(originCoords);
@@ -355,6 +366,49 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const routes = await getAllOutdoorDirectionsInfo(originCoords, destCoords);
     setAllOutdoorRoutes(routes);
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+  };
+
+  const parseLatLng = (
+    value: string
+  ): { latitude: number; longitude: number } | null => {
+    const match = value.match(
+      /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/
+    );
+    if (!match) return null;
+    const latitude = Number(match[1]);
+    const longitude = Number(match[2]);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    return { latitude, longitude };
+  };
+
+  const onPressEventDirections = async (locationText: string) => {
+    try {
+      const maybeCoords = parseLatLng(locationText);
+      if (maybeCoords) {
+        await routeToDestination(maybeCoords);
+        return;
+      }
+
+      const results = await searchLocations(locationText);
+      const firstWithCoords = results.find(
+        (place) => place?.location?.latitude != null && place?.location?.longitude != null
+      );
+
+      if (!firstWithCoords?.location) {
+        Alert.alert(
+          'Directions error',
+          'Could not find route coordinates for this event location.'
+        );
+        return;
+      }
+
+      await routeToDestination({
+        latitude: firstWithCoords.location.latitude,
+        longitude: firstWithCoords.location.longitude,
+      });
+    } catch {
+      Alert.alert('Directions error', 'Could not start directions for this event.');
+    }
   };
 
   const handleRegionChangeComplete = (r: Region) => {
@@ -519,11 +573,14 @@ export default function HomePageIndex(props: HomePageIndexProps) {
       >
         <UpcomingEventButton
           onMainButtonPress={() => setShowBuildingPopup(false)}
-          onOpenEventDetails={({ title, detailsText, onChangeCalendar, onLogout }) => {
+          onRequestDirections={(locationText) => {
+            void onPressEventDirections(locationText);
+          }}
+          onOpenEventDetails={({ title, detailsText, onDirections, onChangeCalendar, onLogout }) => {
             setShowBuildingPopup(false);
             setEventDetailsTitle(title);
             setEventDetailsText(detailsText);
-            eventDetailsActionsRef.current = { onChangeCalendar, onLogout };
+            eventDetailsActionsRef.current = { onDirections, onChangeCalendar, onLogout };
             setShowEventDetailsPopup(true);
           }}
         />
@@ -534,6 +591,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         title={eventDetailsTitle}
         detailsText={eventDetailsText}
         onClose={() => setShowEventDetailsPopup(false)}
+        onDirections={() => {
+          setShowEventDetailsPopup(false);
+          eventDetailsActionsRef.current.onDirections();
+        }}
         onChangeCalendar={() => {
           setShowEventDetailsPopup(false);
           eventDetailsActionsRef.current.onChangeCalendar();

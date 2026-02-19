@@ -104,4 +104,27 @@ public class GoogleSessionServiceTest {
         assertEquals("token2", retrieved.get().getAccessToken());
         assertEquals("refresh2", retrieved.get().getRefreshToken());
     }
+
+    @Test
+    void testRemoveNullOrBlankDoesNothing() {
+        String sessionId = "keep-session";
+        GoogleTokenSession session = new GoogleTokenSession("token", "refresh", Instant.now().plusSeconds(3600));
+        sessionService.put(sessionId, session);
+
+        sessionService.remove(null);
+        sessionService.remove("   ");
+
+        assertTrue(sessionService.get(sessionId).isPresent());
+    }
+
+    @Test
+    void testRemoveValidSessionRemovesIt() {
+        String sessionId = "remove-session";
+        GoogleTokenSession session = new GoogleTokenSession("token", "refresh", Instant.now().plusSeconds(3600));
+        sessionService.put(sessionId, session);
+
+        sessionService.remove(sessionId);
+
+        assertTrue(sessionService.get(sessionId).isEmpty());
+    }
 }

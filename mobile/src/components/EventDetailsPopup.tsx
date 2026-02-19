@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 
 const BURGUNDY = "#800020";
 
@@ -9,6 +10,7 @@ export default function EventDetailsPopup({
   title,
   detailsText,
   onClose,
+  onDirections,
   onChangeCalendar,
   onLogout,
 }: {
@@ -16,6 +18,7 @@ export default function EventDetailsPopup({
   title: string;
   detailsText: string;
   onClose: () => void;
+  onDirections: () => void;
   onChangeCalendar: () => void;
   onLogout: () => void;
 }) {
@@ -32,6 +35,13 @@ export default function EventDetailsPopup({
         </View>
 
         <Text style={styles.body}>{detailsText}</Text>
+
+        <View style={styles.buttonRow}>
+          <Pressable onPress={onDirections} style={styles.directionsBtn}>
+            <FontAwesome5 name="directions" size={18} color="white" />
+            <Text style={styles.directionsText}>Directions</Text>
+          </Pressable>
+        </View>
 
         <View style={{ height: 12 }} />
         <Pressable style={styles.changeCalendarBtn} onPress={onChangeCalendar}>
@@ -94,6 +104,24 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: "#333",
     marginTop: 4,
+  },
+  buttonRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  directionsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: BURGUNDY,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  directionsText: {
+    color: "#fff",
+    fontWeight: "800",
   },
   changeCalendarBtn: {
     backgroundColor: "rgba(128, 0, 32, 0.08)",

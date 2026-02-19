@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
+  Alert,
 } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Constants from "expo-constants";
@@ -26,11 +27,14 @@ const ACCENT_RED = "#800020";
 export default function UpcomingEventButton({
   onMainButtonPress,
   onOpenEventDetails,
+  onRequestDirections,
 }: {
   onMainButtonPress?: () => void;
+  onRequestDirections?: (locationText: string) => void;
   onOpenEventDetails?: (payload: {
     title: string;
     detailsText: string;
+    onDirections: () => void;
     onChangeCalendar: () => void;
     onLogout: () => void;
   }) => void;
@@ -250,6 +254,8 @@ export default function UpcomingEventButton({
   const showRedEventButton = !!selectedCalendar;
   const upcomingTitle = nextEvent ? ((nextEvent?.summary ?? "").trim() || "Upcoming event") : "No upcoming event";
   const upcomingButtonLabel = nextEvent ? `Upcoming event: ${upcomingTitle}` : upcomingTitle;
+  const upcomingLocation =
+    typeof nextEvent?.location === "string" ? nextEvent.location.trim() : "";
 
   return (
     <View style={{ width: "100%" }}>
@@ -271,6 +277,17 @@ export default function UpcomingEventButton({
             onOpenEventDetails?.({
               title: upcomingTitle,
               detailsText: eventDetailsText,
+              onDirections: () => {
+                if (!upcomingLocation) {
+                  Alert.alert("No location", "This event has no location to navigate to.");
+                  return;
+                }
+                if (!onRequestDirections) {
+                  Alert.alert("Directions unavailable", "Internal directions are not available right now.");
+                  return;
+                }
+                onRequestDirections(upcomingLocation);
+              },
               onChangeCalendar: () => {
                 void startImportFlow(true);
               },
