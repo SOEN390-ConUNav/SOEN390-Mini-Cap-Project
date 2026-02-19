@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+
+# Format only changed mobile files
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "^mobile/")
+
+if [ -n "$FILES" ]; then
+  echo "📱 Formatting mobile files..."
+  echo "$FILES" | xargs npx prettier --write
+  echo "$FILES" | xargs git add
+fi
