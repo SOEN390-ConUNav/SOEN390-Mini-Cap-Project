@@ -22,11 +22,12 @@ import useNavigationConfig from '../../hooks/useNavigationConfig';
 import useNavigationInfo from '../../hooks/useNavigationInfo';
 import { getAllOutdoorDirectionsInfo } from '../../api';
 import { reverseGeocode } from "../../services/handleGeocode";
-import {isLoading} from "expo-font";
+import NavigationDirectionHud from "../../components/navigation-direction/NavigationDirectionHUD";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
 const CAMPUS_REGION_DELTA = { latitudeDelta: 0.01, longitudeDelta: 0.01 };
+const NAVIGATION_ZOOM = { latitudeDelta: 0.004, longitudeDelta: 0.004 };
 
 const SHUTTLE_STOPS = {
   SGW: { latitude: 45.497122, longitude: -73.578471 },
@@ -50,7 +51,7 @@ export default function HomePageIndex() {
   const { setNavigationState, isNavigating, isConfiguring, isSearching } = useNavigationState();
   const { origin, setOrigin, destination, setDestination, swap, clear } = useNavigationEndpoints();
   const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
-  const { setIsLoading, setPathDistance, setPathDuration, isLoading } = useNavigationInfo();
+  const { setIsLoading, setPathDistance, setPathDuration, pathDistance, pathDuration } = useNavigationInfo();
 
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
   const [showEnableLocation, setShowEnableLocation] = useState(true);
@@ -77,7 +78,28 @@ export default function HomePageIndex() {
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
+  // ── Derive active route steps for the HUD ──────────────────────────────
+  const activeRoute = allOutdoorRoutes?.find(
+      (r) => r.transportMode?.toUpperCase() === navigationMode?.toUpperCase()
+  ) ?? allOutdoorRoutes?.[0] ?? null;
+
+  const hudSteps = activeRoute?.steps ?? [];
+  const hudDistance = activeRoute?.distance ?? pathDistance ?? '';
+  const hudDuration = activeRoute?.duration ?? pathDuration ?? '';
+  // ───────────────────────────────────────────────────────────────────────
+
   useEffect(() => { checkLocationPermission(); }, []);
+
+  // ── FIX 1: When navigation starts, clear UI clutter + zoom to user ──────
+  useEffect(() => {
+    if (!isNavigating) return;
+    setShowBuildingPopup(false);
+    setSelectedBuildingId(null);
+    setOutlineMode(false);
+    getOneFix()
+        .then((fix) => animateToRegion({ ...fix, ...NAVIGATION_ZOOM }))
+        .catch(() => {});
+  }, [isNavigating]);
 
   useEffect(() => {
     if (params.shuttleCampus && (params.shuttleCampus === 'SGW' || params.shuttleCampus === 'LOYOLA')) {
@@ -210,7 +232,9 @@ export default function HomePageIndex() {
     animateToRegion({ latitude: b.marker.latitude, longitude: b.marker.longitude, ...OUTLINE_ENTER_REGION });
   };
 
+  // ── FIX 2: Ignore building taps while actively navigating ───────────────
   const onPressBuilding = (b: Building) => {
+    if (isNavigating) return;
     setNavigationState(NAVIGATION_STATE.IDLE);
     if (selectedBuildingId !== b.id || !outlineMode) {
       setDestination({ longitude: b.marker.longitude, latitude: b.marker.latitude, label: b.name });
@@ -244,13 +268,11 @@ export default function HomePageIndex() {
       const routes = await getAllOutdoorDirectionsInfo(originCoords, destCoords);
       setAllOutdoorRoutes(routes);
 
-      // Set distance and duration for the default (WALK) mode
       const walkRoute = routes.find((r) => r.transportMode?.toUpperCase() === 'WALKING');
       if (walkRoute) {
         setPathDistance(walkRoute.distance);
         setPathDuration(walkRoute.duration);
       }
-
     } catch (error) {
       console.error('Error fetching directions:', error);
       Alert.alert('Navigation error', 'Could not fetch directions. Please try again.');
@@ -332,7 +354,11 @@ export default function HomePageIndex() {
             showsUserLocation={hasLocationPermission === true}
             showsMyLocationButton={false}
             onRegionChangeComplete={handleRegionChangeComplete}
-            onPress={() => { setShowBuildingPopup(false); setNavigationState(NAVIGATION_STATE.IDLE); }}
+            onPress={() => {
+              setShowBuildingPopup(false);
+              // Don't reset state while navigating — path and HUD must stay visible
+              if (!isNavigating) setNavigationState(NAVIGATION_STATE.IDLE);
+            }}
             onMapReady={() => { setMapReady(true); scheduleFreezeMarkers(); }}
         >
           {shuttleStop && (
@@ -359,12 +385,14 @@ export default function HomePageIndex() {
               />
           )}
 
+          {/* DirectionPath stays mounted for both configuring and navigating */}
           {(isConfiguring || isNavigating) && (
               <DirectionPath origin={origin} destination={destination} />
           )}
         </MapView>
 
-        {showBuildingPopup && selectedBuilding && (
+        {/* Building popup is suppressed while navigating */}
+        {showBuildingPopup && selectedBuilding && !isNavigating && (
             <BuildingPopup
                 id={selectedBuilding.id}
                 name={selectedBuilding.name}
@@ -387,6 +415,7 @@ export default function HomePageIndex() {
           <UpcomingEventButton />
         </View>
 
+        {/* FIX 3: alignItems:'center' on searchWrapper so pill doesn't stretch full width */}
         <View style={styles.searchWrapper}>
           <SearchBar
               placeholder="Search"
@@ -408,10 +437,22 @@ export default function HomePageIndex() {
         </View>
 
         <SearchPanel visible={isSearching} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)} />
-        <NavigationConfigView durations={allOutdoorRoutes} visible={isConfiguring} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)} />
-        <FloatingActionButton onPress={onPressFab} />
+        <NavigationConfigView
+            durations={allOutdoorRoutes}
+            visible={isConfiguring}
+            onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        />
 
-        <View style={styles.campusWrapper}>
+        {/* Always mounted so BottomDrawer can animate in/out cleanly */}
+        <NavigationDirectionHud
+            visible={isNavigating}
+            steps={hudSteps}
+            onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        />
+
+        {!isNavigating && <FloatingActionButton onPress={onPressFab} />}
+
+        <View style={[styles.campusWrapper, isNavigating && styles.overlayHidden]} pointerEvents={isNavigating ? 'none' : 'auto'}>
           <CampusSwitcher value={campus} onChange={onChangeCampus} />
         </View>
       </View>
@@ -431,11 +472,11 @@ const styles = StyleSheet.create({
   enableLocationSubtitle: { textAlign: 'center', color: '#666', lineHeight: 20, marginBottom: 24 },
   enableLocationBullets: { gap: 12, marginBottom: 28 },
   enableLocationBullet: { color: '#333', fontWeight: '600' },
-  enableLocationBtn: { backgroundColor: BURGUNDY, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 10 },
+  enableLocationBtn: { backgroundColor: '#800020', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 10 },
   enableLocationBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   enableLocationSkip: { paddingVertical: 14, alignItems: 'center' },
   enableLocationSkipText: { color: '#777', fontWeight: '600' },
-  searchWrapper: { position: 'absolute', top: 50, left: 16, right: 16 },
+  searchWrapper: { position: 'absolute', top: 50, left: 16, right: 16, alignItems: 'center' },
   upcomingEventWrapper: { position: 'absolute', top: 108, left: 16, right: 16 },
   overlayHidden: { opacity: 0 },
   campusWrapper: { position: 'absolute', left: 16, right: 16, bottom: 90, alignItems: 'center' },

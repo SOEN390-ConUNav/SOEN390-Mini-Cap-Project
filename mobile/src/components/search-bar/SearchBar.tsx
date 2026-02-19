@@ -1,7 +1,9 @@
 import React from "react";
-import {StyleSheet, View, Text, Pressable} from "react-native";
-import {Ionicons} from "@expo/vector-icons";
+import { StyleSheet, View, Text, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSharedValue } from "react-native-reanimated";
 import RouteCard from "./RouteCard";
+import RouteRow from "./RouteRow";
 
 interface SearchBarProps {
     placeholder: string;
@@ -24,28 +26,46 @@ export default function SearchBar({
                                       onBack,
                                       onSwap,
                                   }: SearchBarProps) {
-    if (isConfiguring || isNavigating) {
+    // Dummy shared values — no drag interaction while navigating
+    const dummyDrag = useSharedValue(0);
+
+    // ── Navigating: single "To" row in a card shell ──
+    if (isNavigating) {
+        return (
+            <View style={styles.singleRowCard}>
+                <RouteRow
+                    label="To"
+                    value={destinationLabel}
+                    onSwap={() => {}}
+                    dragProgress={dummyDrag}
+                    siblingDragProgress={dummyDrag}
+                />
+            </View>
+        );
+    }
+
+    // ── Configuring: full route card ──
+    if (isConfiguring) {
         return (
             <RouteCard
                 originLabel={originLabel}
                 destinationLabel={destinationLabel}
-                onBack={onBack ?? (() => {
-                })}
-                onSwap={onSwap ?? (() => {
-                })}
+                onBack={onBack ?? (() => {})}
+                onSwap={onSwap ?? (() => {})}
             />
         );
     }
 
+    // ── Default: search bar ──
     return (
         <Pressable
             onPress={onPress}
-            style={({pressed}) => [styles.container, pressed && {opacity: 0.85}]}
+            style={({ pressed }) => [styles.container, pressed && { opacity: 0.85 }]}
         >
-            <Ionicons name="search" size={18} color="#555"/>
+            <Ionicons name="search" size={18} color="#555" />
             <Text style={styles.text}>{placeholder}</Text>
-            <View style={styles.spacer}/>
-            <Ionicons name="mic" size={18} color="#555"/>
+            <View style={styles.spacer} />
+            <Ionicons name="mic" size={18} color="#555" />
         </Pressable>
     );
 }
@@ -62,7 +82,7 @@ const styles = StyleSheet.create({
         shadowColor: "#000",
         shadowOpacity: 0.12,
         shadowRadius: 10,
-        shadowOffset: {width: 0, height: 4},
+        shadowOffset: { width: 0, height: 4 },
         elevation: 5,
     },
     text: {
@@ -71,5 +91,17 @@ const styles = StyleSheet.create({
     },
     spacer: {
         flex: 1,
+    },
+    // Matches RouteCard's card shell but without the row/flex layout for a back button
+    singleRowCard: {
+        borderRadius: 14,
+        backgroundColor: "rgba(255,255,255,0.97)",
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        shadowColor: "#000",
+        shadowOpacity: 0.14,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
     },
 });

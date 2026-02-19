@@ -7,6 +7,8 @@ import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { OutdoorDirectionResponse } from '../../api/outdoorDirectionsApi';
 import { TRANSPORT_MODE_API_MAP } from '../../type';
+import {NAVIGATION_STATE} from "../../const";
+import useNavigationState from "../../hooks/useNavigationState";
 
 interface NavigationConfigViewProps {
   readonly durations: OutdoorDirectionResponse[];
@@ -21,6 +23,7 @@ export default function NavigationConfigView({
 }: NavigationConfigViewProps) {
     const {navigationMode, setNavigationMode} = useNavigationConfig();
     const {isLoading} = useNavigationInfo();
+    const { navigationState, setNavigationState } = useNavigationState();
     const getDurationForMode = (mode: string) => {
         const route = durations.find(
             (d) => d.transportMode?.toLowerCase() === mode.toLowerCase(),
@@ -33,14 +36,17 @@ export default function NavigationConfigView({
         return getDurationForMode(apiKey);
     };
     const handleGo = () => {
-        // Logic to start the actual turn-by-turn navigation
-        console.log("Start navigation with mode:", navigationMode);
+        setNavigationState(NAVIGATION_STATE.NAVIGATING);
     };
 
     return (
         <BottomDrawer
             visible={visible}
-            onClose={onClose}
+            onClose={() => {
+                if (navigationState !== NAVIGATION_STATE.NAVIGATING) {
+                    onClose();
+                }
+            }}
             snapPoints={['35%']} // Adjusted height for this content
             enablePanDownToClose={true}
             contentContainerStyle={styles.drawerContent}
