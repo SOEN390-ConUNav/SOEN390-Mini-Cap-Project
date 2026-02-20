@@ -1,5 +1,6 @@
 package com.soen390.backend.service;
 
+import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
@@ -155,7 +156,7 @@ public class GoogleMapsServiceTest {
                         """;
     }
 
-    private String getMockJsonZeroResults() {
+    public String getMockJsonZeroResults() {
         return """
             {
                 "geocoded_waypoints": [{ "geocoder_status": "ZERO_RESULTS" }],
@@ -165,7 +166,7 @@ public class GoogleMapsServiceTest {
             """;
     }
 
-    private String getMockJsonNotFound() {
+    public String getMockJsonNotFound() {
         return """
             {
                 "routes": [],
@@ -208,13 +209,12 @@ public class GoogleMapsServiceTest {
     }
 
     @Test
-    void testZeroResultsReturnsNull() {
+    void testZeroResultsThrowsException() {
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(getMockJsonZeroResults());
 
-        OutdoorDirectionResponse response = googleMapsService.getDirections(origin, destination, TransportMode.walking);
-
-        assertNull(response);
+        assertThrows(GoogleMapsDirectionEmptyException.class,
+                () -> googleMapsService.getDirections(origin, destination, TransportMode.walking));
     }
 
     @Test
