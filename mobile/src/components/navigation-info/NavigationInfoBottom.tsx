@@ -1,4 +1,4 @@
-import { View, Text,StyleSheet, Button, Pressable } from 'react-native'
+import { View, Text,StyleSheet} from 'react-native'
 import React from 'react'
 import BottomDrawer from '../BottomDrawer';
 import useNavigationInfo from '../../hooks/useNavigationInfo';

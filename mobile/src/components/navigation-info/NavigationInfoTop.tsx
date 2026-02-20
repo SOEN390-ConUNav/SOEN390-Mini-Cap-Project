@@ -1,7 +1,6 @@
-import { View, Text } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
-import { StyleSheet } from 'react-native'
 
 interface NavigationInfoTopProps {
    readonly destination: string
