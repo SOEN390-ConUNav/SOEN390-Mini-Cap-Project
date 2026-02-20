@@ -1,43 +1,42 @@
-import { create } from "zustand";
 import { Coordinate } from "../type";
+import { create } from "zustand";
 
 export interface LabeledCoordinate extends Coordinate {
-    /** Human-readable name resolved by the geocoding service */
-    label: string;
+  /** Human-readable name resolved by the geocoding service */
+  label: string;
 }
 interface NavigationEndpointsState {
-    origin: LabeledCoordinate | null;
-    destination: LabeledCoordinate | null;
-    setOrigin: (endpoint: LabeledCoordinate | null) => void;
-    setDestination: (endpoint: LabeledCoordinate | null) => void;
-    swap: () => void;
-    clear: () => void;
+  origin: LabeledCoordinate | null;
+  destination: LabeledCoordinate | null;
+  setOrigin: (endpoint: LabeledCoordinate | null) => void;
+  setDestination: (endpoint: LabeledCoordinate | null) => void;
+  swap: () => void;
+  clear: () => void;
 }
 
-
 const useNavigationEndpointsStore = create<NavigationEndpointsState>((set) => ({
-    origin: null,
-    destination: null,
+  origin: null,
+  destination: null,
 
-    setOrigin: (endpoint) => set({ origin: endpoint }),
-    setDestination: (endpoint) => set({ destination: endpoint }),
+  setOrigin: (endpoint) => set({ origin: endpoint }),
+  setDestination: (endpoint) => set({ destination: endpoint }),
 
-    swap: () =>
-        set((state) => ({
-            origin: state.destination,
-            destination: state.origin,
-        })),
+  swap: () =>
+    set((state) => ({
+      origin: state.destination,
+      destination: state.origin,
+    })),
 
-    clear: () => set({ origin: null, destination: null }),
+  clear: () => set({ origin: null, destination: null }),
 }));
 
 export default function useNavigationEndpoints() {
-    const origin = useNavigationEndpointsStore((s) => s.origin);
-    const destination = useNavigationEndpointsStore((s) => s.destination);
-    const setOrigin = useNavigationEndpointsStore((s) => s.setOrigin);
-    const setDestination = useNavigationEndpointsStore((s) => s.setDestination);
-    const swap = useNavigationEndpointsStore((s) => s.swap);
-    const clear = useNavigationEndpointsStore((s) => s.clear);
+  const origin = useNavigationEndpointsStore((s) => s.origin);
+  const destination = useNavigationEndpointsStore((s) => s.destination);
+  const setOrigin = useNavigationEndpointsStore((s) => s.setOrigin);
+  const setDestination = useNavigationEndpointsStore((s) => s.setDestination);
+  const swap = useNavigationEndpointsStore((s) => s.swap);
+  const clear = useNavigationEndpointsStore((s) => s.clear);
 
-    return { origin, setOrigin, destination, setDestination, swap, clear };
+  return { origin, setOrigin, destination, setDestination, swap, clear };
 }
