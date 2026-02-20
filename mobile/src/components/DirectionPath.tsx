@@ -9,8 +9,8 @@ import useNavigationConfig from "../hooks/useNavigationConfig";
 const BURGUNDY = "#800020";
 
 interface DirectionPathProps {
-  origin: Coordinate | null;
-  destination: Coordinate | null;
+  readonly origin: Coordinate | null;
+  readonly destination: Coordinate | null;
 }
 
 function EndPin() {
@@ -26,10 +26,7 @@ const decodeToCoords = (encoded: string): Coordinate[] =>
     .decode(encoded)
     .map(([lat, lng]) => ({ latitude: lat, longitude: lng }));
 
-export default function DirectionPath({
-  origin,
-  destination,
-}: DirectionPathProps) {
+export default function DirectionPath({ destination }: DirectionPathProps) {
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   const { navigationMode, allOutdoorRoutes } = useNavigationConfig();
 
