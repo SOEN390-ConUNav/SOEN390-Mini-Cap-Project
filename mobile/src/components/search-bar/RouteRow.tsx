@@ -10,13 +10,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 
-const BURGUNDY = "#800020";
 const SWAP_THRESHOLD = 42;
 
 interface RouteRowProps {
   readonly label: "From" | "To";
   readonly value: string;
-  readonly trailingIcon?: keyof typeof Ionicons.glyphMap;
   readonly onSwap: () => void;
   /**
    * Shared value owned by RouteCard.
@@ -34,7 +32,6 @@ interface RouteRowProps {
 export default function RouteRow({
   label,
   value,
-  trailingIcon,
   onSwap,
   dragProgress,
   siblingDragProgress,
@@ -58,6 +55,9 @@ export default function RouteRow({
       translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
       scale.value = withSpring(1);
       dragProgress.value = withSpring(0);
+      if (Math.abs(e.translationY) >= SWAP_THRESHOLD) {
+        onSwap(); // safe to call directly now
+      }
     })
     .onFinalize(() => {
       translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
