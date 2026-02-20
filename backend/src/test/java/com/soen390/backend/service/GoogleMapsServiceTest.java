@@ -155,7 +155,7 @@ public class GoogleMapsServiceTest {
                         """;
     }
 
-    private String getMockJsonZeroResults() {
+    public String getMockJsonZeroResults() {
         return """
             {
                 "geocoded_waypoints": [{ "geocoder_status": "ZERO_RESULTS" }],
@@ -165,7 +165,7 @@ public class GoogleMapsServiceTest {
             """;
     }
 
-    private String getMockJsonNotFound() {
+    public String getMockJsonNotFound() {
         return """
             {
                 "routes": [],
@@ -208,13 +208,12 @@ public class GoogleMapsServiceTest {
     }
 
     @Test
-    void testZeroResultsReturnsNull() {
+    void testZeroResultsThrowsException() {
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(getMockJsonZeroResults());
 
-        OutdoorDirectionResponse response = googleMapsService.getDirections(origin, destination, TransportMode.walking);
-
-        assertNull(response);
+        assertThrows(GoogleMapsDirectionsApiException.class,
+                () -> googleMapsService.getDirections(origin, destination, TransportMode.walking));
     }
 
     @Test
