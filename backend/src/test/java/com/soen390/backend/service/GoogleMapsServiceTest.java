@@ -1,5 +1,6 @@
 package com.soen390.backend.service;
 
+import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
@@ -212,7 +213,7 @@ public class GoogleMapsServiceTest {
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(getMockJsonZeroResults());
 
-        assertThrows(GoogleMapsDirectionsApiException.class,
+        assertThrows(GoogleMapsDirectionEmptyException.class,
                 () -> googleMapsService.getDirections(origin, destination, TransportMode.walking));
     }
 

@@ -1,11 +1,15 @@
 package com.soen390.backend.controller;
 
+import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.service.GoogleMapsService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/directions/outdoor")
@@ -27,11 +31,10 @@ public class OutdoorDirectionsController {
             OutdoorDirectionResponse response =
                     mapsService.getDirections(origin, destination, transportMode);
             return ResponseEntity.ok(response);
+        } catch (GoogleMapsDirectionEmptyException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
-            if (e.getMessage().contains("Directions not found")) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.status(502).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
         }
     }
 }
