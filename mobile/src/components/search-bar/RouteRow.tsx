@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   interpolate,
-  runOnJS,
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
@@ -15,55 +14,56 @@ const BURGUNDY = "#800020";
 const SWAP_THRESHOLD = 42;
 
 interface RouteRowProps {
-  label: "From" | "To";
-  value: string;
-  trailingIcon?: keyof typeof Ionicons.glyphMap;
-  onSwap: () => void;
+  readonly label: "From" | "To";
+  readonly value: string;
+  readonly trailingIcon?: keyof typeof Ionicons.glyphMap;
+  readonly onSwap: () => void;
   /**
    * Shared value owned by RouteCard.
    * This row WRITES to it while being dragged (0 → 1).
    * The sibling row READS from it to grey itself out.
    */
-  dragProgress: SharedValue<number>;
+  readonly dragProgress: SharedValue<number>;
   /**
    * Shared value owned by RouteCard, driven by the *sibling* row.
    * This row READS from it to know when to fade out.
    */
-  siblingDragProgress: SharedValue<number>;
+  readonly siblingDragProgress: SharedValue<number>;
 }
 
 export default function RouteRow({
-                                   label,
-                                   value,
-                                   trailingIcon,
-                                   onSwap,
-                                   dragProgress,
-                                   siblingDragProgress,
-                                 }: RouteRowProps) {
+  label,
+  value,
+  trailingIcon,
+  onSwap,
+  dragProgress,
+  siblingDragProgress,
+}: RouteRowProps) {
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
 
   const pan = Gesture.Pan()
-      .onBegin(() => {
-        scale.value = withSpring(1.02);
-      })
-      .onUpdate((e) => {
-        translateY.value = Math.max(-60, Math.min(60, e.translationY));
-        dragProgress.value = Math.min(1, Math.abs(e.translationY) / SWAP_THRESHOLD);
-      })
-      .onEnd((e) => {
-        if (Math.abs(e.translationY) >= SWAP_THRESHOLD) {
-          runOnJS(onSwap)();
-        }
-        translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
-        scale.value = withSpring(1);
-        dragProgress.value = withSpring(0);
-      })
-      .onFinalize(() => {
-        translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
-        scale.value = withSpring(1);
-        dragProgress.value = withSpring(0);
-      });
+    .runOnJS(true)
+    .onBegin(() => {
+      scale.value = withSpring(1.02);
+    })
+    .onUpdate((e) => {
+      translateY.value = Math.max(-60, Math.min(60, e.translationY));
+      dragProgress.value = Math.min(
+        1,
+        Math.abs(e.translationY) / SWAP_THRESHOLD,
+      );
+    })
+    .onEnd((e) => {
+      translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+      scale.value = withSpring(1);
+      dragProgress.value = withSpring(0);
+    })
+    .onFinalize(() => {
+      translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+      scale.value = withSpring(1);
+      dragProgress.value = withSpring(0);
+    });
 
   const rowAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
@@ -77,24 +77,24 @@ export default function RouteRow({
   }));
 
   return (
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.row, rowAnimStyle]}>
-          <Animated.View style={[styles.inner, dimAnimStyle]}>
-            <Ionicons
-                name="reorder-two-outline"
-                size={16}
-                color="#ccc"
-                style={styles.handle}
-            />
-            <View style={styles.textGroup}>
-              <Text style={styles.label}>{label}</Text>
-              <Text style={styles.value} numberOfLines={1}>
-                {value}
-              </Text>
-            </View>
-          </Animated.View>
+    <GestureDetector gesture={pan}>
+      <Animated.View style={[styles.row, rowAnimStyle]}>
+        <Animated.View style={[styles.inner, dimAnimStyle]}>
+          <Ionicons
+            name="reorder-two-outline"
+            size={16}
+            color="#ccc"
+            style={styles.handle}
+          />
+          <View style={styles.textGroup}>
+            <Text style={styles.label}>{label}</Text>
+            <Text style={styles.value} numberOfLines={1}>
+              {value}
+            </Text>
+          </View>
         </Animated.View>
-      </GestureDetector>
+      </Animated.View>
+    </GestureDetector>
   );
 }
 

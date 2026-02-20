@@ -30,9 +30,9 @@ const PLACE_TYPES = [
 ];
 
 type SearchPanelProps = {
-  visible: boolean;
-  onClose: () => void;
-  onSelectLocation: (location: {
+  readonly visible: boolean;
+  readonly onClose: () => void;
+  readonly onSelectLocation: (location: {
     latitude: number;
     longitude: number;
     name?: string;

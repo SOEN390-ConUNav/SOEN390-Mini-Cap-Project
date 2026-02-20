@@ -23,7 +23,7 @@ public class OutdoorDirectionsController {
 
 
     @GetMapping
-    public ResponseEntity<?> getDirections(
+    public ResponseEntity<Object> getDirections(
             @RequestParam String origin,
             @RequestParam String destination,
             @RequestParam TransportMode transportMode) {
