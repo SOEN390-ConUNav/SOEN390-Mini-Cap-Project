@@ -4,9 +4,9 @@ import BottomDrawer from '../BottomDrawer';
 import useNavigationInfo from '../../hooks/useNavigationInfo';
 
 interface NavigationInfoBottomProps {
-    visible:boolean;
-    onClose: () => void;
-    onPressAction?: () => void;
+    readonly visible:boolean;
+    readonly onClose: () => void;
+    readonly onPressAction?: () => void;
 }
 
 const NavigationInfoBottom = ({visible, onClose, onPressAction}:NavigationInfoBottomProps) => {

@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { StyleSheet } from 'react-native'
 
 interface NavigationInfoTopProps {
-  destination: string
+   readonly destination: string
 }
 
 const NavigationInfoTop = ({destination} : NavigationInfoTopProps) => {

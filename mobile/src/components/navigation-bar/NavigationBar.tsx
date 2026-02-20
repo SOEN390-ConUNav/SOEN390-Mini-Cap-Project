@@ -5,9 +5,9 @@ import NavigationInfoTop from '../navigation-info/NavigationInfoTop'
 import NavigationInfoTopExt from '../navigation-info/NavigationInfoTopExt'
 
 interface NavigationBarProps {
-  destination: string,
-  onPress?: () => void,
-  navigationInfoToggleState?: string;
+  readonly destination: string,
+  readonly onPress?: () => void,
+  readonly navigationInfoToggleState?: string;
 }
 const NavigationBar = ({destination, onPress, navigationInfoToggleState} : NavigationBarProps) => {
   return (

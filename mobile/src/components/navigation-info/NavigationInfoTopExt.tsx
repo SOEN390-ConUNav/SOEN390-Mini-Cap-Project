@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import useNavigationInfo from '../../hooks/useNavigationInfo'
 
 interface NavigationInfoTopExtProps {
-  destination: string
+  readonly destination: string
 }
 
 const NavigationInfoTopExt = ({ destination }: NavigationInfoTopExtProps) => {

@@ -7,14 +7,12 @@ import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { OutdoorDirectionResponse } from '../../api/outdoorDirectionsApi';
 import { TRANSPORT_MODE_API_MAP } from '../../type';
-import { NAVIGATION_STATE } from '../../const';
-import useNavigationState from '../../hooks/useNavigationState';
 
 interface NavigationConfigViewProps {
   readonly durations: OutdoorDirectionResponse[];
   readonly visible: boolean;
   readonly onClose: () => void;
-  readonly onGo: () => void;
+  readonly onGo?: () => void;
 }
 
 export default function NavigationConfigView({
@@ -39,7 +37,7 @@ export default function NavigationConfigView({
     const handleGo = () => {
         // Logic to start the actual turn-by-turn navigation
         console.log("Start navigation with mode:", navigationMode);
-        onGo();
+        onGo?.();
     };
 
     return (

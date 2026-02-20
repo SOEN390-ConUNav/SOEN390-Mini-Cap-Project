@@ -13,7 +13,7 @@ interface SearchBarProps {
   readonly destinationLabel?: string;
   readonly onBack?: () => void;
   readonly onSwap?: () => void;
-    navigationInfoToggleState?: string;
+  readonly navigationInfoToggleState?: string;
 }
 
 export default function SearchBar({
