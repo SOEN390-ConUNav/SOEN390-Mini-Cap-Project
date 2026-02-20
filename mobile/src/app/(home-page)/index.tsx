@@ -51,6 +51,9 @@ export default function HomePageIndex() {
   const { origin, setOrigin, destination, setDestination, swap, clear } = useNavigationEndpoints();
   const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
   const { setIsLoading, setPathDistance, setPathDuration, isLoading } = useNavigationInfo();
+  const toggleNavigationState = useRef<"maximize" | "minimize">("maximize");
+  const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<"maximize"|"minimize">("maximize");
+
 
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
   const [showEnableLocation, setShowEnableLocation] = useState(true);
@@ -109,13 +112,6 @@ export default function HomePageIndex() {
     scheduleFreezeMarkers();
     return () => { if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current); };
   }, [showEnableLocation]);
-
-  useEffect(() => {
-    navigation.setOptions({
-      tabBarStyle: (isConfiguring || isNavigating) ? { display: 'none' } : navStyles.tabBarStyle,
-    });
-    console.log("Configuring: " + isConfiguring + " Navigating: " + isNavigating + " Searching: " + isSearching + " Idle: " + isIdle);
-  }, [isConfiguring, isNavigating, navigation, isIdle, isSearching]);
 
   useEffect(() => {
     scheduleFreezeMarkers();
@@ -198,7 +194,6 @@ export default function HomePageIndex() {
     setOutlineMode(false);
     setShowBuildingPopup(false);
     setShuttleStop(null);
-    console.log("onchange campus")
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
@@ -215,7 +210,6 @@ export default function HomePageIndex() {
   };
 
   const onPressBuilding = (b: Building) => {
-    console.log("onpressbuilding")
     setNavigationState(NAVIGATION_STATE.IDLE);
     if (selectedBuildingId !== b.id || !outlineMode) {
       setDestination({ longitude: b.marker.longitude, latitude: b.marker.latitude, label: b.name });
@@ -230,7 +224,6 @@ export default function HomePageIndex() {
     if (!selectedBuilding) return;
 
     setIsLoading(true);
-    console.log("onpressdirectoin : config");
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
 
     try {
@@ -260,7 +253,6 @@ export default function HomePageIndex() {
     } catch (error) {
       console.error('Error fetching directions:', error);
       Alert.alert('Navigation error', 'Could not fetch directions. Please try again.');
-      console.log("onpressdirections");
       setNavigationState(NAVIGATION_STATE.IDLE);
     } finally {
       setIsLoading(false);
@@ -308,9 +300,15 @@ export default function HomePageIndex() {
 };
 
 const handleCloseNavConfig = () => {
-    if (navigatingRef.current) return; // ignore if we just went navigating
+    if (navigatingRef.current) return;
     setNavigationState(NAVIGATION_STATE.IDLE);
 };
+
+const onToggleNavigationState = () => {
+  console.log(toggleNavigationInfoState);
+  //toggleNavigationState.current = toggleNavigationState.current === "maximize" ? "minimize" : "maximize";
+  setToggleNavigationInfoState(toggleNavigationInfoState === "maximize" ? "minimize" : "maximize");
+}
 
   if (showEnableLocation) {
     return (
@@ -349,7 +347,7 @@ const handleCloseNavConfig = () => {
             showsUserLocation={hasLocationPermission === true}
             showsMyLocationButton={false}
             onRegionChangeComplete={handleRegionChangeComplete}
-            onPress={() => {console.log("mapview"); setShowBuildingPopup(false); setNavigationState(NAVIGATION_STATE.IDLE); }}
+            onPress={() => {setShowBuildingPopup(false); setNavigationState(NAVIGATION_STATE.IDLE); }}
             onMapReady={() => { setMapReady(true); scheduleFreezeMarkers(); }}
         >
           {shuttleStop && (
@@ -413,19 +411,23 @@ const handleCloseNavConfig = () => {
               originLabel={origin?.label ?? "Current Location"}
               destinationLabel={destination?.label ?? "Select destination"}
               onBack={() => {
-                console.log("searchbar");
+                if (isNavigating) {
+                setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING)
+                } else {
                 setIsLoading(false);
                 setNavigationState(NAVIGATION_STATE.IDLE);
                 setSelectedBuildingId(null);
                 setOutlineMode(false);
                 setShowBuildingPopup(false);
                 clear();
+                }
               }}
+              navigationInfoToggleState={toggleNavigationInfoState}
               onSwap={handleSwap}
           />
         </View>
 
-        <SearchPanel visible={isSearching} onClose={() => {console.log("search panel");setNavigationState(NAVIGATION_STATE.IDLE);}} />
+        <SearchPanel visible={isSearching} onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)} />
         <NavigationConfigView durations={allOutdoorRoutes} visible={isConfiguring} onClose={() =>  handleCloseNavConfig()} onGo={() => handleGoNavConfig()}/>
         <FloatingActionButton onPress={onPressFab} />
 
@@ -435,8 +437,10 @@ const handleCloseNavConfig = () => {
       {isNavigating && (
         <NavigationInfoBottom
           visible={isNavigating}
-          onClose={() => null}
-          onPress={() => console.log("Navigation pressed" + navigationState)}
+          onClose={() => {
+            navigatingRef.current = false;
+          }}
+          onPressAction={onToggleNavigationState}
         />
       )}
     </View>

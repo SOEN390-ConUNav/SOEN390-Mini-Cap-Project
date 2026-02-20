@@ -6,10 +6,10 @@ import useNavigationInfo from '../../hooks/useNavigationInfo';
 interface NavigationInfoBottomProps {
     visible:boolean;
     onClose: () => void;
-    onPress: ()=> void;
+    onPressAction?: () => void;
 }
 
-const NavigationInfoBottom = ({visible, onClose, onPress}:NavigationInfoBottomProps) => {
+const NavigationInfoBottom = ({visible, onClose, onPressAction}:NavigationInfoBottomProps) => {
   const pathDistance = useNavigationInfo((state) => state.pathDistance);
   const pathDuration = useNavigationInfo((state) => state.pathDuration);
   const calculateETA = (durationStr: string) => {
@@ -45,15 +45,19 @@ const NavigationInfoBottom = ({visible, onClose, onPress}:NavigationInfoBottomPr
     <BottomDrawer 
     visible={visible}
     onClose={onClose}
-    snapPoints={['40']}>
+    snapPoints={['5%', '25%']}
+    enablePanDownToClose={false}
+    onPressMinimize={true}
+    enableDynamicSizing={false}
+    initialSnapIndex={1}
+    onPressAction={onPressAction}
+    >
+    
     <View >
       <Text style={styles.smallText}>Estimated Time Arrival</Text>
       <Text style={styles.bigText}>{calculateETA(pathDuration)}</Text>
       <Text style={styles.smallText}>Distance</Text>
       <Text style={styles.bigText}>{pathDistance}</Text>
-      <Pressable onPress={onPress}>
-        <Text> caca</Text>
-      </Pressable>
     </View>
     </BottomDrawer>
     

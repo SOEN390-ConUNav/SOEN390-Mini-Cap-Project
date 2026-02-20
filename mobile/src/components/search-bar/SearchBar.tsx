@@ -13,6 +13,7 @@ interface SearchBarProps {
     destinationLabel?: string;
     onBack?: () => void;
     onSwap?: () => void;
+    navigationInfoToggleState?: string;
 }
 
 export default function SearchBar({
@@ -24,6 +25,7 @@ export default function SearchBar({
                                       destinationLabel = "Select destination",
                                       onBack,
                                       onSwap,
+                                      navigationInfoToggleState
                                   }: SearchBarProps) {
     if (isConfiguring) {
         return (
@@ -40,7 +42,7 @@ export default function SearchBar({
 
     if (isNavigating) {
         return (
-            <NavigationBar />
+            <NavigationBar destination={destinationLabel} onPress={onBack} navigationInfoToggleState={navigationInfoToggleState}/>
         );
     }
 

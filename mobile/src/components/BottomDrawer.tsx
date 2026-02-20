@@ -13,22 +13,27 @@ interface BottomDrawerProps {
     enablePanDownToClose?: boolean;
     enableDynamicSizing?: boolean;
     contentContainerStyle?: ViewStyle;
+    onPressMinimize?: boolean;
+    onPressAction?: () => void;
 }
 
 export default function BottomDrawer({
                                          visible,
                                          onClose,
                                          children,
-                                         snapPoints = ['50%', '75%'],
+                                         snapPoints = ['10%', '50%', '75%'],
                                          initialSnapIndex = 0,
                                          backgroundColor = '#FFFFFF',
                                          handleColor = '#00000040',
                                          enablePanDownToClose = true,
                                          enableDynamicSizing = false,
                                          contentContainerStyle,
+                                         onPressMinimize,
+                                         onPressAction
                                      }: BottomDrawerProps) {
     const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const onPressToggleIndex = useRef(0);
 
     const CustomHandle = ({onPress}: { onPress: () => void }) => {
         return (
@@ -41,6 +46,17 @@ export default function BottomDrawer({
             </TouchableOpacity>
         );
     };
+
+    const onPress = () => {
+        if (onPressMinimize) {
+            console.log("stop");
+            bottomSheetRef.current?.snapToIndex(onPressToggleIndex.current);
+            onPressToggleIndex.current = onPressToggleIndex.current === 1 ? 0 : 1;
+            onPressAction?.();
+        } else {
+            bottomSheetRef.current?.dismiss();
+        }
+    }
 
     useEffect(() => {
         if (visible) {
@@ -60,7 +76,7 @@ export default function BottomDrawer({
             onDismiss={onClose}
             backgroundStyle={[styles.background, { backgroundColor }]}
             handleComponent={() => (
-                <CustomHandle onPress={() => bottomSheetRef.current?.dismiss()}/>
+                <CustomHandle onPress={onPress}/>
             )}
         >
             <BottomSheetView style={[styles.contentContainer, contentContainerStyle]}>

@@ -1,14 +1,48 @@
 import { View, Text } from 'react-native'
 import React from 'react'
-import TopDrawer from '../navigation-bar/TopDrawer'
+import { MaterialIcons } from '@expo/vector-icons'
+import { StyleSheet } from 'react-native'
 
-const NavigationInfoTop = () => {
+interface NavigationInfoTopProps {
+  destination: string
+}
+
+const NavigationInfoTop = ({destination} : NavigationInfoTopProps) => {
   return (
-    <View>
-      <Text>NavigationInfoTop</Text>
-      <TopDrawer />
+    <View style={styles.container}>
+      <MaterialIcons name="place" size={18} color="#000" />
+      
+      <Text style={styles.text}>
+        {destination}
+      </Text>
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+
+    backgroundColor: '#fff',
+    borderRadius: 25,
+
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+
+    borderWidth: 1,
+    borderColor: '#800020',
+
+    elevation: 3,
+  },
+
+  text: {
+    flex: 1,             
+    textAlign: 'center',  
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+})
 
 export default NavigationInfoTop
