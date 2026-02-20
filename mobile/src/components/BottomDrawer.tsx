@@ -49,7 +49,6 @@ export default function BottomDrawer({
 
     const onPress = () => {
         if (onPressMinimize) {
-            console.log("stop");
             bottomSheetRef.current?.snapToIndex(onPressToggleIndex.current);
             onPressToggleIndex.current = onPressToggleIndex.current === 1 ? 0 : 1;
             onPressAction?.();

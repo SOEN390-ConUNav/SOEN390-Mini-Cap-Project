@@ -439,8 +439,6 @@ const handleCloseNavConfig = () => {
 };
 
 const onToggleNavigationState = () => {
-  console.log(toggleNavigationInfoState);
-  //toggleNavigationState.current = toggleNavigationState.current === "maximize" ? "minimize" : "maximize";
   setToggleNavigationInfoState(toggleNavigationInfoState === "maximize" ? "minimize" : "maximize");
 }
 
@@ -606,7 +604,7 @@ const onToggleNavigationState = () => {
       <NavigationConfigView
         durations={allOutdoorRoutes}
         visible={isConfiguring}
-        onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        onClose={() => handleCloseNavConfig()}
         onGo={() => handleGoNavConfig()}
       />
       <FloatingActionButton onPress={onPressFab} />
