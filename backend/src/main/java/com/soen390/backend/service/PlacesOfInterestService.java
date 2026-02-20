@@ -55,10 +55,7 @@ public class PlacesOfInterestService {
     }
 
     public String searchPlacesByText(String query) {
-        // Build the request body
-        Map<String, Object> body = Map.of(
-                "textQuery", query
-        );
+        Map<String, Object> body = Map.of("textQuery", query);
 
         String rawJson;
         try {

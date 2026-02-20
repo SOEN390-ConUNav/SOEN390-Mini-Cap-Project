@@ -1,5 +1,6 @@
 package com.soen390.backend.service;
 
+import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
@@ -155,26 +156,23 @@ public class GoogleMapsServiceTest {
                         """;
     }
 
-    public String getMockJsonResultNotFound(){
+    public String getMockJsonZeroResults() {
         return """
-                {
-                    "geocoded_waypoints": [
-                        {
-                            "geocoder_status": "ZERO_RESULTS"
-                        },
-                        {
-                            "geocoder_status": "OK",
-                            "place_id": "ChIJaeO5dIYeyUwRcMi5FOfMXCg",
-                            "types": [
-                                "street_address",
-                                "subpremise"
-                            ]
-                        }
-                    ],
-                    "routes": [],
-                    "status": "NOT_FOUND"
-                }
-                """;
+            {
+                "geocoded_waypoints": [{ "geocoder_status": "ZERO_RESULTS" }],
+                "routes": [],
+                "status": "ZERO_RESULTS"
+            }
+            """;
+    }
+
+    public String getMockJsonNotFound() {
+        return """
+            {
+                "routes": [],
+                "status": "NOT_FOUND"
+            }
+            """;
     }
 
     public String getEmptyMockJson(){
@@ -211,10 +209,21 @@ public class GoogleMapsServiceTest {
     }
 
     @Test
-    void testCheckingResponseStatus(){
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(getMockJsonResultNotFound());
+    void testZeroResultsThrowsException() {
+        when(restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn(getMockJsonZeroResults());
 
-        assertThrows(GoogleMapsDirectionsApiException.class,()->googleMapsService.getDirections(origin,destination, TransportMode.driving));
+        assertThrows(GoogleMapsDirectionEmptyException.class,
+                () -> googleMapsService.getDirections(origin, destination, TransportMode.walking));
+    }
+
+    @Test
+    void testNotFoundStatusThrowsApiException() {
+        when(restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn(getMockJsonNotFound());
+
+        assertThrows(GoogleMapsDirectionsApiException.class,
+                () -> googleMapsService.getDirections(origin, destination, TransportMode.driving));
     }
 
     @Test

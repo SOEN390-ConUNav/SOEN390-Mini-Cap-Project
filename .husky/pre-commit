@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+MOBILE_FILES=$(printf "%s\n" "$FILES" | sed -n '/^mobile\//p')
+
+if [ -n "$MOBILE_FILES" ]; then
+  echo "📱 Formatting mobile files..."
+  printf "%s\n" "$MOBILE_FILES" | xargs npx prettier --write
+  printf "%s\n" "$MOBILE_FILES" | xargs git add
+fi
