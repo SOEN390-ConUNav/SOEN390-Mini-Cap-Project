@@ -1,7 +1,6 @@
 package com.soen390.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.soen390.backend.exception.GoogleMapsDirectionsEmptyException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.object.RouteStep;
 import com.soen390.backend.enums.ManeuverType;
@@ -55,8 +54,6 @@ public class GoogleMapsService {
 
             return new OutdoorDirectionResponse(distance, duration, polyline, transportMode, processSteps(steps));
 
-        } catch (GoogleMapsDirectionsEmptyException empty) {
-            return null;
         } catch (GoogleMapsDirectionsApiException e) {
             throw e;
         } catch (NullPointerException | JsonProcessingException e) {
@@ -99,10 +96,10 @@ public class GoogleMapsService {
 
     private void checkResponseStatus(String status) {
         if (status.equals("ZERO_RESULTS")){
-            throw new GoogleMapsDirectionsEmptyException("No routes found");
+            throw new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations.");
         }
         if (!status.equals("OK")) {
-            throw new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations.");
+            throw new GoogleMapsDirectionsApiException("Unexpected error");
         }
     }
 
