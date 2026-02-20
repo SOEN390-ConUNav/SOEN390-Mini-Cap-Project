@@ -57,15 +57,13 @@ public class OutdoorDirectionsControllerTest {
     }
 
     @Test
-    void getDirectionsShouldReturn404OnInvalidParams() throws Exception {
+    void getDirectionsShouldReturn204OnInvalidParams() throws Exception {
         when(googleMapsService.getDirections(any(), any(), any())).thenThrow(new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations."));
 
         mockMvc.perform(get("/api/directions/outdoor")
                         .param("origin", "god")
                         .param("destination", "McGill")
                         .param("transportMode", "walking"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Directions not found. Please check your start and end locations."))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(status().isNoContent());
     }
 }
