@@ -38,19 +38,21 @@ export default function EventDetailsPopup({
 
         <Text style={styles.body}>{detailsText}</Text>
 
-        {showDirections ? (
-          <View style={styles.buttonRow}>
+        <View style={styles.buttonRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.changeCalendarBtn]}
+            onPress={onChangeCalendar}
+          >
+            <Text style={styles.changeCalendarBtnText}>Change calendar</Text>
+          </Pressable>
+          {showDirections ? (
             <Pressable onPress={onDirections} style={styles.directionsBtn}>
               <FontAwesome5 name="directions" size={18} color="white" />
               <Text style={styles.directionsText}>Directions</Text>
             </Pressable>
-          </View>
-        ) : null}
+          ) : null}
+        </View>
 
-        <View style={{ height: 12 }} />
-        <Pressable style={styles.changeCalendarBtn} onPress={onChangeCalendar}>
-          <Text style={styles.changeCalendarBtnText}>Change calendar</Text>
-        </Pressable>
         <View style={{ height: 8 }} />
         <Pressable style={styles.logoutBtn} onPress={onLogout}>
           <Text style={styles.logoutBtnText}>Log out of Google</Text>
@@ -112,7 +114,16 @@ const styles = StyleSheet.create({
   buttonRow: {
     marginTop: 12,
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  actionBtn: {
+    flex: 1,
+    borderRadius: 999,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   directionsBtn: {
     flexDirection: "row",
@@ -131,9 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(128, 0, 32, 0.08)",
     borderWidth: 1,
     borderColor: BURGUNDY,
-    borderRadius: 16,
-    paddingVertical: 10,
-    alignItems: "center",
   },
   changeCalendarBtnText: {
     color: BURGUNDY,
@@ -141,7 +149,7 @@ const styles = StyleSheet.create({
   },
   logoutBtn: {
     backgroundColor: BURGUNDY,
-    borderRadius: 16,
+    borderRadius: 999,
     paddingVertical: 10,
     alignItems: "center",
   },
