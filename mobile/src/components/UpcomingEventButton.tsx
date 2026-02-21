@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Constants from "expo-constants";
+import { Accessibility } from "../data/buildings";
 import {
   requestGoogleCalendars,
   requestGoogleLogout,
@@ -20,6 +21,7 @@ import {
   requestGoogleState,
   requestSetGoogleSelectedCalendar,
 } from "../api";
+import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 
 const BURGUNDY = "#800020";
 const ACCENT_RED = "#800020";
@@ -35,6 +37,7 @@ export default function UpcomingEventButton({
     title: string;
     detailsText: string;
     showDirections: boolean;
+    accessibility?: Accessibility;
     onDirections: () => void;
     onChangeCalendar: () => void;
     onLogout: () => void;
@@ -291,6 +294,9 @@ export default function UpcomingEventButton({
     : upcomingTitle;
   const upcomingLocation =
     typeof nextEvent?.location === "string" ? nextEvent.location.trim() : "";
+  const matchedEventBuilding = upcomingLocation
+    ? findBuildingFromLocationText(upcomingLocation)
+    : null;
 
   return (
     <View style={{ width: "100%" }}>
@@ -315,6 +321,7 @@ export default function UpcomingEventButton({
               title: upcomingTitle,
               detailsText: eventDetailsText,
               showDirections: !!nextEvent,
+              accessibility: matchedEventBuilding?.accessibility,
               onDirections: () => {
                 if (!upcomingLocation) {
                   Alert.alert(

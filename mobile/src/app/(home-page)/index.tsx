@@ -13,7 +13,12 @@ import SearchBar from "../../components/search-bar/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
 import FloatingActionButton from "../../components/FloatingActionButton";
 import CampusSwitcher from "../../components/CampusSwitcher";
-import { Building, BuildingId, BUILDINGS } from "../../data/buildings";
+import {
+  Accessibility,
+  Building,
+  BuildingId,
+  BUILDINGS,
+} from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
 import UpcomingEventButton from "../../components/UpcomingEventButton";
@@ -86,6 +91,8 @@ export default function HomePageIndex() {
   const [eventDetailsTitle, setEventDetailsTitle] = useState("");
   const [eventDetailsText, setEventDetailsText] = useState("");
   const [showEventDirections, setShowEventDirections] = useState(false);
+  const [eventDetailsAccessibility, setEventDetailsAccessibility] =
+    useState<Accessibility | null>(null);
 
   const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -666,6 +673,7 @@ export default function HomePageIndex() {
             title,
             detailsText,
             showDirections,
+            accessibility,
             onDirections,
             onChangeCalendar,
             onLogout,
@@ -674,6 +682,7 @@ export default function HomePageIndex() {
             setEventDetailsTitle(title);
             setEventDetailsText(detailsText);
             setShowEventDirections(showDirections);
+            setEventDetailsAccessibility(accessibility ?? null);
             eventDetailsActionsRef.current = {
               onDirections,
               onChangeCalendar,
@@ -689,6 +698,7 @@ export default function HomePageIndex() {
         title={eventDetailsTitle}
         detailsText={eventDetailsText}
         showDirections={showEventDirections}
+        accessibility={eventDetailsAccessibility ?? undefined}
         onClose={() => setShowEventDetailsPopup(false)}
         onDirections={() => {
           setShowEventDetailsPopup(false);

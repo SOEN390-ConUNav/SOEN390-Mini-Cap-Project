@@ -21,6 +21,26 @@ jest.mock("@expo/vector-icons/FontAwesome5", () => {
   };
 });
 
+jest.mock("@expo/vector-icons/FontAwesome", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+  return {
+    __esModule: true,
+    default: ({ name }: { name: string }) =>
+      React.createElement(Text, null, `fa-solid-${name}`),
+  };
+});
+
+jest.mock("@expo/vector-icons/Foundation", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+  return {
+    __esModule: true,
+    default: ({ name }: { name: string }) =>
+      React.createElement(Text, null, `foundation-${name}`),
+  };
+});
+
 describe("EventDetailsPopup", () => {
   it("renders nothing when not visible", () => {
     render(
@@ -99,5 +119,28 @@ describe("EventDetailsPopup", () => {
     );
 
     expect(screen.queryByText("Directions")).toBeNull();
+  });
+
+  it("renders accessibility icons when accessibility data is provided", () => {
+    render(
+      <EventDetailsPopup
+        visible
+        title="SOEN 390"
+        detailsText="SGW - Hall - H-937"
+        accessibility={{
+          hasElevator: true,
+          hasParking: true,
+          isAccessible: true,
+        }}
+        onClose={jest.fn()}
+        onDirections={jest.fn()}
+        onChangeCalendar={jest.fn()}
+        onLogout={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText("P")).toBeTruthy();
+    expect(screen.getByText("foundation-elevator")).toBeTruthy();
+    expect(screen.getByText("fa-solid-wheelchair")).toBeTruthy();
   });
 });

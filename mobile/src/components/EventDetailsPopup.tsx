@@ -2,14 +2,22 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Foundation from "@expo/vector-icons/Foundation";
 
 const BURGUNDY = "#800020";
+const defaultAccessibility = {
+  hasElevator: false,
+  hasParking: false,
+  isAccessible: false,
+};
 
 export default function EventDetailsPopup({
   visible,
   title,
   detailsText,
   showDirections = true,
+  accessibility,
   onClose,
   onDirections,
   onChangeCalendar,
@@ -19,21 +27,46 @@ export default function EventDetailsPopup({
   title: string;
   detailsText: string;
   showDirections?: boolean;
+  accessibility?: {
+    hasElevator: boolean;
+    hasParking: boolean;
+    isAccessible: boolean;
+  };
   onClose: () => void;
   onDirections: () => void;
   onChangeCalendar: () => void;
   onLogout: () => void;
 }) {
   if (!visible) return null;
+  const acc = accessibility ?? defaultAccessibility;
+  const showAccessibility =
+    acc.hasParking || acc.hasElevator || acc.isAccessible;
 
   return (
     <Pressable style={styles.backdrop} onPress={onClose}>
       <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
-          <Pressable style={styles.closeBtn} onPress={onClose}>
-            <Ionicons name="close" size={20} color="#111" />
-          </Pressable>
+          <View style={styles.headerRight}>
+            {showAccessibility ? (
+              <View style={styles.iconsRow}>
+                {acc.hasParking ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>P</Text>
+                  </View>
+                ) : null}
+                {acc.hasElevator ? (
+                  <Foundation name="elevator" size={20} color={BURGUNDY} />
+                ) : null}
+                {acc.isAccessible ? (
+                  <FontAwesome name="wheelchair" size={20} color={BURGUNDY} />
+                ) : null}
+              </View>
+            ) : null}
+            <Pressable style={styles.closeBtn} onPress={onClose}>
+              <Ionicons name="close" size={20} color="#111" />
+            </Pressable>
+          </View>
         </View>
 
         <Text style={styles.body}>{detailsText}</Text>
@@ -98,6 +131,23 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111",
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  badge: {
+    backgroundColor: BURGUNDY,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeText: { color: "#fff", fontWeight: "900" },
   closeBtn: {
     width: 32,
     height: 32,
