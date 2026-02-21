@@ -13,22 +13,27 @@ interface BottomDrawerProps {
     enablePanDownToClose?: boolean;
     enableDynamicSizing?: boolean;
     contentContainerStyle?: ViewStyle;
+    readonly handleMode?: "dismiss" | "toggle";
+    onPressAction?: () => void;
 }
 
 export default function BottomDrawer({
                                          visible,
                                          onClose,
                                          children,
-                                         snapPoints = ['50%', '75%'],
+                                         snapPoints = ['10%', '50%', '75%'],
                                          initialSnapIndex = 0,
                                          backgroundColor = '#FFFFFF',
                                          handleColor = '#00000040',
                                          enablePanDownToClose = true,
                                          enableDynamicSizing = false,
                                          contentContainerStyle,
+                                         handleMode = "dismiss",
+                                         onPressAction
                                      }: BottomDrawerProps) {
     const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
     const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const onPressToggleIndex = useRef(0);
 
     const CustomHandle = ({onPress}: { onPress: () => void }) => {
         return (
@@ -40,6 +45,24 @@ export default function BottomDrawer({
                 <View style={[styles.handleIndicator, {backgroundColor: handleColor}]}/>
             </TouchableOpacity>
         );
+    };
+
+    const onPress = () => {
+        switch (handleMode) {
+            case "dismiss":
+                bottomSheetRef.current?.dismiss();
+                break;
+
+            case "toggle":
+                bottomSheetRef.current?.snapToIndex(onPressToggleIndex.current);
+                onPressToggleIndex.current =
+                onPressToggleIndex.current === 1 ? 0 : 1;
+                onPressAction?.();
+                break;
+
+            default:
+                break;
+        }
     };
 
     useEffect(() => {
@@ -60,7 +83,7 @@ export default function BottomDrawer({
             onDismiss={onClose}
             backgroundStyle={[styles.background, { backgroundColor }]}
             handleComponent={() => (
-                <CustomHandle onPress={() => bottomSheetRef.current?.dismiss()}/>
+                <CustomHandle onPress={onPress}/>
             )}
         >
             <BottomSheetView style={[styles.contentContainer, contentContainerStyle]}>
@@ -82,7 +105,9 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     contentContainer: {
-        padding: 36,
+        paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 12,
         alignItems: 'center',
     },
     handleWrapper: {

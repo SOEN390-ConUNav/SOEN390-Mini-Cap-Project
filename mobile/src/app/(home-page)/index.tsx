@@ -28,6 +28,7 @@ import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { getAllOutdoorDirectionsInfo } from "../../api";
 import { NamedCoordinate } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
+import NavigationInfoBottom from '../../components/navigation-info/NavigationInfoBottom';
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -52,13 +53,13 @@ export default function HomePageIndex() {
   const params = useLocalSearchParams<{ shuttleCampus?: string }>();
 
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
-  const { setNavigationState, isNavigating, isConfiguring, isSearching } =
-    useNavigationState();
-  const { origin, setOrigin, destination, setDestination, swap, clear } =
-    useNavigationEndpoints();
-  const { allOutdoorRoutes, setAllOutdoorRoutes } = useNavigationConfig();
-  const { setIsLoading, setPathDistance, setPathDuration } =
-    useNavigationInfo();
+  const { navigationState, setNavigationState, isNavigating, isConfiguring, isSearching, isIdle } = useNavigationState();
+  const { origin, setOrigin, destination, setDestination, swap, clear } = useNavigationEndpoints();
+  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
+  const { setIsLoading, setPathDistance, setPathDuration, isLoading } = useNavigationInfo();
+  const toggleNavigationState = useRef<"maximize" | "minimize">("maximize");
+  const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<"maximize"|"minimize">("minimize");
+
 
   const [hasLocationPermission, setHasLocationPermission] = useState<
     boolean | null
@@ -87,6 +88,8 @@ export default function HomePageIndex() {
 
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+
+  const navigatingRef = useRef(false);
 
   useEffect(() => {
     checkLocationPermission();
@@ -425,6 +428,21 @@ export default function HomePageIndex() {
     }
   };
 
+  const handleGoNavConfig = () => {
+    navigatingRef.current = true;
+    setNavigationState(NAVIGATION_STATE.NAVIGATING);
+    setToggleNavigationInfoState("minimize");
+};
+
+const handleCloseNavConfig = () => {
+    if (navigatingRef.current) return;
+    setNavigationState(NAVIGATION_STATE.IDLE);
+};
+
+const onToggleNavigationState = () => {
+  setToggleNavigationInfoState(toggleNavigationInfoState === "maximize" ? "minimize" : "maximize");
+}
+
   if (showEnableLocation) {
     return (
       <View style={styles.root}>
@@ -515,7 +533,7 @@ export default function HomePageIndex() {
         )}
 
         {(isConfiguring || isNavigating) && (
-          <DirectionPath origin={origin} destination={destination} />
+          <DirectionPath destination={destination} />
         )}
       </MapView>
 
@@ -554,25 +572,30 @@ export default function HomePageIndex() {
         <UpcomingEventButton />
       </View>
 
-      <View style={styles.searchWrapper}>
-        <SearchBar
-          placeholder="Search"
-          onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
-          isConfiguring={isConfiguring}
-          isNavigating={isNavigating}
-          originLabel={origin?.label ?? "Current Location"}
-          destinationLabel={destination?.label ?? "Select destination"}
-          onBack={() => {
-            setIsLoading(false);
-            setNavigationState(NAVIGATION_STATE.IDLE);
-            setSelectedBuildingId(null);
-            setOutlineMode(false);
-            setShowBuildingPopup(false);
-            clear();
-          }}
-          onSwap={handleSwap}
-        />
-      </View>
+        <View style={styles.searchWrapper}>
+          <SearchBar
+              placeholder="Search"
+              onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
+              isConfiguring={isConfiguring}
+              isNavigating={isNavigating}
+              originLabel={origin?.label ?? "Current Location"}
+              destinationLabel={destination?.label ?? "Select destination"}
+              onBack={() => {
+                if (isNavigating) {
+                setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING)
+                } else {
+                setIsLoading(false);
+                setNavigationState(NAVIGATION_STATE.IDLE);
+                setSelectedBuildingId(null);
+                setOutlineMode(false);
+                setShowBuildingPopup(false);
+                clear();
+                }
+              }}
+              navigationInfoToggleState={toggleNavigationInfoState}
+              onSwap={handleSwap}
+          />
+        </View>
 
       <SearchPanel
         visible={isSearching}
@@ -582,13 +605,23 @@ export default function HomePageIndex() {
       <NavigationConfigView
         durations={allOutdoorRoutes}
         visible={isConfiguring}
-        onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        onClose={() => handleCloseNavConfig()}
+        onGo={() => handleGoNavConfig()}
       />
       <FloatingActionButton onPress={onPressFab} />
 
       <View style={styles.campusWrapper}>
         <CampusSwitcher value={campus} onChange={onChangeCampus} />
       </View>
+      {isNavigating && (
+        <NavigationInfoBottom
+          visible={isNavigating}
+          onClose={() => {
+            navigatingRef.current = false;
+          }}
+          onPressAction={onToggleNavigationState}
+        />
+      )}
     </View>
   );
 }
