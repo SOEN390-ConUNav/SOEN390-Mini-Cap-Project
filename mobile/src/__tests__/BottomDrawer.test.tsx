@@ -56,9 +56,9 @@ describe('BottomDrawer', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onPressAction when handle pressed and onPressMinimize is true', () => {
+  it('calls onPressAction when handle pressed and isDismissable is false', () => {
     const { getByTestId } = render(
-      <BottomDrawer {...baseProps} onPressMinimize onPressAction={onPressAction} />
+      <BottomDrawer {...baseProps} isDismissable={false} onPressAction={onPressAction} />
     );
     const modal = getByTestId('bottom-sheet-modal');
     const handle = modal.props.children[0]; // handleComponent is rendered first

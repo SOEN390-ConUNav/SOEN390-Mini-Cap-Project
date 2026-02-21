@@ -13,7 +13,7 @@ interface BottomDrawerProps {
     enablePanDownToClose?: boolean;
     enableDynamicSizing?: boolean;
     contentContainerStyle?: ViewStyle;
-    onPressMinimize?: boolean;
+    isDismissable?: boolean;
     onPressAction?: () => void;
 }
 
@@ -28,7 +28,7 @@ export default function BottomDrawer({
                                          enablePanDownToClose = true,
                                          enableDynamicSizing = false,
                                          contentContainerStyle,
-                                         onPressMinimize,
+                                         isDismissable = true,
                                          onPressAction
                                      }: BottomDrawerProps) {
     const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
@@ -48,12 +48,12 @@ export default function BottomDrawer({
     };
 
     const onPress = () => {
-        if (onPressMinimize) {
+        if (isDismissable) {
+            bottomSheetRef.current?.dismiss();
+        } else {
             bottomSheetRef.current?.snapToIndex(onPressToggleIndex.current);
             onPressToggleIndex.current = onPressToggleIndex.current === 1 ? 0 : 1;
             onPressAction?.();
-        } else {
-            bottomSheetRef.current?.dismiss();
         }
     }
 
