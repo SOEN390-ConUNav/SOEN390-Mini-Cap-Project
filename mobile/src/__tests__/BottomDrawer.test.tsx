@@ -58,7 +58,7 @@ describe('BottomDrawer', () => {
 
   it('calls onPressAction when handle pressed and isDismissable is false', () => {
     const { getByTestId } = render(
-      <BottomDrawer {...baseProps} isDismissable={false} onPressAction={onPressAction} />
+      <BottomDrawer {...baseProps} handleMode={"toggle"} onPressAction={onPressAction} />
     );
     const modal = getByTestId('bottom-sheet-modal');
     const handle = modal.props.children[0]; // handleComponent is rendered first

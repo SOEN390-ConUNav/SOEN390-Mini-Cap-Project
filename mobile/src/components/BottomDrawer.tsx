@@ -13,7 +13,7 @@ interface BottomDrawerProps {
     enablePanDownToClose?: boolean;
     enableDynamicSizing?: boolean;
     contentContainerStyle?: ViewStyle;
-    isDismissable?: boolean;
+    readonly handleMode?: "dismiss" | "toggle";
     onPressAction?: () => void;
 }
 
@@ -28,7 +28,7 @@ export default function BottomDrawer({
                                          enablePanDownToClose = true,
                                          enableDynamicSizing = false,
                                          contentContainerStyle,
-                                         isDismissable = true,
+                                         handleMode = "dismiss",
                                          onPressAction
                                      }: BottomDrawerProps) {
     const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
@@ -48,14 +48,22 @@ export default function BottomDrawer({
     };
 
     const onPress = () => {
-        if (isDismissable) {
-            bottomSheetRef.current?.dismiss();
-        } else {
-            bottomSheetRef.current?.snapToIndex(onPressToggleIndex.current);
-            onPressToggleIndex.current = onPressToggleIndex.current === 1 ? 0 : 1;
-            onPressAction?.();
+        switch (handleMode) {
+            case "dismiss":
+                bottomSheetRef.current?.dismiss();
+                break;
+
+            case "toggle":
+                bottomSheetRef.current?.snapToIndex(onPressToggleIndex.current);
+                onPressToggleIndex.current =
+                onPressToggleIndex.current === 1 ? 0 : 1;
+                onPressAction?.();
+                break;
+
+            default:
+                break;
         }
-    }
+    };
 
     useEffect(() => {
         if (visible) {
