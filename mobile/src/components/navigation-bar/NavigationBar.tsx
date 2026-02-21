@@ -17,10 +17,10 @@ const NavigationBar = ({destination, onPress, navigationInfoToggleState} : Navig
   </View>
 
   <View style={styles.navigationWrapper}>
-    {navigationInfoToggleState === "minimize" && (
+    {navigationInfoToggleState === "maximize" && (
       <NavigationInfoTopExt destination={destination} />
     )}
-    {navigationInfoToggleState === "maximize" && (
+    {navigationInfoToggleState === "minimize" && (
       <NavigationInfoTop destination={destination} />
     )}
   </View>

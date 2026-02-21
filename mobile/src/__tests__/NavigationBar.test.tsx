@@ -68,8 +68,8 @@ describe('NavigationBar', () => {
       />,
     );
 
-    expect(getByTestId('navigation-info-top-ext')).toBeTruthy();
-    expect(queryByTestId('navigation-info-top')).toBeNull();
+    expect(getByTestId('navigation-info-top')).toBeTruthy();
+    expect(queryByTestId('navigation-info-top-ext')).toBeNull();
   });
 
   // ─── maximize state ──────────────────────────────
@@ -82,8 +82,8 @@ describe('NavigationBar', () => {
       />,
     );
 
-    expect(getByTestId('navigation-info-top')).toBeTruthy();
-    expect(queryByTestId('navigation-info-top-ext')).toBeNull();
+    expect(getByTestId('navigation-info-top-ext')).toBeTruthy();
+    expect(queryByTestId('navigation-info-top')).toBeNull();
   });
 
   // ─── undefined state ─────────────────────────────

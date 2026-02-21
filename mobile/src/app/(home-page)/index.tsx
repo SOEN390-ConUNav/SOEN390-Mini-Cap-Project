@@ -58,7 +58,7 @@ export default function HomePageIndex() {
   const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
   const { setIsLoading, setPathDistance, setPathDuration, isLoading } = useNavigationInfo();
   const toggleNavigationState = useRef<"maximize" | "minimize">("maximize");
-  const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<"maximize"|"minimize">("maximize");
+  const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<"maximize"|"minimize">("minimize");
 
 
   const [hasLocationPermission, setHasLocationPermission] = useState<
@@ -431,6 +431,7 @@ export default function HomePageIndex() {
   const handleGoNavConfig = () => {
     navigatingRef.current = true;
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
+    setToggleNavigationInfoState("minimize");
 };
 
 const handleCloseNavConfig = () => {
