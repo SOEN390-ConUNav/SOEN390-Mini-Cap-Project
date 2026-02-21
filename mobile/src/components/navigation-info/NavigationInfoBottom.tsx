@@ -2,7 +2,7 @@ import { View, Text,StyleSheet} from 'react-native'
 import React from 'react'
 import BottomDrawer from '../BottomDrawer';
 import useNavigationInfo from '../../hooks/useNavigationInfo';
-import { calculateETA } from '../../utils/calculateETA';
+import { calculateETA } from '../../utils/navigationUtils';
 
 interface NavigationInfoBottomProps {
     readonly visible:boolean;

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import NavigationGoButton from './NavigationGoButton';
 import React from 'react';
-import { calculateETA } from '../../utils/calculateETA';
+import { calculateETA } from '../../utils/navigationUtils';
 
 interface NavigationPathRowProps {
   handleGo: () => void;

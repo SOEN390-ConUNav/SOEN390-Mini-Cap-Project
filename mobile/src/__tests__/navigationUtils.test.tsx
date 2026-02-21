@@ -1,4 +1,4 @@
-import { calculateETA } from '../utils/calculateETA';
+import { calculateETA } from "../utils/navigationUtils";
 
 describe('calculateETA', () => {
   beforeEach(() => {

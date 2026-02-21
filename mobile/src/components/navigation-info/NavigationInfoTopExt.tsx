@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
 import useNavigationInfo from '../../hooks/useNavigationInfo'
-import { calculateETA } from '../../utils/calculateETA'
+import { calculateETA } from '../../utils/navigationUtils'
 
 interface NavigationInfoTopExtProps {
   readonly destination: string
