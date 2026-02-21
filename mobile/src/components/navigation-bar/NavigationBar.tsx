@@ -7,7 +7,7 @@ import NavigationInfoTopExt from '../navigation-info/NavigationInfoTopExt'
 interface NavigationBarProps {
   readonly destination: string,
   readonly onPress?: () => void,
-  readonly navigationInfoToggleState?: string;
+  readonly navigationInfoToggleState?: "maximize" | "minimize";
 }
 const NavigationBar = ({destination, onPress, navigationInfoToggleState} : NavigationBarProps) => {
   return (
