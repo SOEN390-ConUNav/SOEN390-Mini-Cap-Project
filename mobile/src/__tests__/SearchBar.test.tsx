@@ -28,6 +28,25 @@ jest.mock("../components/search-bar/RouteCard", () => {
   );
 });
 
+jest.mock("../components/navigation-bar/NavigationBar", () => {
+  const { View, Text } = require("react-native");
+  return ({
+    destination,
+    onPress,
+    navigationInfoToggleState,
+  }: {
+    destination: string;
+    onPress?: () => void;
+    navigationInfoToggleState?: string;
+  }) => {
+    return (
+      <View testID="navigation-bar-card">
+        <Text>{destination}</Text>
+      </View>
+    );
+  };
+});
+
 const baseProps = {
   placeholder: "Search here",
   onPress: jest.fn(),
@@ -79,9 +98,9 @@ describe("SearchBar", () => {
 
   // ─── isNavigating ─────────────────────────────────────────────────────────
 
-  it("renders RouteCard when isNavigating is true", () => {
+  it("renders NavigationBar when isNavigating is true", () => {
     const { getByTestId } = render(<SearchBar {...baseProps} isNavigating />);
-    expect(getByTestId("route-card")).toBeTruthy();
+    expect(getByTestId("navigation-bar-card")).toBeTruthy();
   });
 
   it("does not render the search pressable when isNavigating is true", () => {

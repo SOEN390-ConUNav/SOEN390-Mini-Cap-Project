@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import RouteCard from "./RouteCard";
+import NavigationBar from "../navigation-bar/NavigationBar";
 
 interface SearchBarProps {
   readonly placeholder: string;
@@ -12,6 +13,7 @@ interface SearchBarProps {
   readonly destinationLabel?: string;
   readonly onBack?: () => void;
   readonly onSwap?: () => void;
+  readonly navigationInfoToggleState?: "maximize" | "minimize";
 }
 
 export default function SearchBar({
@@ -23,14 +25,25 @@ export default function SearchBar({
   destinationLabel = "Select destination",
   onBack,
   onSwap,
+  navigationInfoToggleState,
 }: SearchBarProps) {
-  if (isConfiguring || isNavigating) {
+  if (isConfiguring) {
     return (
       <RouteCard
         originLabel={originLabel}
         destinationLabel={destinationLabel}
         onBack={onBack ?? (() => {})}
         onSwap={onSwap ?? (() => {})}
+      />
+    );
+  }
+
+  if (isNavigating) {
+    return (
+      <NavigationBar
+        destination={destinationLabel}
+        onPress={onBack}
+        navigationInfoToggleState={navigationInfoToggleState}
       />
     );
   }
