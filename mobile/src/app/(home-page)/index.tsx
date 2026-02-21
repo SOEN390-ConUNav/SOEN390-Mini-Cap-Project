@@ -54,6 +54,16 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
 
+type EventDetailsPayload = {
+  title: string;
+  detailsText: string;
+  showDirections: boolean;
+  accessibility?: Accessibility;
+  onDirections: () => void;
+  onChangeCalendar: () => void;
+  onLogout: () => void;
+};
+
 export default function HomePageIndex() {
   const navigation = useNavigation();
   const router = useRouter();
@@ -99,12 +109,9 @@ export default function HomePageIndex() {
     useState<BuildingId | null>(null);
   const [outlineMode, setOutlineMode] = useState(false);
   const [showBuildingPopup, setShowBuildingPopup] = useState(false);
-  const [showEventDetailsPopup, setShowEventDetailsPopup] = useState(false);
-  const [eventDetailsTitle, setEventDetailsTitle] = useState("");
-  const [eventDetailsText, setEventDetailsText] = useState("");
-  const [showEventDirections, setShowEventDirections] = useState(false);
-  const [eventDetailsAccessibility, setEventDetailsAccessibility] =
-    useState<Accessibility | null>(null);
+  const [eventDetails, setEventDetails] = useState<EventDetailsPayload | null>(
+    null,
+  );
 
   const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -112,15 +119,6 @@ export default function HomePageIndex() {
 
   const mapRef = useRef<MapView>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
-  const eventDetailsActionsRef = useRef<{
-    onDirections: () => void;
-    onChangeCalendar: () => void;
-    onLogout: () => void;
-  }>({
-    onDirections: () => {},
-    onChangeCalendar: () => {},
-    onLogout: () => {},
-  });
 
   const navigatingRef = useRef(false);
 
@@ -245,7 +243,7 @@ export default function HomePageIndex() {
 
   const onPressFab = async () => {
     try {
-      setShowEventDetailsPopup(false);
+      setEventDetails(null);
       if (hasLocationPermission === true) {
         animateToRegion(await getOneFix());
         return;
@@ -284,7 +282,7 @@ export default function HomePageIndex() {
   };
 
   const onChangeCampus = (next: "SGW" | "LOYOLA") => {
-    setShowEventDetailsPopup(false);
+    setEventDetails(null);
     setCampus(next);
     scheduleFreezeMarkers();
     animateToRegion({
@@ -710,38 +708,40 @@ export default function HomePageIndex() {
             onLogout,
           }) => {
             setShowBuildingPopup(false);
-            setEventDetailsTitle(title);
-            setEventDetailsText(detailsText);
-            setShowEventDirections(showDirections);
-            setEventDetailsAccessibility(accessibility ?? null);
-            eventDetailsActionsRef.current = {
+            setEventDetails({
+              title,
+              detailsText,
+              showDirections,
+              accessibility,
               onDirections,
               onChangeCalendar,
               onLogout,
-            };
-            setShowEventDetailsPopup(true);
+            });
           }}
         />
       </View>
 
       <EventDetailsPopup
-        visible={showEventDetailsPopup}
-        title={eventDetailsTitle}
-        detailsText={eventDetailsText}
-        showDirections={showEventDirections}
-        accessibility={eventDetailsAccessibility ?? undefined}
-        onClose={() => setShowEventDetailsPopup(false)}
+        visible={eventDetails != null}
+        title={eventDetails?.title ?? ""}
+        detailsText={eventDetails?.detailsText ?? ""}
+        showDirections={eventDetails?.showDirections ?? false}
+        accessibility={eventDetails?.accessibility}
+        onClose={() => setEventDetails(null)}
         onDirections={() => {
-          setShowEventDetailsPopup(false);
-          eventDetailsActionsRef.current.onDirections();
+          const onDirections = eventDetails?.onDirections;
+          setEventDetails(null);
+          onDirections?.();
         }}
         onChangeCalendar={() => {
-          setShowEventDetailsPopup(false);
-          eventDetailsActionsRef.current.onChangeCalendar();
+          const onChangeCalendar = eventDetails?.onChangeCalendar;
+          setEventDetails(null);
+          onChangeCalendar?.();
         }}
         onLogout={() => {
-          setShowEventDetailsPopup(false);
-          eventDetailsActionsRef.current.onLogout();
+          const onLogout = eventDetails?.onLogout;
+          setEventDetails(null);
+          onLogout?.();
         }}
       />
 

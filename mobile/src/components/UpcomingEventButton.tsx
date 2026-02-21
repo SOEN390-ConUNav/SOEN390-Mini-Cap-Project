@@ -24,7 +24,6 @@ import {
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 
 const BURGUNDY = "#800020";
-const ACCENT_RED = "#800020";
 
 export default function UpcomingEventButton({
   onMainButtonPress,
@@ -432,7 +431,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: ACCENT_RED,
+    borderColor: BURGUNDY,
     backgroundColor: "white",
     alignItems: "center",
     width: "80%",
@@ -445,7 +444,7 @@ const styles = StyleSheet.create({
     width: "67%",
   },
   upcomingBtnText: {
-    color: ACCENT_RED,
+    color: BURGUNDY,
     fontWeight: "700",
     textAlign: "center",
     fontSize: 12,
@@ -461,7 +460,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: ACCENT_RED,
+    borderColor: BURGUNDY,
     padding: 14,
     maxHeight: "70%",
   },
@@ -477,7 +476,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 24,
     borderWidth: 1,
-    borderColor: ACCENT_RED,
+    borderColor: BURGUNDY,
     borderRadius: 16,
     backgroundColor: "rgba(128, 0, 32, 0.05)",
   },
@@ -490,7 +489,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: ACCENT_RED,
+    borderColor: BURGUNDY,
     borderRadius: 16,
     backgroundColor: "white",
     marginBottom: 10,
@@ -508,7 +507,7 @@ const styles = StyleSheet.create({
   },
   calendarMeta: {
     fontSize: 12,
-    color: ACCENT_RED,
+    color: BURGUNDY,
     marginTop: 2,
   },
   cancelBtn: {

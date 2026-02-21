@@ -6,6 +6,14 @@ const normalizeLocationText = (value: string): string =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const containsAlias = (normalizedLocation: string, alias: string): boolean => {
+  const aliasPattern = new RegExp(`\\b${escapeRegExp(alias)}\\b`);
+  return aliasPattern.test(normalizedLocation);
+};
+
 const BUILDING_ALIAS_INDEX = BUILDINGS.map((building) => {
   const normalizedName = normalizeLocationText(building.name);
   const simplifiedName = normalizedName
@@ -52,9 +60,13 @@ export const findBuildingFromLocationText = (
   if (byBuildingId) return byBuildingId;
 
   const normalizedLocation = normalizeLocationText(trimmed);
-  const aliasMatch = BUILDING_ALIAS_INDEX.find(({ aliases }) =>
-    aliases.some((alias) => normalizedLocation.includes(alias)),
+  const aliasMatches = BUILDING_ALIAS_INDEX.flatMap(({ building, aliases }) =>
+    aliases
+      .filter((alias) => containsAlias(normalizedLocation, alias))
+      .map((alias) => ({ building, score: alias.length })),
   );
+  if (aliasMatches.length === 0) return null;
 
-  return aliasMatch?.building ?? null;
+  aliasMatches.sort((a, b) => b.score - a.score);
+  return aliasMatches[0].building;
 };

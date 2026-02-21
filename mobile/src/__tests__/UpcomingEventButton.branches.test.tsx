@@ -1,5 +1,11 @@
 import React from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
 import { Alert, AppState } from "react-native";
 import UpcomingEventButton from "../components/UpcomingEventButton";
 import Constants from "expo-constants";
@@ -59,9 +65,15 @@ describe("UpcomingEventButton branch coverage", () => {
       .spyOn(AppState, "addEventListener")
       .mockImplementation(() => ({ remove: jest.fn() }) as any);
     (GoogleSignin.hasPlayServices as jest.Mock).mockResolvedValue(undefined);
-    (GoogleSignin.signIn as jest.Mock).mockResolvedValue({ serverAuthCode: "server-code-123" });
-    (requestGoogleOAuthExchange as jest.Mock).mockResolvedValue(response({ ok: true, json: {} }));
-    (requestGoogleLogout as jest.Mock).mockResolvedValue(response({ ok: true, json: { loggedOut: true } }));
+    (GoogleSignin.signIn as jest.Mock).mockResolvedValue({
+      serverAuthCode: "server-code-123",
+    });
+    (requestGoogleOAuthExchange as jest.Mock).mockResolvedValue(
+      response({ ok: true, json: {} }),
+    );
+    (requestGoogleLogout as jest.Mock).mockResolvedValue(
+      response({ ok: true, json: { loggedOut: true } }),
+    );
   });
 
   afterEach(() => {
@@ -71,7 +83,7 @@ describe("UpcomingEventButton branch coverage", () => {
 
   it("handles initial unauthorized state by keeping local disconnected UI", async () => {
     (requestGoogleState as jest.Mock).mockResolvedValue(
-      response({ ok: false, status: 401, text: "unauthorized" })
+      response({ ok: false, status: 401, text: "unauthorized" }),
     );
 
     render(<UpcomingEventButton />);
@@ -91,18 +103,21 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
-      .mockResolvedValueOnce(response({ ok: false, status: 401, text: "expired" }))
+      .mockResolvedValueOnce(
+        response({ ok: false, status: 401, text: "expired" }),
+      )
       .mockResolvedValueOnce(
         response({
           json: {
             selectedCalendar: { id: "cal-1", summary: "School", primary: true },
             calendarSelected: true,
             nextEvent: { summary: "SOEN 390", location: "H-937" },
-            nextEventDetailsText: "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
+            nextEventDetailsText:
+              "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
           },
-        })
+        }),
       );
 
     render(<UpcomingEventButton />);
@@ -114,7 +129,9 @@ describe("UpcomingEventButton branch coverage", () => {
     fireEvent.press(screen.getByText("Import Google Calendar Schedule"));
 
     await waitFor(() => {
-      expect(requestGoogleOAuthExchange).toHaveBeenCalledWith("server-code-123");
+      expect(requestGoogleOAuthExchange).toHaveBeenCalledWith(
+        "server-code-123",
+      );
     });
 
     expect(requestGoogleCalendars).not.toHaveBeenCalled();
@@ -123,7 +140,8 @@ describe("UpcomingEventButton branch coverage", () => {
 
   it("logs import-flow error when web client id is missing", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
-    const originalClientId = (Constants as any).expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID;
+    const originalClientId = (Constants as any).expoConfig?.extra
+      ?.GOOGLE_WEB_CLIENT_ID;
     (Constants as any).expoConfig.extra.GOOGLE_WEB_CLIENT_ID = undefined;
 
     (requestGoogleState as jest.Mock)
@@ -135,9 +153,11 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
-      .mockResolvedValueOnce(response({ ok: false, status: 401, text: "expired" }));
+      .mockResolvedValueOnce(
+        response({ ok: false, status: 401, text: "expired" }),
+      );
 
     render(<UpcomingEventButton />);
     await waitFor(() => {
@@ -146,7 +166,10 @@ describe("UpcomingEventButton branch coverage", () => {
     fireEvent.press(screen.getByText("Import Google Calendar Schedule"));
 
     await waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("IMPORT FLOW ERROR:", expect.any(Error));
+      expect(logSpy).toHaveBeenCalledWith(
+        "IMPORT FLOW ERROR:",
+        expect.any(Error),
+      );
     });
 
     (Constants as any).expoConfig.extra.GOOGLE_WEB_CLIENT_ID = originalClientId;
@@ -162,7 +185,7 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
       .mockResolvedValueOnce(
         response({
@@ -172,13 +195,15 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       );
 
     (requestGoogleCalendars as jest.Mock)
-      .mockResolvedValueOnce(response({ ok: false, status: 401, text: "expired" }))
       .mockResolvedValueOnce(
-        response({ json: [{ id: "cal-1", summary: "School", primary: true }] })
+        response({ ok: false, status: 401, text: "expired" }),
+      )
+      .mockResolvedValueOnce(
+        response({ json: [{ id: "cal-1", summary: "School", primary: true }] }),
       );
 
     render(<UpcomingEventButton />);
@@ -215,7 +240,7 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
       .mockResolvedValueOnce(
         response({
@@ -225,10 +250,10 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       );
     (requestGoogleCalendars as jest.Mock).mockResolvedValue(
-      response({ ok: false, status: 500, text: "calendar error" })
+      response({ ok: false, status: 500, text: "calendar error" }),
     );
 
     render(<UpcomingEventButton />);
@@ -240,14 +265,17 @@ describe("UpcomingEventButton branch coverage", () => {
     fireEvent.press(screen.getByText("Import Google Calendar Schedule"));
 
     await waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("IMPORT FLOW ERROR:", expect.any(Error));
+      expect(logSpy).toHaveBeenCalledWith(
+        "IMPORT FLOW ERROR:",
+        expect.any(Error),
+      );
     });
   });
 
   it("logs import-flow error when oauth exchange response is not ok", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     (requestGoogleOAuthExchange as jest.Mock).mockResolvedValueOnce(
-      response({ ok: false, status: 500, text: "oauth failed" })
+      response({ ok: false, status: 500, text: "oauth failed" }),
     );
     (requestGoogleState as jest.Mock)
       .mockResolvedValueOnce(
@@ -258,9 +286,11 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
-      .mockResolvedValueOnce(response({ ok: false, status: 401, text: "expired" }));
+      .mockResolvedValueOnce(
+        response({ ok: false, status: 401, text: "expired" }),
+      );
 
     render(<UpcomingEventButton />);
     await waitFor(() => {
@@ -269,7 +299,10 @@ describe("UpcomingEventButton branch coverage", () => {
     fireEvent.press(screen.getByText("Import Google Calendar Schedule"));
 
     await waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("IMPORT FLOW ERROR:", expect.any(Error));
+      expect(logSpy).toHaveBeenCalledWith(
+        "IMPORT FLOW ERROR:",
+        expect.any(Error),
+      );
     });
   });
 
@@ -283,23 +316,30 @@ describe("UpcomingEventButton branch coverage", () => {
           selectedCalendar: { id: "cal-1", summary: "School", primary: true },
           calendarSelected: true,
           nextEvent: { summary: "SOEN 390", location: "H-937" },
-          nextEventDetailsText: "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
+          nextEventDetailsText:
+            "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
         },
-      })
+      }),
     );
 
-    (requestGoogleLogout as jest.Mock).mockRejectedValue(new Error("logout failed"));
-    (GoogleSignin.revokeAccess as jest.Mock).mockRejectedValue(new Error("revoke failed"));
-    (GoogleSignin.signOut as jest.Mock).mockRejectedValue(new Error("signout failed"));
+    (requestGoogleLogout as jest.Mock).mockRejectedValue(
+      new Error("logout failed"),
+    );
+    (GoogleSignin.revokeAccess as jest.Mock).mockRejectedValue(
+      new Error("revoke failed"),
+    );
+    (GoogleSignin.signOut as jest.Mock).mockRejectedValue(
+      new Error("signout failed"),
+    );
     (requestGoogleCalendars as jest.Mock).mockResolvedValue(
-      response({ json: [{ id: "cal-1", summary: "School", primary: true }] })
+      response({ json: [{ id: "cal-1", summary: "School", primary: true }] }),
     );
 
     render(
       <UpcomingEventButton
         onOpenEventDetails={onOpenEventDetails}
         onRequestDirections={onRequestDirections}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -310,6 +350,18 @@ describe("UpcomingEventButton branch coverage", () => {
     expect(onOpenEventDetails).toHaveBeenCalledTimes(1);
 
     const payload = onOpenEventDetails.mock.calls[0][0];
+    expect(payload).toEqual(
+      expect.objectContaining({
+        title: "SOEN 390",
+        detailsText: "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
+        showDirections: true,
+        accessibility: {
+          hasElevator: true,
+          hasParking: false,
+          isAccessible: true,
+        },
+      }),
+    );
     payload.onDirections();
     expect(onRequestDirections).toHaveBeenCalledWith("H-937");
 
@@ -341,41 +393,58 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: { summary: "No Location Event", location: "   " },
             nextEventDetailsText: "No location",
           },
-        })
+        }),
       )
       .mockResolvedValueOnce(
         response({
           json: {
             selectedCalendar: { id: "cal-1", summary: "School", primary: true },
             calendarSelected: true,
-            nextEvent: { summary: "Has Location Event", location: "Hall Building" },
+            nextEvent: {
+              summary: "Has Location Event",
+              location: "Hall Building",
+            },
             nextEventDetailsText: "Has location",
           },
-        })
+        }),
       );
 
-    const firstView = render(<UpcomingEventButton onOpenEventDetails={onOpenEventDetails} />);
+    const firstView = render(
+      <UpcomingEventButton onOpenEventDetails={onOpenEventDetails} />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText("Upcoming event: No Location Event")).toBeTruthy();
+      expect(
+        screen.getByText("Upcoming event: No Location Event"),
+      ).toBeTruthy();
     });
     fireEvent.press(screen.getByText("Upcoming event: No Location Event"));
+    expect(onOpenEventDetails.mock.calls[0][0].showDirections).toBe(true);
+    expect(onOpenEventDetails.mock.calls[0][0].accessibility).toBeUndefined();
     onOpenEventDetails.mock.calls[0][0].onDirections();
     expect(Alert.alert).toHaveBeenCalledWith(
       "No location",
-      "This event has no location to navigate to."
+      "This event has no location to navigate to.",
     );
 
     firstView.unmount();
     render(<UpcomingEventButton onOpenEventDetails={onOpenEventDetails} />);
     await waitFor(() => {
-      expect(screen.getByText("Upcoming event: Has Location Event")).toBeTruthy();
+      expect(
+        screen.getByText("Upcoming event: Has Location Event"),
+      ).toBeTruthy();
     });
     fireEvent.press(screen.getByText("Upcoming event: Has Location Event"));
+    expect(onOpenEventDetails.mock.calls[1][0].showDirections).toBe(true);
+    expect(onOpenEventDetails.mock.calls[1][0].accessibility).toEqual({
+      hasElevator: true,
+      hasParking: false,
+      isAccessible: true,
+    });
     onOpenEventDetails.mock.calls[1][0].onDirections();
     expect(Alert.alert).toHaveBeenCalledWith(
       "Directions unavailable",
-      "Internal directions are not available right now."
+      "Internal directions are not available right now.",
     );
   });
 
@@ -389,7 +458,7 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
       .mockResolvedValueOnce(
         response({
@@ -399,7 +468,7 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
       .mockResolvedValueOnce(
         response({
@@ -409,16 +478,20 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       );
 
     (requestGoogleCalendars as jest.Mock).mockResolvedValue(
-      response({ json: [{ id: "cal-1", summary: "School", primary: true }] })
+      response({ json: [{ id: "cal-1", summary: "School", primary: true }] }),
     );
 
     (requestSetGoogleSelectedCalendar as jest.Mock)
-      .mockResolvedValueOnce(response({ ok: false, status: 401, text: "expired" }))
-      .mockResolvedValueOnce(response({ ok: true, status: 200, json: { saved: true } }));
+      .mockResolvedValueOnce(
+        response({ ok: false, status: 401, text: "expired" }),
+      )
+      .mockResolvedValueOnce(
+        response({ ok: true, status: 200, json: { saved: true } }),
+      );
 
     render(<UpcomingEventButton />);
 
@@ -450,7 +523,7 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       )
       .mockResolvedValueOnce(
         response({
@@ -460,14 +533,14 @@ describe("UpcomingEventButton branch coverage", () => {
             nextEvent: null,
             nextEventDetailsText: "No upcoming event",
           },
-        })
+        }),
       );
 
     (requestGoogleCalendars as jest.Mock).mockResolvedValue(
-      response({ json: [{ id: "cal-1", summary: "School", primary: true }] })
+      response({ json: [{ id: "cal-1", summary: "School", primary: true }] }),
     );
     (requestSetGoogleSelectedCalendar as jest.Mock).mockResolvedValueOnce(
-      response({ ok: false, status: 500, text: "set failed" })
+      response({ ok: false, status: 500, text: "set failed" }),
     );
 
     render(<UpcomingEventButton />);
@@ -482,7 +555,10 @@ describe("UpcomingEventButton branch coverage", () => {
     fireEvent.press(screen.getByText("School"));
 
     await waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("SELECT CALENDAR ERROR:", expect.any(Error));
+      expect(logSpy).toHaveBeenCalledWith(
+        "SELECT CALENDAR ERROR:",
+        expect.any(Error),
+      );
     });
   });
 
@@ -510,7 +586,7 @@ describe("UpcomingEventButton branch coverage", () => {
           nextEvent: null,
           nextEventDetailsText: "No upcoming event",
         },
-      })
+      }),
     );
 
     render(<UpcomingEventButton />);
@@ -519,19 +595,24 @@ describe("UpcomingEventButton branch coverage", () => {
       expect(addListenerSpy).toHaveBeenCalled();
     });
 
-    const callCountAfterMount = (requestGoogleState as jest.Mock).mock.calls.length;
+    const callCountAfterMount = (requestGoogleState as jest.Mock).mock.calls
+      .length;
 
     await act(async () => {
       jest.advanceTimersByTime(60_000);
     });
 
-    expect((requestGoogleState as jest.Mock).mock.calls.length).toBeGreaterThan(callCountAfterMount);
+    expect((requestGoogleState as jest.Mock).mock.calls.length).toBeGreaterThan(
+      callCountAfterMount,
+    );
 
     await act(async () => {
       appStateListener?.("active");
     });
 
-    expect((requestGoogleState as jest.Mock).mock.calls.length).toBeGreaterThan(callCountAfterMount + 1);
+    expect((requestGoogleState as jest.Mock).mock.calls.length).toBeGreaterThan(
+      callCountAfterMount + 1,
+    );
     addListenerSpy.mockRestore();
   });
 
@@ -539,13 +620,16 @@ describe("UpcomingEventButton branch coverage", () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
     (requestGoogleState as jest.Mock).mockResolvedValue(
-      response({ ok: false, status: 500, text: "boom" })
+      response({ ok: false, status: 500, text: "boom" }),
     );
 
     render(<UpcomingEventButton />);
 
     await waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("STATE REFRESH ERROR:", expect.any(Error));
+      expect(logSpy).toHaveBeenCalledWith(
+        "STATE REFRESH ERROR:",
+        expect.any(Error),
+      );
     });
     expect(screen.getByText("Import Google Calendar Schedule")).toBeTruthy();
   });
