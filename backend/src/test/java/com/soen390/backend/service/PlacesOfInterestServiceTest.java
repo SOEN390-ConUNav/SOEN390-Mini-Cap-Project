@@ -50,4 +50,41 @@ class PlacesOfInterestServiceTest {
             placesService.getNearbyPlaces(1, 100.0, 0.0, 0.0, null);
         });
     }
+
+    @Test
+    void searchPlacesByText_Success() {
+        String mockResponse = """
+        {
+            "places": [
+                {
+                    "displayName": { "text": "Test Place" },
+                    "formattedAddress": "123 Test St",
+                    "location": { "latitude": 1, "longitude": 2 }
+                }
+            ]
+        }
+        """;
+
+        mockServer.expect(requestTo("https://places.googleapis.com/v1/places:searchText"))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andRespond(withSuccess(mockResponse, MediaType.APPLICATION_JSON));
+
+        String result = placesService.searchPlacesByText("pizza");
+        assertEquals(mockResponse, result);
+
+        mockServer.verify();
+    }
+
+    @Test
+    void searchPlacesByText_ReturnsBlank_WhenResponseIsBlank() {
+        mockServer.expect(requestTo("https://places.googleapis.com/v1/places:searchText"))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        String result = placesService.searchPlacesByText("pizza");
+
+        assertNull(result);
+        mockServer.verify();
+    }
+
+
 }

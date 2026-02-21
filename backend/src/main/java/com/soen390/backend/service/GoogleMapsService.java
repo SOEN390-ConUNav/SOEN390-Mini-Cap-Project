@@ -1,6 +1,7 @@
 package com.soen390.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
 import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.object.RouteStep;
 import com.soen390.backend.enums.ManeuverType;
@@ -34,7 +35,6 @@ public class GoogleMapsService {
                 "&destination=" + destination +
                 "&mode=" + transportMode +
                 "&key=" + apiKey;
-
         String json = restTemplate.getForObject(url, String.class);
 
         try {
@@ -55,7 +55,7 @@ public class GoogleMapsService {
 
             return new OutdoorDirectionResponse(distance, duration, polyline, transportMode, processSteps(steps));
 
-        } catch (GoogleMapsDirectionsApiException e) {
+        } catch (GoogleMapsDirectionsApiException | GoogleMapsDirectionEmptyException  e) {
             throw e;
         } catch (NullPointerException | JsonProcessingException e) {
             throw new RuntimeException("Map data format error: The response from the map service was incomplete or unexpected.", e);
@@ -74,9 +74,11 @@ public class GoogleMapsService {
             String stepDist = step.path("distance").path("text").asText();
             String stepDur = step.path("duration").path("text").asText();
 
+            String stepPolyline = step.path("polyline").path("points").asText();
+
             ManeuverType maneuverType = handleMissingManeuver(step);
 
-            stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur, maneuverType));
+            stepList.add(new RouteStep(cleanInstruction, stepDist, stepDur, maneuverType, stepPolyline));
         }
         return stepList;
 
@@ -94,8 +96,11 @@ public class GoogleMapsService {
     }
 
     private void checkResponseStatus(String status) {
+        if (status.equals("ZERO_RESULTS")){
+            throw new GoogleMapsDirectionEmptyException("Directions not found. Please check your start and end locations.");
+        }
         if (!status.equals("OK")) {
-            throw new GoogleMapsDirectionsApiException("Directions not found. Please check your start and end locations.");
+            throw new GoogleMapsDirectionsApiException("Unexpected error");
         }
     }
 

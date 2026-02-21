@@ -1,64 +1,65 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useLocalSearchParams, useRouter } from 'expo-router';
-import { hasIndoorMaps, getDefaultFloor } from '../../utils/buildingIndoorMaps';
+import React, { useEffect, useRef, useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useNavigation, useLocalSearchParams, useRouter } from "expo-router";
+import { hasIndoorMaps, getDefaultFloor } from "../../utils/buildingIndoorMaps";
 import MapView, {
   Marker,
   Polygon,
-  Polyline,
   PROVIDER_GOOGLE,
   Region,
-} from 'react-native-maps';
-import * as Location from 'expo-location';
-import SearchBar from '../../components/SearchBar';
-import SearchPanel from '../../components/SearchPanel';
-import FloatingActionButton from '../../components/FloatingActionButton';
-import CampusSwitcher from '../../components/CampusSwitcher';
-import { Building, BuildingId, BUILDINGS } from '../../data/buildings';
-import BuildingMarker from '../../components/BuildingMarker';
-import BuildingPopup from '../../components/BuildingPopup';
-import UpcomingEventButton from '../../components/UpcomingEventButton';
-import EventDetailsPopup from '../../components/EventDetailsPopup';
-import useNavigationState from '../../hooks/useNavigationState';
-import { NAVIGATION_STATE } from '../../const';
-import NavigationConfigView from '../../components/navigation-config/NavigationConfigView';
-import { styles as navStyles } from '../../components/BottomNav';
-import useNavigationEndpoints from '../../hooks/useNavigationEndpoints';
-import useNavigationConfig from '../../hooks/useNavigationConfig';
-import { getAllOutdoorDirectionsInfo, searchLocations } from '../../api';
-import { decodePolyline } from '../../utils/polylineDecode';
+} from "react-native-maps";
+import * as Location from "expo-location";
+import SearchBar from "../../components/search-bar/SearchBar";
+import SearchPanel from "../../components/SearchPanel";
+import FloatingActionButton from "../../components/FloatingActionButton";
+import CampusSwitcher from "../../components/CampusSwitcher";
+import { Building, BuildingId, BUILDINGS } from "../../data/buildings";
+import BuildingMarker from "../../components/BuildingMarker";
+import BuildingPopup from "../../components/BuildingPopup";
+import UpcomingEventButton from "../../components/UpcomingEventButton";
+import EventDetailsPopup from "../../components/EventDetailsPopup";
+import useNavigationState from "../../hooks/useNavigationState";
+import { NAVIGATION_STATE } from "../../const";
+import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
+import { styles as navStyles } from "../../components/BottomNav";
+import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
+import DirectionPath from "../../components/DirectionPath";
+import useNavigationConfig from "../../hooks/useNavigationConfig";
+import useNavigationInfo from "../../hooks/useNavigationInfo";
+import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
+import { NamedCoordinate } from "../../type";
+import { reverseGeocode } from "../../services/handleGeocode";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
 const CAMPUS_REGION_DELTA = { latitudeDelta: 0.01, longitudeDelta: 0.01 };
 
-// Shuttle stop coordinates
 const SHUTTLE_STOPS = {
   SGW: { latitude: 45.497122, longitude: -73.578471 },
   LOYOLA: { latitude: 45.45844144049705, longitude: -73.63831707854963 },
 } as const;
 
-const BURGUNDY = '#800020';
+const BURGUNDY = "#800020";
 const OUTLINE_EXIT_LAT_DELTA = 0.006;
-const OUTLINE_ENTER_REGION: Pick<Region, 'latitudeDelta' | 'longitudeDelta'> = {
+const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
   latitudeDelta: 0.0028,
   longitudeDelta: 0.0028,
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
 
-interface HomePageIndexProps {}
-
-export default function HomePageIndex(props: HomePageIndexProps) {
+export default function HomePageIndex() {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams<{ shuttleCampus?: string }>();
 
-  const [campus, setCampus] = useState<'SGW' | 'LOYOLA'>('SGW');
+  const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
   const { setNavigationState, isNavigating, isConfiguring, isSearching } =
     useNavigationState();
-  const { setOrigin, setDestination } = useNavigationEndpoints();
-  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
-    useNavigationConfig();
+  const { origin, setOrigin, destination, setDestination, swap, clear } =
+    useNavigationEndpoints();
+  const { allOutdoorRoutes, setAllOutdoorRoutes } = useNavigationConfig();
+  const { setIsLoading, setPathDistance, setPathDuration } =
+    useNavigationInfo();
 
   const [hasLocationPermission, setHasLocationPermission] = useState<
     boolean | null
@@ -71,9 +72,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     ...CAMPUS_REGION_DELTA,
   });
 
-  // Shuttle stop state
   const [shuttleStop, setShuttleStop] = useState<{
-    campus: 'SGW' | 'LOYOLA';
+    campus: "SGW" | "LOYOLA";
     coordinate: { latitude: number; longitude: number };
   } | null>(null);
 
@@ -82,8 +82,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const [outlineMode, setOutlineMode] = useState(false);
   const [showBuildingPopup, setShowBuildingPopup] = useState(false);
   const [showEventDetailsPopup, setShowEventDetailsPopup] = useState(false);
-  const [eventDetailsTitle, setEventDetailsTitle] = useState('');
-  const [eventDetailsText, setEventDetailsText] = useState('');
+  const [eventDetailsTitle, setEventDetailsTitle] = useState("");
+  const [eventDetailsText, setEventDetailsText] = useState("");
 
   const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -101,37 +101,27 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     onLogout: () => {},
   });
 
-  // Check permission status on mount
   useEffect(() => {
     checkLocationPermission();
   }, []);
 
-  // Handle shuttle navigation from route params
   useEffect(() => {
     if (
       params.shuttleCampus &&
-      (params.shuttleCampus === 'SGW' || params.shuttleCampus === 'LOYOLA')
+      (params.shuttleCampus === "SGW" || params.shuttleCampus === "LOYOLA")
     ) {
       const targetCampus = params.shuttleCampus;
       const coord = SHUTTLE_STOPS[targetCampus];
-
       setCampus(targetCampus);
       setShuttleStop({ campus: targetCampus, coordinate: coord });
-
-      // Clear any building focus when showing shuttle stop
       setSelectedBuildingId(null);
       setOutlineMode(false);
       setShowBuildingPopup(false);
     }
   }, [params.shuttleCampus]);
 
-  // Animate to shuttle stop when it's set and map is ready
   useEffect(() => {
-    if (!shuttleStop) return;
-    if (showEnableLocation) return;
-    if (!mapReady) return;
-
-    // Let overlays/markers render before camera jump
+    if (!shuttleStop || showEnableLocation || !mapReady) return;
     requestAnimationFrame(() => {
       animateToRegion({
         latitude: shuttleStop.coordinate.latitude,
@@ -139,8 +129,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         ...CAMPUS_REGION_DELTA,
       });
     });
-
-    // Unfreeze briefly during camera movement
     scheduleFreezeMarkers();
   }, [shuttleStop, showEnableLocation, mapReady]);
 
@@ -148,17 +136,15 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     scheduleFreezeMarkers();
     return () => {
       if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
-      freezeTimerRef.current = null;
     };
   }, [showEnableLocation]);
 
   useEffect(() => {
-    const shouldHideTabBar = isConfiguring || isNavigating;
-
     navigation.setOptions({
-      tabBarStyle: shouldHideTabBar
-        ? { display: 'none' }
-        : navStyles.tabBarStyle,
+      tabBarStyle:
+        isConfiguring || isNavigating
+          ? { display: "none" }
+          : navStyles.tabBarStyle,
     });
   }, [isConfiguring, isNavigating, navigation]);
 
@@ -166,13 +152,12 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     scheduleFreezeMarkers();
     return () => {
       if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
-      freezeTimerRef.current = null;
     };
   }, [mapReady, showEnableLocation, isConfiguring, isNavigating]);
 
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
-    const granted = status === 'granted';
+    const granted = status === "granted";
     setHasLocationPermission(granted);
     if (granted) {
       setShowEnableLocation(false);
@@ -180,19 +165,15 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }
   };
 
-    const onPressIndoorMaps = () => {
-        if (selectedBuildingId) {
-            setShowBuildingPopup(false);
-          
-            const defaultFloor = getDefaultFloor(selectedBuildingId);
-            router.push({
-        pathname: '/indoor-navigation',
-                params: { 
-                    buildingId: selectedBuildingId,
-                    floor: defaultFloor,
-                },
-            });
-        }
+  const onPressIndoorMaps = () => {
+    if (selectedBuildingId) {
+      setShowBuildingPopup(false);
+      const defaultFloor = getDefaultFloor(selectedBuildingId);
+      router.push({
+        pathname: "/indoor-navigation",
+        params: { buildingId: selectedBuildingId, floor: defaultFloor },
+      });
+    }
   };
 
   const stopWatchingLocation = () => {
@@ -212,7 +193,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         () => {},
       );
     } catch (error) {
-      console.error('Error watching location:', error);
+      console.error("Error watching location:", error);
     }
   };
 
@@ -232,48 +213,44 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const scheduleFreezeMarkers = () => {
     if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
     setFreezeMarkers(false);
-
-    const overlaysVisible = !showEnableLocation;
-    if (!mapReady || !overlaysVisible) return;
-
-    freezeTimerRef.current = setTimeout(() => {
-      setFreezeMarkers(true);
-    }, FREEZE_MARKERS_AFTER_MS);
+    if (!mapReady || showEnableLocation) return;
+    freezeTimerRef.current = setTimeout(
+      () => setFreezeMarkers(true),
+      FREEZE_MARKERS_AFTER_MS,
+    );
   };
 
   const onPressFab = async () => {
     try {
       setShowEventDetailsPopup(false);
       if (hasLocationPermission === true) {
-        const r = await getOneFix();
-        animateToRegion(r);
+        animateToRegion(await getOneFix());
         return;
       }
       setShowEnableLocation(true);
     } catch {
-      Alert.alert('Location error', 'Could not center the map.');
+      Alert.alert("Location error", "Could not center the map.");
     }
   };
 
   const onEnableLocation = async () => {
     try {
       const granted = await Location.requestForegroundPermissionsAsync().then(
-        ({ status }) => status === 'granted',
+        ({ status }) => status === "granted",
       );
       if (!granted) {
         Alert.alert(
-          'Permission denied',
-          'You can enable location later in device settings.',
+          "Permission denied",
+          "You can enable location later in device settings.",
         );
         return;
       }
       setHasLocationPermission(true);
       setShowEnableLocation(false);
-      const r = await getOneFix();
-      animateToRegion(r);
+      animateToRegion(await getOneFix());
       await startWatchingLocation();
     } catch {
-      Alert.alert('Location error', 'Could not retrieve your location.');
+      Alert.alert("Location error", "Could not retrieve your location.");
     }
   };
 
@@ -283,26 +260,18 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     stopWatchingLocation();
   };
 
-  const onChangeCampus = (next: 'SGW' | 'LOYOLA') => {
+  const onChangeCampus = (next: "SGW" | "LOYOLA") => {
     setShowEventDetailsPopup(false);
     setCampus(next);
-    const target = next === 'SGW' ? SGW_CENTER : LOYOLA_CENTER;
-
     scheduleFreezeMarkers();
     animateToRegion({
-      latitude: target.latitude,
-      longitude: target.longitude,
+      ...(next === "SGW" ? SGW_CENTER : LOYOLA_CENTER),
       ...CAMPUS_REGION_DELTA,
     });
-
-    // Clear building focus
     setSelectedBuildingId(null);
     setOutlineMode(false);
     setShowBuildingPopup(false);
-
-    // Clear shuttle stop when manually changing campus
     setShuttleStop(null);
-
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
@@ -312,14 +281,10 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
   const enterOutlineForBuilding = (b: Building) => {
     scheduleFreezeMarkers();
-
-    // Clear shuttle stop when focusing on a building
     setShuttleStop(null);
-
     setSelectedBuildingId(b.id);
     setOutlineMode(true);
     setShowBuildingPopup(false);
-
     animateToRegion({
       latitude: b.marker.latitude,
       longitude: b.marker.longitude,
@@ -333,6 +298,7 @@ export default function HomePageIndex(props: HomePageIndexProps) {
       setDestination({
         longitude: b.marker.longitude,
         latitude: b.marker.latitude,
+        label: b.name,
       });
       enterOutlineForBuilding(b);
       return;
@@ -343,12 +309,53 @@ export default function HomePageIndex(props: HomePageIndexProps) {
   const onPressDirections = async () => {
     setShowBuildingPopup(false);
     if (!selectedBuilding) return;
-    const destCoords = {
-      latitude: selectedBuilding.marker.latitude,
-      longitude: selectedBuilding.marker.longitude,
-    };
 
-    await routeToDestination(destCoords);
+    setIsLoading(true);
+    setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+
+    try {
+      const currentLocation = await getOneFix();
+      const label = await reverseGeocode(currentLocation).catch(
+        () => "Current Location",
+      );
+
+      const originCoords = {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        label,
+      };
+      const destCoords = {
+        latitude: selectedBuilding.marker.latitude,
+        longitude: selectedBuilding.marker.longitude,
+        label: selectedBuilding.name,
+      };
+
+      setOrigin(originCoords);
+      setDestination(destCoords);
+
+      const routes = await getAllOutdoorDirectionsInfo(
+        originCoords,
+        destCoords,
+      );
+      setAllOutdoorRoutes(routes);
+
+      const walkRoute = routes.find(
+        (r) => r.transportMode?.toUpperCase() === "WALKING",
+      );
+      if (walkRoute) {
+        setPathDistance(walkRoute.distance);
+        setPathDuration(walkRoute.duration);
+      }
+    } catch (error) {
+      console.error("Error fetching directions:", error);
+      Alert.alert(
+        "Navigation error",
+        "Could not fetch directions. Please try again.",
+      );
+      setNavigationState(NAVIGATION_STATE.IDLE);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const routeToDestination = async (destCoords: {
@@ -359,20 +366,29 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     const originCoords = {
       latitude: currLocation.latitude,
       longitude: currLocation.longitude,
+      label: "Current Location",
+    };
+    const labeledDestCoords = {
+      latitude: destCoords.latitude,
+      longitude: destCoords.longitude,
+      label: "Selected Location",
     };
 
     setOrigin(originCoords);
-    setDestination(destCoords);
-    const routes = await getAllOutdoorDirectionsInfo(originCoords, destCoords);
+    setDestination(labeledDestCoords);
+    const routes = await getAllOutdoorDirectionsInfo(
+      originCoords,
+      labeledDestCoords,
+    );
     setAllOutdoorRoutes(routes);
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
   };
 
   const parseLatLng = (
-    value: string
+    value: string,
   ): { latitude: number; longitude: number } | null => {
     const match = value.match(
-      /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/
+      /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/,
     );
     if (!match) return null;
     const latitude = Number(match[1]);
@@ -391,13 +407,15 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 
       const results = await searchLocations(locationText);
       const firstWithCoords = results.find(
-        (place) => place?.location?.latitude != null && place?.location?.longitude != null
+        (place) =>
+          place?.location?.latitude != null &&
+          place?.location?.longitude != null,
       );
 
       if (!firstWithCoords?.location) {
         Alert.alert(
-          'Directions error',
-          'Could not find route coordinates for this event location.'
+          "Directions error",
+          "Could not find route coordinates for this event location.",
         );
         return;
       }
@@ -407,13 +425,15 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         longitude: firstWithCoords.location.longitude,
       });
     } catch {
-      Alert.alert('Directions error', 'Could not start directions for this event.');
+      Alert.alert(
+        "Directions error",
+        "Could not start directions for this event.",
+      );
     }
   };
 
   const handleRegionChangeComplete = (r: Region) => {
     setRegion(r);
-
     if (outlineMode && r.latitudeDelta > OUTLINE_EXIT_LAT_DELTA) {
       setOutlineMode(false);
       setShowBuildingPopup(false);
@@ -421,26 +441,78 @@ export default function HomePageIndex(props: HomePageIndexProps) {
     }
   };
 
-  const currentRoutePolyline = React.useMemo(() => {
-    if (!isConfiguring && !isNavigating) return null;
+  const handleSelectLocation = async ({
+    latitude,
+    longitude,
+    name,
+  }: NamedCoordinate) => {
+    try {
+      const currentPos = await Location.getCurrentPositionAsync({});
 
-    const modeMapping: Record<string, string> = {
-      WALK: 'walking',
-      BIKE: 'bicycling',
-      BUS: 'transit',
-      SHUTTLE: 'shuttle',
-    };
+      const originCoords = {
+        latitude: currentPos.coords.latitude,
+        longitude: currentPos.coords.longitude,
+        label: "Current Location",
+      };
+      const destCoords = {
+        latitude,
+        longitude,
+        label: name ?? "Selected Location",
+      };
 
-    const targetMode = modeMapping[navigationMode];
-    const route = allOutdoorRoutes.find(
-      (r) => r.transportMode?.toLowerCase() === targetMode,
-    );
+      setOrigin(originCoords);
+      setDestination(destCoords);
 
-    if (route?.polyline) {
-      return decodePolyline(route.polyline);
+      const routes = await getAllOutdoorDirectionsInfo(
+        originCoords,
+        destCoords,
+      );
+      setAllOutdoorRoutes(routes);
+
+      setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+
+      mapRef.current?.fitToCoordinates(
+        [originCoords, { latitude, longitude }],
+        {
+          edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
+          animated: true,
+        },
+      );
+    } catch (error) {
+      Alert.alert(
+        "Navigation error",
+        "Unable to fetch directions to this location.",
+      );
     }
-    return null;
-  }, [allOutdoorRoutes, navigationMode, isConfiguring, isNavigating]);
+  };
+
+  const handleSwap = async () => {
+    if (!origin || !destination) return;
+
+    setIsLoading(true);
+
+    const newOrigin = destination;
+    const newDest = origin;
+    swap();
+
+    try {
+      const routes = await getAllOutdoorDirectionsInfo(newOrigin, newDest);
+      setAllOutdoorRoutes(routes);
+
+      const walkRoute = routes.find(
+        (r) => r.transportMode?.toUpperCase() === "WALKING",
+      );
+      if (walkRoute) {
+        setPathDistance(walkRoute.distance);
+        setPathDuration(walkRoute.duration);
+      }
+    } catch (error) {
+      console.error("Error fetching swapped directions:", error);
+      Alert.alert("Navigation error", "Could not fetch directions after swap.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (showEnableLocation) {
     return (
@@ -500,7 +572,6 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           scheduleFreezeMarkers();
         }}
       >
-        {/* Shuttle stop marker (only when set) */}
         {shuttleStop && (
           <Marker
             coordinate={shuttleStop.coordinate}
@@ -532,14 +603,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           />
         )}
 
-        {currentRoutePolyline && (
-          <Polyline
-            key={`polyline-${navigationMode}`}
-            coordinates={currentRoutePolyline}
-            strokeColor={BURGUNDY}
-            strokeWidth={4}
-            lineDashPattern={navigationMode === 'WALK' ? [5, 5] : undefined}
-          />
+        {(isConfiguring || isNavigating) && (
+          <DirectionPath destination={destination} />
         )}
       </MapView>
 
@@ -555,7 +620,11 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           accessibility={selectedBuilding.accessibility}
           onClose={() => setShowBuildingPopup(false)}
           onDirections={() => onPressDirections()}
-          onIndoorMaps={hasIndoorMaps(selectedBuilding.id) ? () => onPressIndoorMaps() : undefined}
+          onIndoorMaps={
+            hasIndoorMaps(selectedBuilding.id)
+              ? () => onPressIndoorMaps()
+              : undefined
+          }
         />
       )}
 
@@ -567,8 +636,8 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         ]}
         pointerEvents={
           !showEnableLocation && !(isConfiguring || isNavigating)
-            ? 'auto'
-            : 'none'
+            ? "auto"
+            : "none"
         }
       >
         <UpcomingEventButton
@@ -576,11 +645,21 @@ export default function HomePageIndex(props: HomePageIndexProps) {
           onRequestDirections={(locationText) => {
             void onPressEventDirections(locationText);
           }}
-          onOpenEventDetails={({ title, detailsText, onDirections, onChangeCalendar, onLogout }) => {
+          onOpenEventDetails={({
+            title,
+            detailsText,
+            onDirections,
+            onChangeCalendar,
+            onLogout,
+          }) => {
             setShowBuildingPopup(false);
             setEventDetailsTitle(title);
             setEventDetailsText(detailsText);
-            eventDetailsActionsRef.current = { onDirections, onChangeCalendar, onLogout };
+            eventDetailsActionsRef.current = {
+              onDirections,
+              onChangeCalendar,
+              onLogout,
+            };
             setShowEventDetailsPopup(true);
           }}
         />
@@ -609,19 +688,32 @@ export default function HomePageIndex(props: HomePageIndexProps) {
         <SearchBar
           placeholder="Search"
           onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
+          isConfiguring={isConfiguring}
+          isNavigating={isNavigating}
+          originLabel={origin?.label ?? "Current Location"}
+          destinationLabel={destination?.label ?? "Select destination"}
+          onBack={() => {
+            setIsLoading(false);
+            setNavigationState(NAVIGATION_STATE.IDLE);
+            setSelectedBuildingId(null);
+            setOutlineMode(false);
+            setShowBuildingPopup(false);
+            clear();
+          }}
+          onSwap={handleSwap}
         />
       </View>
 
       <SearchPanel
         visible={isSearching}
         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        onSelectLocation={handleSelectLocation}
       />
       <NavigationConfigView
         durations={allOutdoorRoutes}
         visible={isConfiguring}
         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
       />
-
       <FloatingActionButton onPress={onPressFab} />
 
       <View style={styles.campusWrapper}>
@@ -632,60 +724,56 @@ export default function HomePageIndex(props: HomePageIndexProps) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
-  enableLocationContainer: {
-    flex: 1,
-    paddingTop: 80,
-    paddingHorizontal: 24,
-  },
+  root: { flex: 1, backgroundColor: "#fff" },
+  enableLocationContainer: { flex: 1, paddingTop: 80, paddingHorizontal: 24 },
   enableLocationIconCircle: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(128,0,32,0.18)',
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(128,0,32,0.18)",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 22,
   },
   enableLocationIcon: { fontSize: 40 },
   enableLocationTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: 10,
   },
   enableLocationSubtitle: {
-    textAlign: 'center',
-    color: '#666',
+    textAlign: "center",
+    color: "#666",
     lineHeight: 20,
     marginBottom: 24,
   },
   enableLocationBullets: { gap: 12, marginBottom: 28 },
-  enableLocationBullet: { color: '#333', fontWeight: '600' },
+  enableLocationBullet: { color: "#333", fontWeight: "600" },
   enableLocationBtn: {
     backgroundColor: BURGUNDY,
     borderRadius: 14,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
-  enableLocationBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  enableLocationSkip: { paddingVertical: 14, alignItems: 'center' },
-  enableLocationSkipText: { color: '#777', fontWeight: '600' },
-  searchWrapper: { position: 'absolute', top: 50, left: 16, right: 16 },
+  enableLocationBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  enableLocationSkip: { paddingVertical: 14, alignItems: "center" },
+  enableLocationSkipText: { color: "#777", fontWeight: "600" },
+  searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
   upcomingEventWrapper: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 144,
     width: 300,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   overlayHidden: { opacity: 0 },
   campusWrapper: {
-    position: 'absolute',
+    position: "absolute",
     left: 16,
     right: 16,
     bottom: 90,
-    alignItems: 'center',
+    alignItems: "center",
   },
 });

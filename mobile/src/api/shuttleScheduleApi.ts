@@ -1,7 +1,4 @@
-import Constants from "expo-constants";
-
-const API_BASE_URL =
-  (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+import { API_BASE_URL } from "../const";
 
 export interface ShuttleSchedule {
   campus: string;
