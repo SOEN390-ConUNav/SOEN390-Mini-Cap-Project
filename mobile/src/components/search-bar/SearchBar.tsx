@@ -17,34 +17,36 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({
-                                      placeholder,
-                                      onPress,
-                                      isConfiguring = false,
-                                      isNavigating = false,
-                                      originLabel = "Current Location",
-                                      destinationLabel = "Select destination",
-                                      onBack,
-                                      onSwap,
-                                      navigationInfoToggleState
-                                  }: SearchBarProps) {
-    if (isConfiguring) {
-        return (
-            <RouteCard
-                originLabel={originLabel}
-                destinationLabel={destinationLabel}
-                onBack={onBack ?? (() => {
-                })}
-                onSwap={onSwap ?? (() => {
-                })}
-            />
-        );
-    }
+  placeholder,
+  onPress,
+  isConfiguring = false,
+  isNavigating = false,
+  originLabel = "Current Location",
+  destinationLabel = "Select destination",
+  onBack,
+  onSwap,
+  navigationInfoToggleState,
+}: SearchBarProps) {
+  if (isConfiguring) {
+    return (
+      <RouteCard
+        originLabel={originLabel}
+        destinationLabel={destinationLabel}
+        onBack={onBack ?? (() => {})}
+        onSwap={onSwap ?? (() => {})}
+      />
+    );
+  }
 
-    if (isNavigating) {
-        return (
-            <NavigationBar destination={destinationLabel} onPress={onBack} navigationInfoToggleState={navigationInfoToggleState}/>
-        );
-    }
+  if (isNavigating) {
+    return (
+      <NavigationBar
+        destination={destinationLabel}
+        onPress={onBack}
+        navigationInfoToggleState={navigationInfoToggleState}
+      />
+    );
+  }
 
   return (
     <Pressable

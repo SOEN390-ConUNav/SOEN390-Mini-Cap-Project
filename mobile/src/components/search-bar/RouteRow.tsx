@@ -16,6 +16,7 @@ interface RouteRowProps {
   readonly label: "From" | "To";
   readonly value: string;
   readonly onSwap: () => void;
+  readonly trailingIcon?: React.ComponentProps<typeof Ionicons>["name"];
   /**
    * Shared value owned by RouteCard.
    * This row WRITES to it while being dragged (0 → 1).
@@ -33,6 +34,7 @@ export default function RouteRow({
   label,
   value,
   onSwap,
+  trailingIcon,
   dragProgress,
   siblingDragProgress,
 }: RouteRowProps) {
@@ -92,6 +94,14 @@ export default function RouteRow({
               {value}
             </Text>
           </View>
+          {trailingIcon ? (
+            <Ionicons
+              name={trailingIcon}
+              size={18}
+              color="#777"
+              style={styles.trailingIcon}
+            />
+          ) : null}
         </Animated.View>
       </Animated.View>
     </GestureDetector>

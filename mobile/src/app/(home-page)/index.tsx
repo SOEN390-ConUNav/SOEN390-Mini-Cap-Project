@@ -13,10 +13,16 @@ import SearchBar from "../../components/search-bar/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
 import FloatingActionButton from "../../components/FloatingActionButton";
 import CampusSwitcher from "../../components/CampusSwitcher";
-import { Building, BuildingId, BUILDINGS } from "../../data/buildings";
+import {
+  Accessibility,
+  Building,
+  BuildingId,
+  BUILDINGS,
+} from "../../data/buildings";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
 import UpcomingEventButton from "../../components/UpcomingEventButton";
+import EventDetailsPopup from "../../components/EventDetailsPopup";
 import useNavigationState from "../../hooks/useNavigationState";
 import { NAVIGATION_STATE } from "../../const";
 import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
@@ -25,10 +31,11 @@ import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
 import DirectionPath from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
-import { getAllOutdoorDirectionsInfo } from "../../api";
+import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
 import { NamedCoordinate } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
-import NavigationInfoBottom from '../../components/navigation-info/NavigationInfoBottom';
+import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
+import NavigationInfoBottom from "../../components/navigation-info/NavigationInfoBottom";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -47,19 +54,40 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
 
+type EventDetailsPayload = {
+  title: string;
+  detailsText: string;
+  showDirections: boolean;
+  accessibility?: Accessibility;
+  onDirections: () => void;
+  onChangeCalendar: () => void;
+  onLogout: () => void;
+};
+
 export default function HomePageIndex() {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams<{ shuttleCampus?: string }>();
 
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
-  const { navigationState, setNavigationState, isNavigating, isConfiguring, isSearching, isIdle } = useNavigationState();
-  const { origin, setOrigin, destination, setDestination, swap, clear } = useNavigationEndpoints();
-  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } = useNavigationConfig();
-  const { setIsLoading, setPathDistance, setPathDuration, isLoading } = useNavigationInfo();
+  const {
+    navigationState,
+    setNavigationState,
+    isNavigating,
+    isConfiguring,
+    isSearching,
+    isIdle,
+  } = useNavigationState();
+  const { origin, setOrigin, destination, setDestination, swap, clear } =
+    useNavigationEndpoints();
+  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
+    useNavigationConfig();
+  const { setIsLoading, setPathDistance, setPathDuration, isLoading } =
+    useNavigationInfo();
   const toggleNavigationState = useRef<"maximize" | "minimize">("maximize");
-  const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<"maximize"|"minimize">("minimize");
-
+  const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<
+    "maximize" | "minimize"
+  >("minimize");
 
   const [hasLocationPermission, setHasLocationPermission] = useState<
     boolean | null
@@ -81,6 +109,9 @@ export default function HomePageIndex() {
     useState<BuildingId | null>(null);
   const [outlineMode, setOutlineMode] = useState(false);
   const [showBuildingPopup, setShowBuildingPopup] = useState(false);
+  const [eventDetails, setEventDetails] = useState<EventDetailsPayload | null>(
+    null,
+  );
 
   const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -212,6 +243,7 @@ export default function HomePageIndex() {
 
   const onPressFab = async () => {
     try {
+      setEventDetails(null);
       if (hasLocationPermission === true) {
         animateToRegion(await getOneFix());
         return;
@@ -250,6 +282,7 @@ export default function HomePageIndex() {
   };
 
   const onChangeCampus = (next: "SGW" | "LOYOLA") => {
+    setEventDetails(null);
     setCampus(next);
     scheduleFreezeMarkers();
     animateToRegion({
@@ -346,6 +379,95 @@ export default function HomePageIndex() {
     }
   };
 
+  const routeToDestination = async (
+    destCoords: {
+      latitude: number;
+      longitude: number;
+    },
+    destinationLabel = "Selected Location",
+  ) => {
+    const currLocation = await getOneFix();
+    const originCoords = {
+      latitude: currLocation.latitude,
+      longitude: currLocation.longitude,
+      label: "Current Location",
+    };
+    const labeledDestCoords = {
+      latitude: destCoords.latitude,
+      longitude: destCoords.longitude,
+      label: destinationLabel,
+    };
+
+    setOrigin(originCoords);
+    setDestination(labeledDestCoords);
+    const routes = await getAllOutdoorDirectionsInfo(
+      originCoords,
+      labeledDestCoords,
+    );
+    setAllOutdoorRoutes(routes);
+    setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+  };
+
+  const parseLatLng = (
+    value: string,
+  ): { latitude: number; longitude: number } | null => {
+    const match = value.match(
+      /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/,
+    );
+    if (!match) return null;
+    const latitude = Number(match[1]);
+    const longitude = Number(match[2]);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    return { latitude, longitude };
+  };
+
+  const onPressEventDirections = async (locationText: string) => {
+    try {
+      const maybeCoords = parseLatLng(locationText);
+      if (maybeCoords) {
+        await routeToDestination(maybeCoords);
+        return;
+      }
+
+      const localBuildingMatch = findBuildingFromLocationText(locationText);
+      if (localBuildingMatch) {
+        await routeToDestination(
+          localBuildingMatch.marker,
+          localBuildingMatch.name,
+        );
+        return;
+      }
+
+      const results = await searchLocations(locationText);
+      const firstWithCoords = results.find(
+        (place) =>
+          place?.location?.latitude != null &&
+          place?.location?.longitude != null,
+      );
+
+      if (!firstWithCoords?.location) {
+        Alert.alert(
+          "Directions error",
+          "Could not find route coordinates for this event location.",
+        );
+        return;
+      }
+
+      await routeToDestination(
+        {
+          latitude: firstWithCoords.location.latitude,
+          longitude: firstWithCoords.location.longitude,
+        },
+        firstWithCoords.name ?? "Selected Location",
+      );
+    } catch {
+      Alert.alert(
+        "Directions error",
+        "Could not start directions for this event.",
+      );
+    }
+  };
+
   const handleRegionChangeComplete = (r: Region) => {
     setRegion(r);
     if (outlineMode && r.latitudeDelta > OUTLINE_EXIT_LAT_DELTA) {
@@ -432,16 +554,18 @@ export default function HomePageIndex() {
     navigatingRef.current = true;
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
     setToggleNavigationInfoState("minimize");
-};
+  };
 
-const handleCloseNavConfig = () => {
+  const handleCloseNavConfig = () => {
     if (navigatingRef.current) return;
     setNavigationState(NAVIGATION_STATE.IDLE);
-};
+  };
 
-const onToggleNavigationState = () => {
-  setToggleNavigationInfoState(toggleNavigationInfoState === "maximize" ? "minimize" : "maximize");
-}
+  const onToggleNavigationState = () => {
+    setToggleNavigationInfoState(
+      toggleNavigationInfoState === "maximize" ? "minimize" : "maximize",
+    );
+  };
 
   if (showEnableLocation) {
     return (
@@ -569,33 +693,101 @@ const onToggleNavigationState = () => {
             : "none"
         }
       >
-        <UpcomingEventButton />
+        <UpcomingEventButton
+          onMainButtonPress={() => setShowBuildingPopup(false)}
+          onRequestDirections={(locationText) => {
+            void onPressEventDirections(locationText);
+          }}
+          onOpenEventDetails={({
+            title,
+            detailsText,
+            showDirections,
+            accessibility,
+            onDirections,
+            onChangeCalendar,
+            onLogout,
+          }) => {
+            setShowBuildingPopup(false);
+            setEventDetails({
+              title,
+              detailsText,
+              showDirections,
+              accessibility,
+              onDirections,
+              onChangeCalendar,
+              onLogout,
+            });
+          }}
+        />
       </View>
 
-        <View style={styles.searchWrapper}>
-          <SearchBar
-              placeholder="Search"
-              onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
-              isConfiguring={isConfiguring}
-              isNavigating={isNavigating}
-              originLabel={origin?.label ?? "Current Location"}
-              destinationLabel={destination?.label ?? "Select destination"}
-              onBack={() => {
-                if (isNavigating) {
-                setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING)
-                } else {
-                setIsLoading(false);
-                setNavigationState(NAVIGATION_STATE.IDLE);
-                setSelectedBuildingId(null);
-                setOutlineMode(false);
-                setShowBuildingPopup(false);
-                clear();
-                }
-              }}
-              navigationInfoToggleState={toggleNavigationInfoState}
-              onSwap={handleSwap}
-          />
-        </View>
+      <EventDetailsPopup
+        visible={eventDetails != null}
+        title={eventDetails?.title ?? ""}
+        detailsText={eventDetails?.detailsText ?? ""}
+        showDirections={eventDetails?.showDirections ?? false}
+        accessibility={eventDetails?.accessibility}
+        onClose={() => setEventDetails(null)}
+        onDirections={() => {
+          const onDirections = eventDetails?.onDirections;
+          setEventDetails(null);
+          onDirections?.();
+        }}
+        onChangeCalendar={() => {
+          const onChangeCalendar = eventDetails?.onChangeCalendar;
+          setEventDetails(null);
+          onChangeCalendar?.();
+        }}
+        onLogout={() => {
+          const onLogout = eventDetails?.onLogout;
+          setEventDetails(null);
+          onLogout?.();
+        }}
+      />
+
+      <View style={styles.searchWrapper}>
+        <SearchBar
+          placeholder="Search"
+          onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
+          isConfiguring={isConfiguring}
+          isNavigating={isNavigating}
+          originLabel={origin?.label ?? "Current Location"}
+          destinationLabel={destination?.label ?? "Select destination"}
+          onBack={() => {
+            setIsLoading(false);
+            setNavigationState(NAVIGATION_STATE.IDLE);
+            setSelectedBuildingId(null);
+            setOutlineMode(false);
+            setShowBuildingPopup(false);
+            clear();
+          }}
+          onSwap={handleSwap}
+        />
+      </View>
+      <View style={styles.searchWrapper}>
+        <SearchBar
+          placeholder="Search"
+          onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
+          isConfiguring={isConfiguring}
+          isNavigating={isNavigating}
+          originLabel={origin?.label ?? "Current Location"}
+          destinationLabel={destination?.label ?? "Select destination"}
+          onBack={() => {
+            if (isNavigating) {
+              setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+            } else {
+              setIsLoading(false);
+              setNavigationState(NAVIGATION_STATE.IDLE);
+              setSelectedBuildingId(null);
+              setOutlineMode(false);
+              setShowBuildingPopup(false);
+              clear();
+            }
+          }}
+          navigationInfoToggleState={toggleNavigationInfoState}
+          onSwap={handleSwap}
+        />
+      </View>
 
       <SearchPanel
         visible={isSearching}
@@ -665,7 +857,12 @@ const styles = StyleSheet.create({
   enableLocationSkip: { paddingVertical: 14, alignItems: "center" },
   enableLocationSkipText: { color: "#777", fontWeight: "600" },
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
-  upcomingEventWrapper: { position: "absolute", top: 108, left: 16, right: 16 },
+  upcomingEventWrapper: {
+    position: "absolute",
+    bottom: 144,
+    width: 300,
+    alignSelf: "center",
+  },
   overlayHidden: { opacity: 0 },
   campusWrapper: {
     position: "absolute",

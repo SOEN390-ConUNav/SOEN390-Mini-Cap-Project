@@ -13,8 +13,9 @@ export type OpeningHours = {
 };
 
 export type Building = {
-  id: BuildingId;               // "FB", "EV", ...
+  id: BuildingId; // "FB", "EV", ...
   name: string;
+  aliases: string[];
   marker: LatLng;
   polygon: LatLng[];
   addressLines: string[];
@@ -34,6 +35,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "FB",
     name: "Faubourg Building",
+    aliases: ["FB", "Faubourg", "Faubourg Building"],
     marker: { latitude: 45.49472, longitude: -73.57772 },
     addressLines: ["1250 Guy St. (main entrance)", "Catherine St. W."],
     polygon: [
@@ -57,6 +59,12 @@ export const BUILDINGS: Building[] = [
   {
     id: "EV",
     name: "Engineering, Computer Science and Visual Arts Integrated Complex",
+    aliases: [
+      "EV",
+      "Engineering Building",
+      "Engineering Complex",
+      "Engineering, Computer Science and Visual Arts Integrated Complex",
+    ],
     marker: { latitude: 45.49539, longitude: -73.57799 },
     addressLines: ["1515 Ste-Catherine St. W."],
     polygon: [
@@ -80,6 +88,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "LB",
     name: "Webster Library",
+    aliases: ["LB", "Webster", "Webster Library", "Library"],
     marker: { latitude: 45.496798007653645, longitude: -73.57803724265663 },
     addressLines: ["1515 Ste-Catherine St. W."],
     polygon: [
@@ -103,6 +112,13 @@ export const BUILDINGS: Building[] = [
   {
     id: "H",
     name: "Henry F. Hall Building",
+    aliases: [
+      "H",
+      "Hall",
+      "Hall Building",
+      "Henry F Hall",
+      "Henry F. Hall Building",
+    ],
     marker: { latitude: 45.49733989962878, longitude: -73.57903014967104 },
     addressLines: ["1455 De Maisonneuve Blvd. W."],
     polygon: [
@@ -126,6 +142,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "CL",
     name: "CL Annex",
+    aliases: ["CL", "CL Annex", "Annex"],
     marker: { latitude: 45.49429413805923, longitude: -73.57920092745108 },
     addressLines: ["1665 Ste-Catherine St. W."],
     polygon: [
@@ -149,6 +166,13 @@ export const BUILDINGS: Building[] = [
   {
     id: "MB",
     name: "John Molson School of Business",
+    aliases: [
+      "MB",
+      "JMSB",
+      "John Molson",
+      "John Molson School of Business",
+      "Business School",
+    ],
     marker: { latitude: 45.495297980272596, longitude: -73.57900517401788 },
     addressLines: ["1450 Guy St."],
     polygon: [
@@ -172,6 +196,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "LS",
     name: "Learning Square",
+    aliases: ["LS", "Learning Square"],
     marker: { latitude: 45.49637488264317, longitude: -73.57948281092284 },
     addressLines: ["1535 De Maisonneuve Blvd. W."],
     polygon: [
@@ -197,6 +222,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "ER",
     name: "ER Building",
+    aliases: ["ER", "ER Building"],
     marker: { latitude: 45.49638596930839, longitude: -73.58018822654073 },
     addressLines: ["2155 Guy St."],
     polygon: [
@@ -222,6 +248,12 @@ export const BUILDINGS: Building[] = [
   {
     id: "VL",
     name: "Vanier Libary Building",
+    aliases: [
+      "VL",
+      "Vanier Library",
+      "Vanier Libary",
+      "Vanier Library Building",
+    ],
     marker: { latitude: 45.45896275540376, longitude: -73.63859033366037 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -249,6 +281,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "HU",
     name: "Applied Science Hub",
+    aliases: ["HU", "Applied Science Hub", "Science Hub"],
     marker: { latitude: 45.45850650474647, longitude: -73.64183117003009 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -272,6 +305,11 @@ export const BUILDINGS: Building[] = [
   {
     id: "SP",
     name: "Richard J. Renaud Science Complex",
+    aliases: [
+      "SP",
+      "Richard J. Renaud Science Complex",
+      "Renaud Science Complex",
+    ],
     marker: { latitude: 45.45793786292976, longitude: -73.64147742435523 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -297,6 +335,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "AD",
     name: "Administration Building",
+    aliases: ["AD", "Administration", "Administration Building"],
     marker: { latitude: 45.45807527451618, longitude: -73.6398275776765 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -320,6 +359,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "CC",
     name: "Central Building",
+    aliases: ["CC", "Central", "Central Building"],
     marker: { latitude: 45.45828550714655, longitude: -73.640346666505855 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -343,6 +383,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "SC",
     name: "Student Centre",
+    aliases: ["SC", "Student Centre", "Student Center"],
     marker: { latitude: 45.459121999518935, longitude: -73.63921863357234 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -366,6 +407,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "HB",
     name: "Hingston Hall, wing HB",
+    aliases: ["HB", "Hingston Hall", "Hingston Hall Wing HB", "Wing HB"],
     marker: { latitude: 45.459356110681796, longitude: -73.64181880514379 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -389,6 +431,7 @@ export const BUILDINGS: Building[] = [
   {
     id: "VE",
     name: "Vanier Extension",
+    aliases: ["VE", "Vanier Extension"],
     marker: { latitude: 45.45879485505858, longitude: -73.63867369960231 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
@@ -409,5 +452,4 @@ export const BUILDINGS: Building[] = [
       isAccessible: true,
     },
   },
-
 ];

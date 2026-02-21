@@ -7,13 +7,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.*;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -230,6 +234,23 @@ public class GoogleCalendarServiceTest {
 
         assertEquals(1, calendars.size());
         assertEquals("valid@google.com", calendars.get(0).getId());
+    }
+
+    @Test
+    void testListCalendarsWhenItemsIsNotAListReturnsEmpty() {
+        when(sessionService.require("valid-session")).thenReturn(validSession);
+
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("items", "not-a-list");
+
+        ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+                .thenReturn(responseEntity);
+
+        List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
+
+        assertTrue(calendars.isEmpty());
     }
 
     // ========== importEvents Tests ==========
@@ -506,6 +527,30 @@ public class GoogleCalendarServiceTest {
     }
 
     @Test
+    void testSetSelectedCalendarMissingIdThrowsException() {
+        GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
+        when(sessionService.require("session-id")).thenReturn(session);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                googleCalendarService.setSelectedCalendar("session-id", new GoogleCalendarDto("   ", "School", false))
+        );
+
+        assertEquals("calendar.id is required.", ex.getMessage());
+    }
+
+    @Test
+    void testSetSelectedCalendarNullSummaryDefaultsToNoName() {
+        GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
+        when(sessionService.require("session-id")).thenReturn(session);
+
+        googleCalendarService.setSelectedCalendar("session-id", new GoogleCalendarDto("calendar-id", null, false));
+
+        ArgumentCaptor<GoogleTokenSession> sessionCaptor = ArgumentCaptor.forClass(GoogleTokenSession.class);
+        verify(sessionService).put(eq("session-id"), sessionCaptor.capture());
+        assertEquals("(no name)", sessionCaptor.getValue().getSelectedCalendarSummary());
+    }
+
+    @Test
     void testGetStateReturnsSelectedCalendarAndNextEvent() {
         GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
         session.setSelectedCalendarId("calendar-id");
@@ -527,5 +572,231 @@ public class GoogleCalendarServiceTest {
         assertEquals(true, state.get("calendarSelected"));
         assertNotNull(state.get("selectedCalendar"));
         assertNotNull(state.get("nextEvent"));
+    }
+
+    @Test
+    void testGetStateExpiredSessionThrowsException() {
+        when(sessionService.require("expired-session")).thenReturn(expiredSession);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                googleCalendarService.getState("expired-session", 7, "America/Montreal", false)
+        );
+
+        assertEquals("Session expired. Please sign in again.", ex.getMessage());
+    }
+
+    @Test
+    void testGetStateWithoutSelectedCalendarReturnsDefaults() {
+        GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
+        when(sessionService.require("session-id")).thenReturn(session);
+
+        Map<String, Object> state = googleCalendarService.getState("session-id", 7, "America/Montreal", false);
+
+        assertEquals(true, state.get("connected"));
+        assertEquals(false, state.get("calendarSelected"));
+        assertNull(state.get("selectedCalendar"));
+        assertNull(state.get("nextEvent"));
+        assertEquals("No upcoming events found in the next 7 days.", state.get("nextEventDetailsText"));
+    }
+
+    @Test
+    void testGetStateIncludeCalendarsAndSelectedSummaryFallback() {
+        GoogleTokenSession session = new GoogleTokenSession("access-token", "refresh-token", Instant.now().plusSeconds(3600));
+        session.setSelectedCalendarId("calendar-id");
+        session.setSelectedCalendarSummary(null);
+        session.setSelectedCalendarPrimary(true);
+
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        when(sessionService.require("session-id")).thenReturn(session);
+        doReturn(null).when(serviceSpy).getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+        doReturn(List.of(new GoogleCalendarDto("cal-1", "Primary", true)))
+                .when(serviceSpy).listCalendars("session-id");
+
+        Map<String, Object> state = serviceSpy.getState("session-id", 7, "America/Montreal", true);
+
+        GoogleCalendarDto selected = (GoogleCalendarDto) state.get("selectedCalendar");
+        assertNotNull(selected);
+        assertEquals("(no name)", selected.getSummary());
+        assertTrue(state.containsKey("calendars"));
+    }
+
+    @Test
+    void testGetNextEventHandlesNullEventAndAllDayParsing() {
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        String tomorrow = LocalDate.now().plusDays(1).toString();
+
+        List<GoogleEventDto> events = Arrays.asList(
+                null,
+                new GoogleEventDto("all-day", "All Day", null, tomorrow, tomorrow, true)
+        );
+
+        doReturn(events).when(serviceSpy).importEvents("session-id", "calendar-id", 7, "America/Montreal");
+
+        GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+
+        assertNotNull(next);
+        assertEquals("all-day", next.getId());
+    }
+
+    @Test
+    void testGetNextEventAllDayWithInvalidTimeZoneReturnsNull() {
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        String tomorrow = LocalDate.now().plusDays(1).toString();
+
+        List<GoogleEventDto> events = List.of(
+                new GoogleEventDto("all-day", "All Day", null, tomorrow, tomorrow, true)
+        );
+
+        doReturn(events).when(serviceSpy).importEvents("session-id", "calendar-id", 7, "Invalid/Zone");
+
+        GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "Invalid/Zone");
+
+        assertNull(next);
+    }
+
+    @Test
+    void testGetNextEventSkipsEventWhenDateParsingFails() {
+        GoogleCalendarService serviceSpy = spy(new GoogleCalendarService(restTemplate, sessionService));
+        String future = OffsetDateTime.now().plusMinutes(45).toString();
+
+        List<GoogleEventDto> events = Arrays.asList(
+                new GoogleEventDto("bad", "Bad date", null, "not-a-date", "not-a-date", false),
+                new GoogleEventDto("future", "Future", null, future, future, false)
+        );
+
+        doReturn(events).when(serviceSpy).importEvents("session-id", "calendar-id", 7, "America/Montreal");
+
+        GoogleEventDto next = serviceSpy.getNextEvent("session-id", "calendar-id", 7, "America/Montreal");
+
+        assertNotNull(next);
+        assertEquals("future", next.getId());
+    }
+
+    @Test
+    void testFormatEventDetailsTextLocationVariants() {
+        GoogleEventDto roomEvent = new GoogleEventDto(
+                "id",
+                "Class",
+                "SGW - Hall Rm H-937",
+                OffsetDateTime.now().plusHours(1).toString(),
+                OffsetDateTime.now().plusHours(2).toString(),
+                false
+        );
+        String roomText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatEventDetailsText", roomEvent, "America/Montreal"
+        );
+        assertNotNull(roomText);
+        assertTrue(roomText.contains("SGW"));
+        assertTrue(roomText.contains("Hall"));
+        assertTrue(roomText.contains("H-937"));
+
+        GoogleEventDto classroomEvent = new GoogleEventDto(
+                "id",
+                "Class",
+                "Classroom: MB-2.210",
+                OffsetDateTime.now().plusHours(1).toString(),
+                OffsetDateTime.now().plusHours(2).toString(),
+                false
+        );
+        String classroomText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatEventDetailsText", classroomEvent, "America/Montreal"
+        );
+        assertNotNull(classroomText);
+        assertTrue(classroomText.contains("MB-2.210"));
+
+        GoogleEventDto emptyLocationEvent = new GoogleEventDto(
+                "id",
+                "Class",
+                "   ",
+                OffsetDateTime.now().plusHours(1).toString(),
+                OffsetDateTime.now().plusHours(2).toString(),
+                false
+        );
+        String emptyText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatEventDetailsText", emptyLocationEvent, "America/Montreal"
+        );
+        assertNotNull(emptyText);
+        assertTrue(emptyText.contains("(no campus)"));
+        assertTrue(emptyText.contains("(no building)"));
+
+        GoogleEventDto fallbackLocationEvent = new GoogleEventDto(
+                "id",
+                "Class",
+                "Hall Building",
+                OffsetDateTime.now().plusHours(1).toString(),
+                OffsetDateTime.now().plusHours(2).toString(),
+                false
+        );
+        String fallbackText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatEventDetailsText", fallbackLocationEvent, "America/Montreal"
+        );
+        assertNotNull(fallbackText);
+        assertTrue(fallbackText.contains("Hall Building"));
+    }
+
+    @Test
+    void testFormatWhenSpecialCases() {
+        String nullEventText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatWhen", null, "America/Montreal"
+        );
+        assertEquals("(missing time)", nullEventText);
+
+        GoogleEventDto allDay = new GoogleEventDto("id", "Holiday", null, "2026-02-20", "2026-02-21", true);
+        String allDayText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatWhen", allDay, "America/Montreal"
+        );
+        assertEquals("All day", allDayText);
+
+        GoogleEventDto missingTime = new GoogleEventDto("id", "Class", null, "bad-start", "bad-end", false);
+        String missingTimeText = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "formatWhen", missingTime, "America/Montreal"
+        );
+        assertEquals("(missing time)", missingTimeText);
+    }
+
+    @Test
+    void testParseEventInstantNullAndInvalid() {
+        Instant nullValue = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "parseEventInstant", (Object) null
+        );
+        assertNull(nullValue);
+
+        Instant invalid = ReflectionTestUtils.invokeMethod(
+                googleCalendarService, "parseEventInstant", "not-a-date"
+        );
+        assertNull(invalid);
+    }
+
+    @Test
+    void testToEventStartInstantFallbackToInstantParse() {
+        String validInstant = Instant.now().plusSeconds(1200).toString();
+        GoogleEventDto event = new GoogleEventDto("id", "Class", null, validInstant, validInstant, false);
+
+        try (MockedStatic<OffsetDateTime> mocked = mockStatic(OffsetDateTime.class, CALLS_REAL_METHODS)) {
+            mocked.when(() -> OffsetDateTime.parse(validInstant))
+                    .thenThrow(new DateTimeParseException("forced parse failure", validInstant, 0));
+
+            Instant parsed = ReflectionTestUtils.invokeMethod(
+                    googleCalendarService, "toEventStartInstant", event, "America/Montreal"
+            );
+
+            assertNotNull(parsed);
+        }
+    }
+
+    @Test
+    void testParseEventInstantFallbackToInstantParse() {
+        String validInstant = Instant.now().plusSeconds(600).toString();
+
+        try (MockedStatic<OffsetDateTime> mocked = mockStatic(OffsetDateTime.class, CALLS_REAL_METHODS)) {
+            mocked.when(() -> OffsetDateTime.parse(validInstant))
+                    .thenThrow(new DateTimeParseException("forced parse failure", validInstant, 0));
+
+            Instant parsed = ReflectionTestUtils.invokeMethod(
+                    googleCalendarService, "parseEventInstant", validInstant
+            );
+
+            assertNotNull(parsed);
+        }
     }
 }
