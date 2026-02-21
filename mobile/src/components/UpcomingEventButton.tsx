@@ -368,20 +368,33 @@ export default function UpcomingEventButton({
               <FlatList
                 data={calendars}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.calendarRow}
-                    onPress={async () => {
-                      setShowCalendarPicker(false);
-                      await selectCalendarAndRefresh(item);
-                    }}
-                  >
-                    <Text style={styles.calendarName}>{item.summary}</Text>
-                    {item.primary ? (
-                      <Text style={styles.calendarMeta}>Primary</Text>
-                    ) : null}
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const isActive = selectedCalendar?.id === item.id;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarRow,
+                        isActive && styles.calendarRowActive,
+                      ]}
+                      onPress={async () => {
+                        setShowCalendarPicker(false);
+                        await selectCalendarAndRefresh(item);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarName,
+                          isActive && styles.calendarNameActive,
+                        ]}
+                      >
+                        {item.summary}
+                      </Text>
+                      {item.primary ? (
+                        <Text style={styles.calendarMeta}>Primary</Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                }}
               />
             )}
 
@@ -482,10 +495,16 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     marginBottom: 10,
   },
+  calendarRowActive: {
+    backgroundColor: "rgba(128, 0, 32, 0.08)",
+  },
   calendarName: {
     fontSize: 15,
     color: BURGUNDY,
     fontWeight: "600",
+  },
+  calendarNameActive: {
+    fontWeight: "700",
   },
   calendarMeta: {
     fontSize: 12,
@@ -493,15 +512,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cancelBtn: {
-    borderWidth: 1,
-    borderColor: ACCENT_RED,
+    borderWidth: 0,
     borderRadius: 18,
     paddingVertical: 9,
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: BURGUNDY,
   },
   cancelBtnText: {
-    color: BURGUNDY,
+    color: "white",
     fontWeight: "700",
   },
 });
