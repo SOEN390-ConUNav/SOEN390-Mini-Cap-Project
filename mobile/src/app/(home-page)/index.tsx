@@ -29,6 +29,7 @@ import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
 import { NamedCoordinate } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
+import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -84,6 +85,7 @@ export default function HomePageIndex() {
   const [showEventDetailsPopup, setShowEventDetailsPopup] = useState(false);
   const [eventDetailsTitle, setEventDetailsTitle] = useState("");
   const [eventDetailsText, setEventDetailsText] = useState("");
+  const [showEventDirections, setShowEventDirections] = useState(false);
 
   const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -358,10 +360,13 @@ export default function HomePageIndex() {
     }
   };
 
-  const routeToDestination = async (destCoords: {
-    latitude: number;
-    longitude: number;
-  }) => {
+  const routeToDestination = async (
+    destCoords: {
+      latitude: number;
+      longitude: number;
+    },
+    destinationLabel = "Selected Location",
+  ) => {
     const currLocation = await getOneFix();
     const originCoords = {
       latitude: currLocation.latitude,
@@ -371,7 +376,7 @@ export default function HomePageIndex() {
     const labeledDestCoords = {
       latitude: destCoords.latitude,
       longitude: destCoords.longitude,
-      label: "Selected Location",
+      label: destinationLabel,
     };
 
     setOrigin(originCoords);
@@ -405,6 +410,15 @@ export default function HomePageIndex() {
         return;
       }
 
+      const localBuildingMatch = findBuildingFromLocationText(locationText);
+      if (localBuildingMatch) {
+        await routeToDestination(
+          localBuildingMatch.marker,
+          localBuildingMatch.name,
+        );
+        return;
+      }
+
       const results = await searchLocations(locationText);
       const firstWithCoords = results.find(
         (place) =>
@@ -420,10 +434,13 @@ export default function HomePageIndex() {
         return;
       }
 
-      await routeToDestination({
-        latitude: firstWithCoords.location.latitude,
-        longitude: firstWithCoords.location.longitude,
-      });
+      await routeToDestination(
+        {
+          latitude: firstWithCoords.location.latitude,
+          longitude: firstWithCoords.location.longitude,
+        },
+        firstWithCoords.name ?? "Selected Location",
+      );
     } catch {
       Alert.alert(
         "Directions error",
@@ -648,6 +665,7 @@ export default function HomePageIndex() {
           onOpenEventDetails={({
             title,
             detailsText,
+            showDirections,
             onDirections,
             onChangeCalendar,
             onLogout,
@@ -655,6 +673,7 @@ export default function HomePageIndex() {
             setShowBuildingPopup(false);
             setEventDetailsTitle(title);
             setEventDetailsText(detailsText);
+            setShowEventDirections(showDirections);
             eventDetailsActionsRef.current = {
               onDirections,
               onChangeCalendar,
@@ -669,6 +688,7 @@ export default function HomePageIndex() {
         visible={showEventDetailsPopup}
         title={eventDetailsTitle}
         detailsText={eventDetailsText}
+        showDirections={showEventDirections}
         onClose={() => setShowEventDetailsPopup(false)}
         onDirections={() => {
           setShowEventDetailsPopup(false);

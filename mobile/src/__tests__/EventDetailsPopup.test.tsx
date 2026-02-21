@@ -6,7 +6,8 @@ jest.mock("@expo/vector-icons", () => {
   const React = require("react");
   const { Text } = require("react-native");
   return {
-    Ionicons: ({ name }: { name: string }) => React.createElement(Text, null, `ion-${name}`),
+    Ionicons: ({ name }: { name: string }) =>
+      React.createElement(Text, null, `ion-${name}`),
   };
 });
 
@@ -15,7 +16,8 @@ jest.mock("@expo/vector-icons/FontAwesome5", () => {
   const { Text } = require("react-native");
   return {
     __esModule: true,
-    default: ({ name }: { name: string }) => React.createElement(Text, null, `fa-${name}`),
+    default: ({ name }: { name: string }) =>
+      React.createElement(Text, null, `fa-${name}`),
   };
 });
 
@@ -30,7 +32,7 @@ describe("EventDetailsPopup", () => {
         onDirections={jest.fn()}
         onChangeCalendar={jest.fn()}
         onLogout={jest.fn()}
-      />
+      />,
     );
 
     expect(screen.queryByText("SOEN 390")).toBeNull();
@@ -51,7 +53,7 @@ describe("EventDetailsPopup", () => {
         onDirections={onDirections}
         onChangeCalendar={onChangeCalendar}
         onLogout={onLogout}
-      />
+      />,
     );
 
     expect(screen.getByText("SOEN 390")).toBeTruthy();
@@ -70,7 +72,7 @@ describe("EventDetailsPopup", () => {
     expect(onLogout).toHaveBeenCalledTimes(1);
 
     const pressables = view.root.findAll(
-      (node: any) => typeof node?.props?.onPress === "function"
+      (node: any) => typeof node?.props?.onPress === "function",
     );
     const stopPropagation = jest.fn();
     for (const node of pressables) {
@@ -80,5 +82,22 @@ describe("EventDetailsPopup", () => {
       }
     }
     expect(stopPropagation).toHaveBeenCalled();
+  });
+
+  it("hides directions button when showDirections is false", () => {
+    render(
+      <EventDetailsPopup
+        visible
+        title="No upcoming event"
+        detailsText="No upcoming event"
+        showDirections={false}
+        onClose={jest.fn()}
+        onDirections={jest.fn()}
+        onChangeCalendar={jest.fn()}
+        onLogout={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Directions")).toBeNull();
   });
 });

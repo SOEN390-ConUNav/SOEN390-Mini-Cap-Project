@@ -34,12 +34,14 @@ export default function UpcomingEventButton({
   onOpenEventDetails?: (payload: {
     title: string;
     detailsText: string;
+    showDirections: boolean;
     onDirections: () => void;
     onChangeCalendar: () => void;
     onLogout: () => void;
   }) => void;
 }) {
-  const googleWebClientId = (Constants.expoConfig?.extra as any)?.GOOGLE_WEB_CLIENT_ID as string | undefined;
+  const googleWebClientId = (Constants.expoConfig?.extra as any)
+    ?.GOOGLE_WEB_CLIENT_ID as string | undefined;
   const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
   const [calendars, setCalendars] = useState<any[]>([]);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
@@ -69,7 +71,9 @@ export default function UpcomingEventButton({
     void refreshState(false, false);
   }, []);
 
-  const exchangeNewSession = async (options?: { showPickerAfterSignIn?: boolean }): Promise<void> => {
+  const exchangeNewSession = async (options?: {
+    showPickerAfterSignIn?: boolean;
+  }): Promise<void> => {
     if (!googleWebClientId) {
       throw new Error("GOOGLE_WEB_CLIENT_ID is missing in app config.");
     }
@@ -77,7 +81,9 @@ export default function UpcomingEventButton({
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const userInfo = await GoogleSignin.signIn();
 
-    const code = (userInfo as any)?.serverAuthCode ?? (userInfo as any)?.data?.serverAuthCode;
+    const code =
+      (userInfo as any)?.serverAuthCode ??
+      (userInfo as any)?.data?.serverAuthCode;
     if (!code) throw new Error("No serverAuthCode returned.");
 
     if (options?.showPickerAfterSignIn) {
@@ -96,12 +102,17 @@ export default function UpcomingEventButton({
   const refreshState = async (
     allowReauth = false,
     includeCalendars = false,
-    reauthOptions?: { showPickerAfterSignIn?: boolean }
+    reauthOptions?: { showPickerAfterSignIn?: boolean },
   ): Promise<any | null> => {
     try {
       let stateRes = await requestGoogleState(includeCalendars);
 
-      if (!stateRes.ok && (stateRes.status === 400 || stateRes.status === 401 || stateRes.status === 403)) {
+      if (
+        !stateRes.ok &&
+        (stateRes.status === 400 ||
+          stateRes.status === 401 ||
+          stateRes.status === 403)
+      ) {
         if (!allowReauth) {
           await clearLocalGoogleState();
           return null;
@@ -116,14 +127,21 @@ export default function UpcomingEventButton({
       }
 
       const state = await stateRes.json();
-      const selected = state?.selectedCalendar && state.selectedCalendar.id ? state.selectedCalendar : null;
+      const selected =
+        state?.selectedCalendar && state.selectedCalendar.id
+          ? state.selectedCalendar
+          : null;
       setSelectedCalendar(selected);
       const detailsTextFromBackend =
-        typeof state?.nextEventDetailsText === "string" ? state.nextEventDetailsText : null;
+        typeof state?.nextEventDetailsText === "string"
+          ? state.nextEventDetailsText
+          : null;
 
       if (state?.nextEvent && typeof state.nextEvent === "object") {
         setNextEvent(state.nextEvent);
-        setEventDetailsText(detailsTextFromBackend ?? "No event details available.");
+        setEventDetailsText(
+          detailsTextFromBackend ?? "No event details available.",
+        );
       } else {
         setNextEvent(null);
         setEventDetailsText(detailsTextFromBackend ?? "No upcoming event");
@@ -139,7 +157,10 @@ export default function UpcomingEventButton({
   const fetchCalendarsWithReauth = async (): Promise<any[]> => {
     let res = await requestGoogleCalendars();
 
-    if (!res.ok && (res.status === 400 || res.status === 401 || res.status === 403)) {
+    if (
+      !res.ok &&
+      (res.status === 400 || res.status === 401 || res.status === 403)
+    ) {
       await exchangeNewSession();
       res = await requestGoogleCalendars();
     }
@@ -155,7 +176,9 @@ export default function UpcomingEventButton({
   const startImportFlow = async (forceCalendarPicker = false) => {
     setIsBusy(true);
     try {
-      const state = await refreshState(true, false, { showPickerAfterSignIn: true });
+      const state = await refreshState(true, false, {
+        showPickerAfterSignIn: true,
+      });
       if (!forceCalendarPicker && state?.calendarSelected) {
         setShowCalendarPicker(false);
         return;
@@ -188,7 +211,12 @@ export default function UpcomingEventButton({
         primary: !!calendar.primary,
       });
 
-      if (!setRes.ok && (setRes.status === 400 || setRes.status === 401 || setRes.status === 403)) {
+      if (
+        !setRes.ok &&
+        (setRes.status === 400 ||
+          setRes.status === 401 ||
+          setRes.status === 403)
+      ) {
         await exchangeNewSession();
         setRes = await requestSetGoogleSelectedCalendar({
           id: calendar.id,
@@ -222,11 +250,14 @@ export default function UpcomingEventButton({
       }
     }, 60_000);
 
-    const appStateSub = AppState.addEventListener("change", (state: AppStateStatus) => {
-      if (state === "active") {
-        void refreshState(false, false);
-      }
-    });
+    const appStateSub = AppState.addEventListener(
+      "change",
+      (state: AppStateStatus) => {
+        if (state === "active") {
+          void refreshState(false, false);
+        }
+      },
+    );
 
     return () => {
       clearInterval(intervalId);
@@ -252,8 +283,12 @@ export default function UpcomingEventButton({
   };
 
   const showRedEventButton = !!selectedCalendar;
-  const upcomingTitle = nextEvent ? ((nextEvent?.summary ?? "").trim() || "Upcoming event") : "No upcoming event";
-  const upcomingButtonLabel = nextEvent ? `Upcoming event: ${upcomingTitle}` : upcomingTitle;
+  const upcomingTitle = nextEvent
+    ? (nextEvent?.summary ?? "").trim() || "Upcoming event"
+    : "No upcoming event";
+  const upcomingButtonLabel = nextEvent
+    ? `Upcoming event: ${upcomingTitle}`
+    : upcomingTitle;
   const upcomingLocation =
     typeof nextEvent?.location === "string" ? nextEvent.location.trim() : "";
 
@@ -267,7 +302,9 @@ export default function UpcomingEventButton({
             if (!isBusy) void startImportFlow();
           }}
         >
-          <Text style={styles.upcomingBtnText}>Import Google Calendar Schedule</Text>
+          <Text style={styles.upcomingBtnText}>
+            Import Google Calendar Schedule
+          </Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
@@ -277,13 +314,20 @@ export default function UpcomingEventButton({
             onOpenEventDetails?.({
               title: upcomingTitle,
               detailsText: eventDetailsText,
+              showDirections: !!nextEvent,
               onDirections: () => {
                 if (!upcomingLocation) {
-                  Alert.alert("No location", "This event has no location to navigate to.");
+                  Alert.alert(
+                    "No location",
+                    "This event has no location to navigate to.",
+                  );
                   return;
                 }
                 if (!onRequestDirections) {
-                  Alert.alert("Directions unavailable", "Internal directions are not available right now.");
+                  Alert.alert(
+                    "Directions unavailable",
+                    "Internal directions are not available right now.",
+                  );
                   return;
                 }
                 onRequestDirections(upcomingLocation);
@@ -309,7 +353,9 @@ export default function UpcomingEventButton({
             {isCalendarLoading ? (
               <View style={styles.calendarLoadingBox}>
                 <ActivityIndicator size="small" color={BURGUNDY} />
-                <Text style={styles.calendarLoadingText}>Refreshing calendars...</Text>
+                <Text style={styles.calendarLoadingText}>
+                  Refreshing calendars...
+                </Text>
               </View>
             ) : (
               <FlatList
@@ -324,20 +370,24 @@ export default function UpcomingEventButton({
                     }}
                   >
                     <Text style={styles.calendarName}>{item.summary}</Text>
-                    {item.primary ? <Text style={styles.calendarMeta}>Primary</Text> : null}
+                    {item.primary ? (
+                      <Text style={styles.calendarMeta}>Primary</Text>
+                    ) : null}
                   </TouchableOpacity>
                 )}
               />
             )}
 
             <View style={{ height: 12 }} />
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCalendarPicker(false)}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setShowCalendarPicker(false)}
+            >
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -447,5 +497,4 @@ const styles = StyleSheet.create({
     color: BURGUNDY,
     fontWeight: "700",
   },
-
 });

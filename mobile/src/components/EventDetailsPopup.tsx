@@ -9,6 +9,7 @@ export default function EventDetailsPopup({
   visible,
   title,
   detailsText,
+  showDirections = true,
   onClose,
   onDirections,
   onChangeCalendar,
@@ -17,6 +18,7 @@ export default function EventDetailsPopup({
   visible: boolean;
   title: string;
   detailsText: string;
+  showDirections?: boolean;
   onClose: () => void;
   onDirections: () => void;
   onChangeCalendar: () => void;
@@ -36,12 +38,14 @@ export default function EventDetailsPopup({
 
         <Text style={styles.body}>{detailsText}</Text>
 
-        <View style={styles.buttonRow}>
-          <Pressable onPress={onDirections} style={styles.directionsBtn}>
-            <FontAwesome5 name="directions" size={18} color="white" />
-            <Text style={styles.directionsText}>Directions</Text>
-          </Pressable>
-        </View>
+        {showDirections ? (
+          <View style={styles.buttonRow}>
+            <Pressable onPress={onDirections} style={styles.directionsBtn}>
+              <FontAwesome5 name="directions" size={18} color="white" />
+              <Text style={styles.directionsText}>Directions</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={{ height: 12 }} />
         <Pressable style={styles.changeCalendarBtn} onPress={onChangeCalendar}>
