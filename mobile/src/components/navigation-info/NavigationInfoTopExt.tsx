@@ -2,41 +2,15 @@ import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
 import useNavigationInfo from '../../hooks/useNavigationInfo'
+import { calculateETA } from '../../utils/calculateETA'
 
 interface NavigationInfoTopExtProps {
   readonly destination: string
 }
 
 const NavigationInfoTopExt = ({ destination }: NavigationInfoTopExtProps) => {
-  const dist = useNavigationInfo((state) => state.pathDistance)
-  const dur = useNavigationInfo((state) => state.pathDuration)
-
-  const findETA = (durationStr: string) => {
-    if (!durationStr || durationStr === 'N/A') return '--:--'
-
-    const now = new Date();
-    let totalMinutes = 0;
-
-    const tokens = durationStr.toLowerCase().split(/\s+/);
-    for (let j = 0; j < tokens.length; j++) {
-      const str = Number.parseInt(tokens[j], 10)
-      if (!Number.isNaN(str)) {
-        const nextStr = tokens[j + 1] || ''
-        if (nextStr.includes('hour')) totalMinutes += str * 60
-        else if (nextStr.includes('min')) totalMinutes += str
-      }
-    }
-
-    if (totalMinutes === 0) return '--:--'
-
-    now.setMinutes(now.getMinutes() + totalMinutes);
-
-    return now.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  }
+  const distance = useNavigationInfo((state) => state.pathDistance)
+  const duration = useNavigationInfo((state) => state.pathDuration)
 
   return (
     <View style={styles.container}>
@@ -50,12 +24,12 @@ const NavigationInfoTopExt = ({ destination }: NavigationInfoTopExtProps) => {
 
       <View style={styles.infoRow}>
         <Text style={styles.label}>Arriving at</Text>
-        <Text style={styles.value}>{findETA(dur)}</Text>
+        <Text style={styles.value}>{calculateETA(duration)}</Text>
       </View>
 
       <View style={styles.infoRow}>
         <Text style={styles.label}>Distance</Text>
-        <Text style={styles.value}>{dist}</Text>
+        <Text style={styles.value}>{distance}</Text>
       </View>
 
     </View>

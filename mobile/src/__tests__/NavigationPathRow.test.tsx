@@ -29,7 +29,7 @@ describe('NavigationPathRow', () => {
 
     expect(getByText('15 mins')).toBeTruthy();
     // FIXED: Matches 00:15 (local) OR 24:15 (CI/Sonar)
-    expect(getByText(/(00|24):15/)).toBeTruthy();
+    expect(getByText('12:15')).toBeTruthy();
   });
 
   it('calculates ETA for hours and minutes', () => {
@@ -37,7 +37,7 @@ describe('NavigationPathRow', () => {
       <NavigationPathRow duration="1 hour 30 mins" handleGo={jest.fn()} />,
     );
     // Matches 01:30 or 25:30 (depending on how the env overflows)
-    expect(getByText(/(01|25):30/)).toBeTruthy();
+    expect(getByText('13:30')).toBeTruthy();
   });
 
   it('handles plural "hours" and different casing', () => {
@@ -45,7 +45,7 @@ describe('NavigationPathRow', () => {
       <NavigationPathRow duration="2 HOURS" handleGo={jest.fn()} />,
     );
     // Matches 02:00 or 26:00
-    expect(getByText(/(02|26):00/)).toBeTruthy();
+    expect(getByText('14:00')).toBeTruthy();
   });
 
   it('returns --:-- for "N/A" or empty duration', () => {
