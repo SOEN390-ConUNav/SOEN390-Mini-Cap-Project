@@ -14,8 +14,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -26,6 +28,9 @@ public class GoogleOAuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private GoogleOAuthController googleOAuthController;
 
     @MockitoBean
     private GoogleOAuthService googleOAuthService;
@@ -45,6 +50,24 @@ public class GoogleOAuthControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("google_session_id=generated-session-id")))
                 .andExpect(jsonPath("$.connected").value(true));
+    }
+
+    @Test
+    void testExchangeCookieContainsExpectedAttributesAndMinMaxAge() throws Exception {
+        ReflectionTestUtils.setField(googleOAuthController, "sessionCookieMaxAgeSeconds", 0L);
+
+        when(googleOAuthService.exchangeServerAuthCode("valid-auth-code"))
+                .thenReturn("generated-session-id");
+
+        mockMvc.perform(post("/api/google/oauth/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"serverAuthCode\": \"valid-auth-code\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("google_session_id=generated-session-id")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("HttpOnly")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("Path=/api/google")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("SameSite=Lax")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("Max-Age=1")));
     }
 
     @ParameterizedTest
@@ -74,5 +97,14 @@ public class GoogleOAuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("google_session_id=")))
                 .andExpect(jsonPath("$.loggedOut").value(true));
+    }
+
+    @Test
+    void testLogoutWithoutCookieStillReturnsOk() throws Exception {
+        mockMvc.perform(post("/api/google/oauth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.loggedOut").value(true));
+
+        verify(googleSessionService).remove(null);
     }
 }

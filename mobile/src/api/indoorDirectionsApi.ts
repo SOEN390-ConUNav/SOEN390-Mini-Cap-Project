@@ -1,7 +1,5 @@
 import { IndoorDirectionResponse, RoutePoint } from "../types/indoorDirections";
-import {API_BASE_URL} from "../const";
-
-
+import { API_BASE_URL } from "../const";
 
 /**
  * Get indoor directions from backend
@@ -11,7 +9,7 @@ export async function getIndoorDirections(
   origin: string,
   destination: string,
   originFloor?: string,
-  destinationFloor?: string
+  destinationFloor?: string,
 ): Promise<IndoorDirectionResponse> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -28,20 +26,21 @@ export async function getIndoorDirections(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/directions/indoor?${params.toString()}`
+      `${API_BASE_URL}/api/directions/indoor?${params.toString()}`,
     );
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
+      const errorText = await response.text().catch(() => "Unknown error");
       throw new Error(`Backend error (${response.status}): ${errorText}`);
     }
 
     return response.json();
   } catch (error: any) {
-    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
-      throw new Error(
-        `Cannot connect to backend at ${API_BASE_URL}.`
-      );
+    if (
+      error.message?.includes("Network request failed") ||
+      error.message?.includes("Failed to fetch")
+    ) {
+      throw new Error(`Cannot connect to backend at ${API_BASE_URL}.`);
     }
     throw error;
   }
@@ -52,7 +51,7 @@ export async function getIndoorDirections(
  */
 export async function getAvailableRooms(
   buildingId: string,
-  floor?: string
+  floor?: string,
 ): Promise<string[]> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -66,7 +65,7 @@ export async function getAvailableRooms(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/directions/indoor/rooms?${params.toString()}`
+      `${API_BASE_URL}/api/directions/indoor/rooms?${params.toString()}`,
     );
 
     if (!response.ok) {
@@ -74,7 +73,9 @@ export async function getAvailableRooms(
     }
 
     const rooms = await response.json();
-    return Array.isArray(rooms) ? rooms.sort((a: string, b: string) => a.localeCompare(b)) : [];
+    return Array.isArray(rooms)
+      ? rooms.sort((a: string, b: string) => a.localeCompare(b))
+      : [];
   } catch (error: any) {
     console.warn("Failed to fetch rooms from backend, using fallback:", error);
     return [];
@@ -98,7 +99,7 @@ export interface RoomPoint {
  */
 export async function getRoomPoints(
   buildingId: string,
-  floor?: string
+  floor?: string,
 ): Promise<RoomPoint[]> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -112,7 +113,7 @@ export async function getRoomPoints(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/directions/indoor/room-points?${params.toString()}`
+      `${API_BASE_URL}/api/directions/indoor/room-points?${params.toString()}`,
     );
 
     if (!response.ok) {
@@ -130,9 +131,9 @@ export async function getRoomPoints(
 export interface PoiItem {
   x: number;
   y: number;
-  id: string;          
+  id: string;
   displayName: string;
-  type: string;       
+  type: string;
 }
 
 /**
@@ -140,7 +141,7 @@ export interface PoiItem {
  */
 export async function getPointsOfInterest(
   buildingId: string,
-  floor?: string
+  floor?: string,
 ): Promise<PoiItem[]> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -151,7 +152,7 @@ export async function getPointsOfInterest(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/directions/indoor/pois?${params.toString()}`
+      `${API_BASE_URL}/api/directions/indoor/pois?${params.toString()}`,
     );
 
     if (!response.ok) {
@@ -171,7 +172,7 @@ export async function getPointsOfInterest(
  */
 export async function getWaypoints(
   buildingId: string,
-  floor?: string
+  floor?: string,
 ): Promise<Waypoint[]> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -185,7 +186,7 @@ export async function getWaypoints(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/directions/indoor/waypoints?${params.toString()}`
+      `${API_BASE_URL}/api/directions/indoor/waypoints?${params.toString()}`,
     );
 
     if (!response.ok) {

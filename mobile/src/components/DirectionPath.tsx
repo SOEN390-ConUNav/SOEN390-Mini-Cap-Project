@@ -9,7 +9,7 @@ import useNavigationConfig from "../hooks/useNavigationConfig";
 const BURGUNDY = "#800020";
 
 interface DirectionPathProps {
-  destination: Coordinate | null;
+  readonly destination: Coordinate | null;
 }
 
 function EndPin() {

@@ -1,4 +1,4 @@
-import {API_BASE_URL} from "../const";
+import { API_BASE_URL } from "../const";
 
 export interface ShuttleSchedule {
   campus: string;

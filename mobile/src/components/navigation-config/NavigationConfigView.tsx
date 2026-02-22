@@ -16,12 +16,14 @@ interface NavigationConfigViewProps {
   readonly durations: OutdoorDirectionResponse[];
   readonly visible: boolean;
   readonly onClose: () => void;
+  readonly onGo?: () => void;
 }
 
 export default function NavigationConfigView({
   durations,
   visible,
   onClose,
+  onGo,
 }: NavigationConfigViewProps) {
   const { navigationMode, setNavigationMode } = useNavigationConfig();
   const { isLoading } = useNavigationInfo();
@@ -38,7 +40,9 @@ export default function NavigationConfigView({
     return getDurationForMode(apiKey);
   };
   const handleGo = () => {
-    setNavigationState(NAVIGATION_STATE.NAVIGATING);
+    // Logic to start the actual turn-by-turn navigation
+    console.log("Start navigation with mode:", navigationMode);
+    onGo?.();
   };
 
   return (

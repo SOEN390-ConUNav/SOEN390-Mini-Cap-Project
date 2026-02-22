@@ -1,4 +1,4 @@
-import {API_BASE_URL} from "../const";
+import { API_BASE_URL } from "../const";
 
 /**
  * Simple backend connectivity test

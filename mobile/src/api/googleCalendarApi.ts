@@ -1,10 +1,9 @@
-import {API_BASE_URL} from "../const";
+import { API_BASE_URL } from "../const";
 type CalendarSelectionPayload = {
   id: string;
   summary?: string;
   primary?: boolean;
 };
-
 
 function requireApiBaseUrl(): string {
   if (!API_BASE_URL) {
@@ -20,7 +19,9 @@ function googleFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
-export function requestGoogleOAuthExchange(serverAuthCode: string): Promise<Response> {
+export function requestGoogleOAuthExchange(
+  serverAuthCode: string,
+): Promise<Response> {
   return googleFetch("/api/google/oauth/exchange", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -28,7 +29,9 @@ export function requestGoogleOAuthExchange(serverAuthCode: string): Promise<Resp
   });
 }
 
-export function requestGoogleState(includeCalendars = false): Promise<Response> {
+export function requestGoogleState(
+  includeCalendars = false,
+): Promise<Response> {
   const path = `/api/google/state?days=7&timeZone=${encodeURIComponent("America/Montreal")}&includeCalendars=${includeCalendars}`;
   return googleFetch(path);
 }
@@ -38,7 +41,7 @@ export function requestGoogleCalendars(): Promise<Response> {
 }
 
 export function requestSetGoogleSelectedCalendar(
-  calendar: CalendarSelectionPayload
+  calendar: CalendarSelectionPayload,
 ): Promise<Response> {
   return googleFetch("/api/google/selected-calendar", {
     method: "PUT",

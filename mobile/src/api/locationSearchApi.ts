@@ -1,14 +1,12 @@
-import {API_BASE_URL} from "../const";
+import { API_BASE_URL } from "../const";
 
-export async function searchLocations(
-  query: string
-): Promise<any[]> {
+export async function searchLocations(query: string): Promise<any[]> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/api/places/search?query=${encodeURIComponent(query)}`
+    `${API_BASE_URL}/api/places/search?query=${encodeURIComponent(query)}`,
   );
 
   if (!response.ok) {
