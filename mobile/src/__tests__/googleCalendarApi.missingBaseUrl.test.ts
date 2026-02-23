@@ -16,7 +16,7 @@ describe("googleCalendarApi missing API_BASE_URL", () => {
     jest.isolateModules(() => {
       const api = require("../api/googleCalendarApi");
       expect(() => api.requestGoogleCalendars()).toThrow(
-        "API_BASE_URL is missing (check .env + app.config.ts)"
+        "API_BASE_URL is missing (check .env + app.config.ts)",
       );
     });
   });

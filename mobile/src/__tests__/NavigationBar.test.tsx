@@ -11,17 +11,23 @@ jest.mock("../components/CircleIconButton", () => {
   );
 });
 
-jest.mock("../components/navigation-info/NavigationInfoTop", () => {
+jest.mock("../components/navigation-info/NavigationInfoTopCombined", () => {
   const { Text } = require("react-native");
-  return ({ destination }: { destination: string }) => (
-    <Text testID="navigation-info-top">{destination}</Text>
-  );
-});
-
-jest.mock("../components/navigation-info/NavigationInfoTopExt", () => {
-  const { Text } = require("react-native");
-  return ({ destination }: { destination: string }) => (
-    <Text testID="navigation-info-top-ext">{destination}</Text>
+  return ({
+    destination,
+    showInfoExtended,
+    showHudExtended,
+    hudStep,
+  }: {
+    destination: string;
+    showInfoExtended: boolean;
+    showHudExtended: boolean;
+    hudStep?: { instruction?: string };
+  }) => (
+    <Text testID="navigation-info-top-combined">
+      {destination}:{showInfoExtended ? "expanded" : "collapsed"}:
+      {showHudExtended ? (hudStep?.instruction ?? "hud-empty") : "no-hud"}
+    </Text>
   );
 });
 
@@ -46,44 +52,85 @@ describe("NavigationBar", () => {
 
   it("calls onPress when back button is pressed", () => {
     const onPress = jest.fn();
-
     const { getByTestId } = render(
       <NavigationBar {...baseProps} onPress={onPress} />,
     );
 
     fireEvent.press(getByTestId("back-button"));
-
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  // ─── minimize state ──────────────────────────────
-
-  it('renders NavigationInfoTopExt when state is "minimize"', () => {
-    const { getByTestId, queryByTestId } = render(
+  it("renders combined info in collapsed mode", () => {
+    const { getByTestId, getByText } = render(
       <NavigationBar {...baseProps} navigationInfoToggleState="minimize" />,
     );
 
-    expect(getByTestId("navigation-info-top")).toBeTruthy();
-    expect(queryByTestId("navigation-info-top-ext")).toBeNull();
+    expect(getByTestId("navigation-info-top-combined")).toBeTruthy();
+    expect(getByText("Loyola Campus:collapsed:no-hud")).toBeTruthy();
   });
 
-  // ─── maximize state ──────────────────────────────
-
-  it('renders NavigationInfoTop when state is "maximize"', () => {
-    const { getByTestId, queryByTestId } = render(
+  it("renders combined info in expanded mode", () => {
+    const { getByText } = render(
       <NavigationBar {...baseProps} navigationInfoToggleState="maximize" />,
     );
 
-    expect(getByTestId("navigation-info-top-ext")).toBeTruthy();
-    expect(queryByTestId("navigation-info-top")).toBeNull();
+    expect(getByText("Loyola Campus:expanded:no-hud")).toBeTruthy();
   });
 
-  // ─── undefined state ─────────────────────────────
+  it("hides back button while cancelling navigation", () => {
+    const { queryByTestId } = render(
+      <NavigationBar {...baseProps} isCancellingNavigation />,
+    );
+    expect(queryByTestId("back-button")).toBeNull();
+  });
 
-  it("renders neither component when toggleState is undefined", () => {
-    const { queryByTestId } = render(<NavigationBar {...baseProps} />);
+  it("passes HUD step into combined card when HUD should be shown", () => {
+    const { getByText } = render(
+      <NavigationBar
+        {...baseProps}
+        navigationInfoToggleState="minimize"
+        navigationHUDToggleState="maximize"
+        navigationHUDStep={
+          { instruction: "Turn left onto Maisonneuve Street" } as any
+        }
+      />,
+    );
 
-    expect(queryByTestId("navigation-info-top")).toBeNull();
-    expect(queryByTestId("navigation-info-top-ext")).toBeNull();
+    expect(
+      getByText("Loyola Campus:collapsed:Turn left onto Maisonneuve Street"),
+    ).toBeTruthy();
+  });
+
+  it("does not pass HUD step when info sheet is expanded", () => {
+    const { getByText } = render(
+      <NavigationBar
+        {...baseProps}
+        navigationInfoToggleState="maximize"
+        navigationHUDToggleState="maximize"
+        navigationHUDStep={
+          { instruction: "Turn left onto Maisonneuve Street" } as any
+        }
+      />,
+    );
+
+    expect(getByText("Loyola Campus:expanded:no-hud")).toBeTruthy();
+  });
+
+  it("shows info ext and hud ext together while cancelling", () => {
+    const { getByText } = render(
+      <NavigationBar
+        {...baseProps}
+        isCancellingNavigation
+        navigationInfoToggleState="minimize"
+        navigationHUDToggleState="minimize"
+        navigationHUDStep={
+          { instruction: "Turn left onto Maisonneuve Street" } as any
+        }
+      />,
+    );
+
+    expect(
+      getByText("Loyola Campus:expanded:Turn left onto Maisonneuve Street"),
+    ).toBeTruthy();
   });
 });

@@ -44,7 +44,6 @@ jest.mock("../type", () => ({
 }));
 
 const mockUseNavigationConfig = useNavigationConfig as unknown as jest.Mock;
-const mockOrigin = { latitude: 45.4972, longitude: -73.5794 };
 const mockDestination = { latitude: 45.4584, longitude: -73.6404 };
 
 describe("DirectionPath", () => {
@@ -67,7 +66,7 @@ describe("DirectionPath", () => {
     });
 
     const { getByTestId } = render(
-      <DirectionPath origin={mockOrigin} destination={mockDestination} />,
+      <DirectionPath destination={mockDestination} />,
     );
 
     const polylineNode = getByTestId("Polyline");
@@ -86,7 +85,7 @@ describe("DirectionPath", () => {
     });
 
     const { getByTestId } = render(
-      <DirectionPath origin={mockOrigin} destination={mockDestination} />,
+      <DirectionPath destination={mockDestination} />,
     );
 
     const polylineNode = getByTestId("Polyline");
@@ -114,7 +113,7 @@ describe("DirectionPath", () => {
     });
 
     const { getByTestId } = render(
-      <DirectionPath origin={mockOrigin} destination={mockDestination} />,
+      <DirectionPath destination={mockDestination} />,
     );
 
     const polylineNode = getByTestId("Polyline");
@@ -135,7 +134,7 @@ describe("DirectionPath", () => {
     });
 
     const { getByTestId } = render(
-      <DirectionPath origin={mockOrigin} destination={mockDestination} />,
+      <DirectionPath destination={mockDestination} />,
     );
 
     const markerNode = getByTestId("Marker");
@@ -148,9 +147,7 @@ describe("DirectionPath", () => {
       allOutdoorRoutes: [],
     });
 
-    const { queryByTestId } = render(
-      <DirectionPath origin={mockOrigin} destination={null} />,
-    );
+    const { queryByTestId } = render(<DirectionPath destination={null} />);
 
     expect(queryByTestId("Marker")).toBeNull();
   });
@@ -167,7 +164,7 @@ describe("DirectionPath", () => {
     });
 
     const { getByTestId } = render(
-      <DirectionPath origin={mockOrigin} destination={mockDestination} />,
+      <DirectionPath destination={mockDestination} />,
     );
 
     const polylineNode = getByTestId("Polyline");

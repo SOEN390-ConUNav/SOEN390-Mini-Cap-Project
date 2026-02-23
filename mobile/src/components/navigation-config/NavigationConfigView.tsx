@@ -7,6 +7,8 @@ import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { OutdoorDirectionResponse } from "../../api/outdoorDirectionsApi";
 import { TRANSPORT_MODE_API_MAP } from "../../type";
+import { NAVIGATION_STATE } from "../../const";
+import { useNavigationStore } from "../../hooks/useNavigationState";
 
 interface NavigationConfigViewProps {
   readonly durations: OutdoorDirectionResponse[];
@@ -43,7 +45,14 @@ export default function NavigationConfigView({
   return (
     <BottomDrawer
       visible={visible}
-      onClose={onClose}
+      onClose={() => {
+        if (
+          useNavigationStore.getState().navigationState !==
+          NAVIGATION_STATE.NAVIGATING
+        ) {
+          onClose();
+        }
+      }}
       snapPoints={["35%"]} // Adjusted height for this content
       enablePanDownToClose={true}
       contentContainerStyle={styles.drawerContent}

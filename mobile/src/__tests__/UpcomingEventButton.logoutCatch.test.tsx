@@ -1,5 +1,11 @@
 import React from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
 import UpcomingEventButton from "../components/UpcomingEventButton";
 
 let mockShouldThrowOnArrayClear = false;
@@ -16,7 +22,11 @@ jest.mock("react", () => {
       return [
         tuple[0],
         (next: any) => {
-          if (mockShouldThrowOnArrayClear && Array.isArray(next) && next.length === 0) {
+          if (
+            mockShouldThrowOnArrayClear &&
+            Array.isArray(next) &&
+            next.length === 0
+          ) {
             throw new Error("clear state failed");
           }
           return tuple[1](next);

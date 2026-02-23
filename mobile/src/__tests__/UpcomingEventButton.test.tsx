@@ -1,5 +1,10 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
 import UpcomingEventButton from "../components/UpcomingEventButton";
 import {
   requestGoogleCalendars,
@@ -38,7 +43,9 @@ describe("UpcomingEventButton", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (requestGoogleOAuthExchange as jest.Mock).mockResolvedValue(okResponse({}));
-    (requestGoogleLogout as jest.Mock).mockResolvedValue(okResponse({ loggedOut: true }));
+    (requestGoogleLogout as jest.Mock).mockResolvedValue(
+      okResponse({ loggedOut: true }),
+    );
   });
 
   it("runs import flow, opens calendar picker, and selects a calendar", async () => {
@@ -49,7 +56,7 @@ describe("UpcomingEventButton", () => {
           calendarSelected: false,
           nextEvent: null,
           nextEventDetailsText: "No upcoming event",
-        })
+        }),
       )
       .mockResolvedValueOnce(
         okResponse({
@@ -57,7 +64,7 @@ describe("UpcomingEventButton", () => {
           calendarSelected: false,
           nextEvent: null,
           nextEventDetailsText: "No upcoming event",
-        })
+        }),
       )
       .mockResolvedValueOnce(
         okResponse({
@@ -65,13 +72,15 @@ describe("UpcomingEventButton", () => {
           calendarSelected: true,
           nextEvent: null,
           nextEventDetailsText: "No upcoming event",
-        })
+        }),
       );
 
     (requestGoogleCalendars as jest.Mock).mockResolvedValue(
-      okResponse([{ id: "cal-1", summary: "School", primary: true }])
+      okResponse([{ id: "cal-1", summary: "School", primary: true }]),
     );
-    (requestSetGoogleSelectedCalendar as jest.Mock).mockResolvedValue(okResponse({ saved: true }));
+    (requestSetGoogleSelectedCalendar as jest.Mock).mockResolvedValue(
+      okResponse({ saved: true }),
+    );
 
     const onMainButtonPress = jest.fn();
 

@@ -29,7 +29,7 @@ describe("googleCalendarApi", () => {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serverAuthCode: "auth-code-123" }),
-      })
+      }),
     );
   });
 
@@ -37,8 +37,10 @@ describe("googleCalendarApi", () => {
     await requestGoogleState(true);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/google/state?days=7&timeZone=America%2FMontreal&includeCalendars=true"),
-      expect.objectContaining({ credentials: "include" })
+      expect.stringContaining(
+        "/api/google/state?days=7&timeZone=America%2FMontreal&includeCalendars=true",
+      ),
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 
@@ -46,8 +48,10 @@ describe("googleCalendarApi", () => {
     await requestGoogleState();
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/google/state?days=7&timeZone=America%2FMontreal&includeCalendars=false"),
-      expect.objectContaining({ credentials: "include" })
+      expect.stringContaining(
+        "/api/google/state?days=7&timeZone=America%2FMontreal&includeCalendars=false",
+      ),
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 
@@ -56,7 +60,7 @@ describe("googleCalendarApi", () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       "http://localhost:8080/api/google/calendars",
-      expect.objectContaining({ credentials: "include" })
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 
@@ -78,7 +82,7 @@ describe("googleCalendarApi", () => {
           summary: "School",
           primary: true,
         }),
-      })
+      }),
     );
   });
 
@@ -90,7 +94,7 @@ describe("googleCalendarApi", () => {
       expect.objectContaining({
         method: "POST",
         credentials: "include",
-      })
+      }),
     );
   });
 });

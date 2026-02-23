@@ -48,7 +48,6 @@ export default function RouteCard({
             <RouteRow
               label="From"
               value={originLabel}
-              trailingIcon="locate"
               onSwap={onSwap}
               dragProgress={originDragProgress}
               siblingDragProgress={destDragProgress}

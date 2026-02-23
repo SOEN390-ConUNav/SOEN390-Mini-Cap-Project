@@ -36,10 +36,13 @@ import { NamedCoordinate } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 import NavigationInfoBottom from "../../components/navigation-info/NavigationInfoBottom";
+import NavigationDirectionHUDBottom from "../../components/navigation-direction/NavigationDirectionHUDBottom";
+import NavigationCancelBottom from "../../components/navigation-cancel/NavigationCancelBottom";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
 const CAMPUS_REGION_DELTA = { latitudeDelta: 0.01, longitudeDelta: 0.01 };
+const NAVIGATION_ZOOM = { latitudeDelta: 0.004, longitudeDelta: 0.004 };
 
 const SHUTTLE_STOPS = {
   SGW: { latitude: 45.497122, longitude: -73.578471 },
@@ -71,21 +74,23 @@ export default function HomePageIndex() {
 
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
   const {
-    navigationState,
     setNavigationState,
     isNavigating,
     isConfiguring,
     isSearching,
     isIdle,
+    isCancellingNavigation,
   } = useNavigationState();
   const { origin, setOrigin, destination, setDestination, swap, clear } =
     useNavigationEndpoints();
   const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
     useNavigationConfig();
-  const { setIsLoading, setPathDistance, setPathDuration, isLoading } =
+  const { setIsLoading, setPathDistance, setPathDuration } =
     useNavigationInfo();
-  const toggleNavigationState = useRef<"maximize" | "minimize">("maximize");
   const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<
+    "maximize" | "minimize"
+  >("minimize");
+  const [toggleNavigationHUDState, setToggleNavigationHUDState] = useState<
     "maximize" | "minimize"
   >("minimize");
 
@@ -126,6 +131,29 @@ export default function HomePageIndex() {
     checkLocationPermission();
   }, []);
 
+  // ── Derive active route steps for the HUD ──────────────────────────────
+  const activeRoute =
+    allOutdoorRoutes?.find(
+      (r) => r.transportMode?.toUpperCase() === navigationMode?.toUpperCase(),
+    ) ??
+    allOutdoorRoutes?.[0] ??
+    null;
+
+  const hudSteps = activeRoute?.steps ?? [];
+  const hudTopStep = hudSteps[0];
+  // ───────────────────────────────────────────────────────────────────────
+
+  // When navigation starts, clear UI clutter + zoom to user ──────
+  useEffect(() => {
+    if (!isNavigating) return;
+    setShowBuildingPopup(false);
+    setSelectedBuildingId(null);
+    setOutlineMode(false);
+    getOneFix()
+      .then((fix) => animateToRegion({ ...fix, ...NAVIGATION_ZOOM }))
+      .catch(() => {});
+  }, [isNavigating]);
+
   useEffect(() => {
     if (
       params.shuttleCampus &&
@@ -161,13 +189,15 @@ export default function HomePageIndex() {
   }, [showEnableLocation]);
 
   useEffect(() => {
-    navigation.setOptions({
-      tabBarStyle:
-        isConfiguring || isNavigating
-          ? { display: "none" }
-          : navStyles.tabBarStyle,
-    });
-  }, [isConfiguring, isNavigating, navigation]);
+    const style =
+      isConfiguring || isNavigating || isCancellingNavigation
+        ? { display: "none" }
+        : navStyles.tabBarStyle;
+
+    navigation.setOptions({ tabBarStyle: style });
+
+    navigation.getParent()?.setOptions({ tabBarStyle: style });
+  }, [isConfiguring, isNavigating, isCancellingNavigation, navigation]);
 
   useEffect(() => {
     scheduleFreezeMarkers();
@@ -314,6 +344,7 @@ export default function HomePageIndex() {
   };
 
   const onPressBuilding = (b: Building) => {
+    if (isNavigating) return;
     setNavigationState(NAVIGATION_STATE.IDLE);
     if (selectedBuildingId !== b.id || !outlineMode) {
       setDestination({
@@ -554,6 +585,7 @@ export default function HomePageIndex() {
     navigatingRef.current = true;
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
     setToggleNavigationInfoState("minimize");
+    setToggleNavigationHUDState("minimize");
   };
 
   const handleCloseNavConfig = () => {
@@ -561,10 +593,30 @@ export default function HomePageIndex() {
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
-  const onToggleNavigationState = () => {
+  const onToggleNavigationInfoState = () => {
     setToggleNavigationInfoState(
       toggleNavigationInfoState === "maximize" ? "minimize" : "maximize",
     );
+  };
+
+  const handleResumeNavigation = () => {
+    setNavigationState(NAVIGATION_STATE.NAVIGATING);
+  };
+
+  const handleCancelTrip = () => {
+    navigatingRef.current = false;
+    setIsLoading(false);
+    setNavigationState(NAVIGATION_STATE.IDLE);
+    setToggleNavigationInfoState("minimize");
+    setToggleNavigationHUDState("minimize");
+    setPathDistance("0");
+    setPathDuration("0");
+    setAllOutdoorRoutes([]);
+    clear();
+  };
+
+  const handleOpenSettings = () => {
+    router.push("/settings");
   };
 
   if (showEnableLocation) {
@@ -618,7 +670,9 @@ export default function HomePageIndex() {
         onRegionChangeComplete={handleRegionChangeComplete}
         onPress={() => {
           setShowBuildingPopup(false);
-          setNavigationState(NAVIGATION_STATE.IDLE);
+          if (!isNavigating && !isCancellingNavigation) {
+            setNavigationState(NAVIGATION_STATE.IDLE);
+          }
         }}
         onMapReady={() => {
           setMapReady(true);
@@ -656,12 +710,10 @@ export default function HomePageIndex() {
           />
         )}
 
-        {(isConfiguring || isNavigating) && (
-          <DirectionPath destination={destination} />
-        )}
+        {!isSearching && !isIdle && <DirectionPath destination={destination} />}
       </MapView>
 
-      {showBuildingPopup && selectedBuilding && (
+      {showBuildingPopup && selectedBuilding && !isNavigating && (
         <BuildingPopup
           id={selectedBuilding.id}
           name={selectedBuilding.name}
@@ -684,11 +736,15 @@ export default function HomePageIndex() {
       <View
         style={[
           styles.upcomingEventWrapper,
-          (showEnableLocation || isConfiguring || isNavigating) &&
+          (showEnableLocation ||
+            isConfiguring ||
+            isNavigating ||
+            isCancellingNavigation) &&
             styles.overlayHidden,
         ]}
         pointerEvents={
-          !showEnableLocation && !(isConfiguring || isNavigating)
+          !showEnableLocation &&
+          !(isConfiguring || isNavigating || isCancellingNavigation)
             ? "auto"
             : "none"
         }
@@ -751,30 +807,15 @@ export default function HomePageIndex() {
           onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
           isConfiguring={isConfiguring}
           isNavigating={isNavigating}
+          isCancellingNavigation={isCancellingNavigation}
           originLabel={origin?.label ?? "Current Location"}
           destinationLabel={destination?.label ?? "Select destination"}
           onBack={() => {
-            setIsLoading(false);
-            setNavigationState(NAVIGATION_STATE.IDLE);
-            setSelectedBuildingId(null);
-            setOutlineMode(false);
-            setShowBuildingPopup(false);
-            clear();
-          }}
-          onSwap={handleSwap}
-        />
-      </View>
-      <View style={styles.searchWrapper}>
-        <SearchBar
-          placeholder="Search"
-          onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
-          isConfiguring={isConfiguring}
-          isNavigating={isNavigating}
-          originLabel={origin?.label ?? "Current Location"}
-          destinationLabel={destination?.label ?? "Select destination"}
-          onBack={() => {
-            if (isNavigating) {
-              setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+            if (isCancellingNavigation) {
+              handleResumeNavigation();
+            } else if (isNavigating) {
+              setToggleNavigationInfoState("minimize");
+              setNavigationState(NAVIGATION_STATE.NAVIGATION_CANCELLING);
             } else {
               setIsLoading(false);
               setNavigationState(NAVIGATION_STATE.IDLE);
@@ -785,6 +826,8 @@ export default function HomePageIndex() {
             }
           }}
           navigationInfoToggleState={toggleNavigationInfoState}
+          navigationHUDToggleState={toggleNavigationHUDState}
+          navigationHUDStep={hudTopStep}
           onSwap={handleSwap}
         />
       </View>
@@ -800,18 +843,50 @@ export default function HomePageIndex() {
         onClose={() => handleCloseNavConfig()}
         onGo={() => handleGoNavConfig()}
       />
-      <FloatingActionButton onPress={onPressFab} />
+      {!isCancellingNavigation && <FloatingActionButton onPress={onPressFab} />}
 
-      <View style={styles.campusWrapper}>
+      <View
+        style={[
+          styles.campusWrapper,
+          (isNavigating || isCancellingNavigation) && styles.overlayHidden,
+        ]}
+        pointerEvents={isNavigating || isCancellingNavigation ? "none" : "auto"}
+      >
         <CampusSwitcher value={campus} onChange={onChangeCampus} />
       </View>
       {isNavigating && (
-        <NavigationInfoBottom
-          visible={isNavigating}
-          onClose={() => {
-            navigatingRef.current = false;
-          }}
-          onPressAction={onToggleNavigationState}
+        <>
+          <NavigationDirectionHUDBottom
+            visible={isNavigating}
+            steps={hudSteps}
+            onSnapIndexChange={(index) => {
+              if (index < 0) return;
+              setToggleNavigationHUDState(
+                index === 1 ? "minimize" : "maximize",
+              );
+            }}
+          />
+          <NavigationInfoBottom
+            visible={isNavigating}
+            onClose={() => {
+              navigatingRef.current = false;
+            }}
+            onPressAction={onToggleNavigationInfoState}
+            onSnapIndexChange={(index) => {
+              if (index < 0) return;
+              setToggleNavigationInfoState(
+                index === 1 ? "minimize" : "maximize",
+              );
+            }}
+          />
+        </>
+      )}
+
+      {isCancellingNavigation && (
+        <NavigationCancelBottom
+          onOpenSettings={handleOpenSettings}
+          onConfirmCancel={handleCancelTrip}
+          onResumeNavigation={handleResumeNavigation}
         />
       )}
     </View>
