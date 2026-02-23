@@ -11,7 +11,7 @@ interface NavigationDirectionHUDTopExtProps {
   readonly step?: Step;
 }
 
-export default function NavigationDirectionHUDTopExt({
+export default function NavigationDirectionHUDTop({
   step,
 }: NavigationDirectionHUDTopExtProps) {
   const street = getStreetOnlyInstruction(step?.instruction);

@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
-import NavigationDirectionHUDTopExt from "../components/navigation-direction/NavigationDirectionHUDTopExt";
+import NavigationDirectionHUDTop from "../components/navigation-direction/NavigationDirectionHUDTop";
 
 jest.mock("@expo/vector-icons", () => ({
   Ionicons: ({ name }: any) => {
@@ -9,15 +9,15 @@ jest.mock("@expo/vector-icons", () => ({
   },
 }));
 
-describe("NavigationDirectionHUDTopExt", () => {
+describe("NavigationDirectionHUDTop", () => {
   it("returns null when no step is provided", () => {
-    const { queryByTestId } = render(<NavigationDirectionHUDTopExt />);
+    const { queryByTestId } = render(<NavigationDirectionHUDTop />);
     expect(queryByTestId("ion-icon")).toBeNull();
   });
 
   it("renders icon and street name from step instruction", () => {
     const { getByTestId, getByText } = render(
-      <NavigationDirectionHUDTopExt
+      <NavigationDirectionHUDTop
         step={{
           instruction: "Turn right onto Guy Street",
           distance: "50 m",
