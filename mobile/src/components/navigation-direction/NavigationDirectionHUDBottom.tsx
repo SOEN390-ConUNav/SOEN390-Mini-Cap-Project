@@ -73,6 +73,8 @@ export default function NavigationDirectionHUDBottom({
   if (!steps || steps.length === 0) return null;
 
   const [nextStep, ...remainingSteps] = steps;
+  const remainingStepsSuffix = remainingSteps.length > 1 ? "s" : "";
+  const remainingStepsLabel = `${remainingSteps.length} more step${remainingStepsSuffix}`;
 
   return (
     <BottomDrawer
@@ -112,9 +114,7 @@ export default function NavigationDirectionHUDBottom({
           style={styles.expandToggle}
         >
           <Text style={styles.expandLabel}>
-            {expanded
-              ? "Hide steps"
-              : `${remainingSteps.length} more step${remainingSteps.length > 1 ? "s" : ""}`}
+            {expanded ? "Hide steps" : remainingStepsLabel}
           </Text>
           <Ionicons
             name={expanded ? "chevron-up" : "chevron-down"}

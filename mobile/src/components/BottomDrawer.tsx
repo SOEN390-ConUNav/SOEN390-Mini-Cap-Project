@@ -46,6 +46,18 @@ function CustomHandle({
   );
 }
 
+function createHandleComponent(props: CustomHandleProps) {
+  return function HandleComponent() {
+    return (
+      <CustomHandle
+        onPress={props.onPress}
+        backgroundColor={props.backgroundColor}
+        handleColor={props.handleColor}
+      />
+    );
+  };
+}
+
 export default function BottomDrawer({
   visible,
   onClose,
@@ -93,6 +105,16 @@ export default function BottomDrawer({
     }
   };
 
+  const handleComponent = useMemo(
+    () =>
+      createHandleComponent({
+        onPress,
+        backgroundColor,
+        handleColor,
+      }),
+    [onPress, backgroundColor, handleColor],
+  );
+
   useEffect(() => {
     if (useModal) {
       if (visible) {
@@ -124,13 +146,7 @@ export default function BottomDrawer({
           onSnapIndexChange?.(index);
         }}
         backgroundStyle={[styles.background, { backgroundColor }]}
-        handleComponent={() => (
-          <CustomHandle
-            onPress={onPress}
-            backgroundColor={backgroundColor}
-            handleColor={handleColor}
-          />
-        )}
+        handleComponent={handleComponent}
       >
         <BottomSheetView
           style={[styles.contentContainer, contentContainerStyle]}
@@ -154,13 +170,7 @@ export default function BottomDrawer({
         onSnapIndexChange?.(index);
       }}
       backgroundStyle={[styles.background, { backgroundColor }]}
-      handleComponent={() => (
-        <CustomHandle
-          onPress={onPress}
-          backgroundColor={backgroundColor}
-          handleColor={handleColor}
-        />
-      )}
+      handleComponent={handleComponent}
     >
       <BottomSheetView style={[styles.contentContainer, contentContainerStyle]}>
         {children}
