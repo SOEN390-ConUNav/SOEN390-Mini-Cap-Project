@@ -17,12 +17,14 @@ export default function NavigationCancelBottom({
     <View style={styles.container} pointerEvents="box-none">
       <View style={styles.row}>
         <NavigationCancelButton
+          testID="resume-button"
           icon="settings-outline"
           onPress={onOpenSettings}
         />
 
         <View style={styles.centerGroup}>
           <NavigationCancelButton
+            testID="resume-button"
             icon="close"
             onPress={onConfirmCancel}
             variant="danger"
@@ -32,6 +34,7 @@ export default function NavigationCancelBottom({
         </View>
 
         <NavigationCancelButton
+          testID="resume-button"
           icon="arrow-forward"
           onPress={onResumeNavigation}
         />

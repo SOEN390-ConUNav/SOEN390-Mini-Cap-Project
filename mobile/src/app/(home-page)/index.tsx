@@ -74,7 +74,6 @@ export default function HomePageIndex() {
 
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
   const {
-    navigationState,
     setNavigationState,
     isNavigating,
     isConfiguring,
@@ -86,7 +85,7 @@ export default function HomePageIndex() {
     useNavigationEndpoints();
   const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
     useNavigationConfig();
-  const { setIsLoading, setPathDistance, setPathDuration, isLoading } =
+  const { setIsLoading, setPathDistance, setPathDuration } =
     useNavigationInfo();
   const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<
     "maximize" | "minimize"
@@ -190,12 +189,14 @@ export default function HomePageIndex() {
   }, [showEnableLocation]);
 
   useEffect(() => {
-    navigation.setOptions({
-      tabBarStyle:
-        isConfiguring || isNavigating || isCancellingNavigation
-          ? { display: "none" }
-          : navStyles.tabBarStyle,
-    });
+    const style =
+      isConfiguring || isNavigating || isCancellingNavigation
+        ? { display: "none" }
+        : navStyles.tabBarStyle;
+
+    navigation.setOptions({ tabBarStyle: style });
+
+    navigation.getParent()?.setOptions({ tabBarStyle: style });
   }, [isConfiguring, isNavigating, isCancellingNavigation, navigation]);
 
   useEffect(() => {
@@ -204,24 +205,6 @@ export default function HomePageIndex() {
       if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
     };
   }, [mapReady, showEnableLocation, isConfiguring, isNavigating]);
-
-  useEffect(() => {
-    const parent = navigation.getParent();
-    if (!parent) return;
-
-    parent.setOptions({
-      tabBarStyle:
-        isConfiguring || isNavigating || isCancellingNavigation
-          ? { display: "none" }
-          : navStyles.tabBarStyle,
-    });
-  }, [
-    navigationState,
-    navigation,
-    isConfiguring,
-    isNavigating,
-    isCancellingNavigation,
-  ]);
 
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
@@ -876,7 +859,6 @@ export default function HomePageIndex() {
           <NavigationDirectionHUDBottom
             visible={isNavigating}
             steps={hudSteps}
-            onClose={() => {}}
             onSnapIndexChange={(index) => {
               if (index < 0) return;
               setToggleNavigationHUDState(

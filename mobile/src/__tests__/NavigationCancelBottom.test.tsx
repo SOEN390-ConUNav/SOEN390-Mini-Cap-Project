@@ -27,17 +27,9 @@ describe("NavigationCancelBottom", () => {
     const onConfirmCancel = jest.fn();
     const onResumeNavigation = jest.fn();
 
-    const { getByText } = render(
-      <NavigationCancelBottom
-        onOpenSettings={onOpenSettings}
-        onConfirmCancel={onConfirmCancel}
-        onResumeNavigation={onResumeNavigation}
-      />,
-    );
-
-    fireEvent.press(getByText("settings-outline"));
-    fireEvent.press(getByText("close"));
-    fireEvent.press(getByText("arrow-forward"));
+    fireEvent.press(getByTestId("settings-button"));
+    fireEvent.press(getByTestId("cancel-button"));
+    fireEvent.press(getByTestId("resume-button"));
 
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
     expect(onConfirmCancel).toHaveBeenCalledTimes(1);
