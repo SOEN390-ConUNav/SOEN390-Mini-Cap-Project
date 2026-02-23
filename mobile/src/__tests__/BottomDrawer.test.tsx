@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 import { Text } from "react-native";
 import BottomDrawer from "../components/BottomDrawer";
 
@@ -7,8 +7,25 @@ import BottomDrawer from "../components/BottomDrawer";
 jest.mock("@gorhom/bottom-sheet", () => {
   const React = require("react");
   const { View } = require("react-native");
+  const nonModalRefState = {
+    snapToIndex: jest.fn(),
+    close: jest.fn(),
+  };
 
   return {
+    __esModule: true,
+    __nonModalRefState: nonModalRefState,
+    default: React.forwardRef(
+      ({ children, onClose, onChange, handleComponent }: any, ref: any) => {
+        React.useImperativeHandle(ref, () => nonModalRefState);
+        return (
+          <View testID="bottom-sheet" onClose={onClose} onChange={onChange}>
+            {handleComponent?.()}
+            {children}
+          </View>
+        );
+      },
+    ),
     BottomSheetModal: React.forwardRef(
       ({ children, onDismiss, handleComponent }: any, ref: any) => {
         // simulate imperative handle
@@ -72,5 +89,25 @@ describe("BottomDrawer", () => {
     const handle = modal.props.children[0]; // handleComponent is rendered first
     handle.props.onPress();
     expect(onPressAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders and handles non-modal mode", () => {
+    const bs = require("@gorhom/bottom-sheet");
+    const { getByTestId } = render(
+      <BottomDrawer {...baseProps} useModal={false} />,
+    );
+    expect(getByTestId("bottom-sheet")).toBeTruthy();
+    expect(bs.__nonModalRefState.snapToIndex).toHaveBeenCalled();
+  });
+
+  it("calls close in non-modal dismiss handle mode", () => {
+    const bs = require("@gorhom/bottom-sheet");
+    const { getByTestId } = render(
+      <BottomDrawer {...baseProps} useModal={false} handleMode="dismiss" />,
+    );
+    const sheet = getByTestId("bottom-sheet");
+    const handle = sheet.props.children[0];
+    handle.props.onPress();
+    expect(bs.__nonModalRefState.close).toHaveBeenCalled();
   });
 });
