@@ -26,6 +26,13 @@ describe("NavigationCancelBottom", () => {
     const onOpenSettings = jest.fn();
     const onConfirmCancel = jest.fn();
     const onResumeNavigation = jest.fn();
+    const { getByTestId } = render(
+      <NavigationCancelBottom
+        onOpenSettings={onOpenSettings}
+        onConfirmCancel={onConfirmCancel}
+        onResumeNavigation={onResumeNavigation}
+      />,
+    );
 
     fireEvent.press(getByTestId("settings-button"));
     fireEvent.press(getByTestId("cancel-button"));

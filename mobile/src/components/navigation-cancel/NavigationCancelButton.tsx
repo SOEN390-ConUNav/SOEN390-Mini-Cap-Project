@@ -7,6 +7,7 @@ interface NavigationCancelButtonProps {
   readonly onPress: () => void;
   readonly variant?: "default" | "danger";
   readonly size?: number;
+  readonly testId?: string;
 }
 
 export default function NavigationCancelButton({
@@ -14,6 +15,7 @@ export default function NavigationCancelButton({
   onPress,
   variant = "default",
   size = 54,
+  testId,
 }: NavigationCancelButtonProps) {
   const isDanger = variant === "danger";
   const buttonStyle: ViewStyle = {
@@ -27,6 +29,7 @@ export default function NavigationCancelButton({
 
   return (
     <Pressable
+      testID={testId}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
