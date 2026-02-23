@@ -43,16 +43,59 @@ export function getManeuverIcon(
 
 export function getStreetOnlyInstruction(instruction?: string): string {
   if (!instruction) return "";
-  const clean = instruction.replace(/<[^>]+>/g, "").trim();
+  const clean = stripHtmlTags(instruction).trim();
+  return (
+    extractAfterKeyword(clean, "onto", ["toward", "for", "to"]) ||
+    extractAfterKeyword(clean, "toward", ["for"]) ||
+    extractAfterKeyword(clean, "on", ["toward", "for", "to"]) ||
+    clean
+  );
+}
 
-  const onto = clean.match(/\bonto\s+(.+?)(?:\s+(?:toward|for|to)\b|$)/i);
-  if (onto?.[1]) return onto[1].trim();
+function stripHtmlTags(value: string): string {
+  let out = "";
+  let inTag = false;
 
-  const toward = clean.match(/\btoward\s+(.+?)(?:\s+for\b|$)/i);
-  if (toward?.[1]) return toward[1].trim();
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === "<") {
+      inTag = true;
+      continue;
+    }
+    if (ch === ">") {
+      inTag = false;
+      continue;
+    }
+    if (!inTag) out += ch;
+  }
 
-  const on = clean.match(/\bon\s+(.+?)(?:\s+(?:toward|for|to)\b|$)/i);
-  if (on?.[1]) return on[1].trim();
+  return out;
+}
 
-  return clean;
+function extractAfterKeyword(
+  source: string,
+  keyword: string,
+  stopWords: readonly string[],
+): string | null {
+  const lower = source.toLowerCase();
+  const key = `${keyword} `;
+  const start = lower.indexOf(key);
+  if (start < 0) return null;
+
+  let phrase = source.slice(start + key.length).trim();
+  if (!phrase) return null;
+
+  const phraseLower = phrase.toLowerCase();
+  let cutIndex = phrase.length;
+
+  for (const stopWord of stopWords) {
+    const stop = ` ${stopWord} `;
+    const idx = phraseLower.indexOf(stop);
+    if (idx >= 0 && idx < cutIndex) {
+      cutIndex = idx;
+    }
+  }
+
+  phrase = phrase.slice(0, cutIndex).trim();
+  return phrase || null;
 }
