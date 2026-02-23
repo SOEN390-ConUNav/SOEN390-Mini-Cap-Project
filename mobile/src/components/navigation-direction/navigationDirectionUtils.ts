@@ -56,8 +56,7 @@ function stripHtmlTags(value: string): string {
   let out = "";
   let inTag = false;
 
-  for (let i = 0; i < value.length; i++) {
-    const ch = value[i];
+  for (const ch of value) {
     if (ch === "<") {
       inTag = true;
       continue;

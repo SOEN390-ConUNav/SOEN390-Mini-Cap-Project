@@ -8,7 +8,7 @@ import { getManeuverIcon } from "./navigationDirectionUtils";
 const BURGUNDY = "#800020";
 const BURGUNDY_DARK = "#5a0016";
 
-function StepRow({ step }: { step: Step }) {
+function StepRow({ step }: { readonly step: Step }) {
   return (
     <View style={stepStyles.row}>
       <View style={stepStyles.iconWrap}>
@@ -112,7 +112,9 @@ export default function NavigationDirectionHUDBottom({
           style={styles.expandToggle}
         >
           <Text style={styles.expandLabel}>
-            {expanded ? "Hide steps" : `${remainingSteps.length} more steps`}
+            {expanded
+              ? "Hide steps"
+              : `${remainingSteps.length} more step${remainingSteps.length > 1 ? "s" : ""}`}
           </Text>
           <Ionicons
             name={expanded ? "chevron-up" : "chevron-down"}
@@ -128,8 +130,14 @@ export default function NavigationDirectionHUDBottom({
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
-          {remainingSteps.map((step, i) => (
-            <StepRow key={i} step={step} />
+          {remainingSteps.map((step) => (
+            <StepRow
+              key={
+                step.polyline ||
+                `${step.maneuverType}-${step.instruction}-${step.distance}-${step.duration}`
+              }
+              step={step}
+            />
           ))}
         </ScrollView>
       )}

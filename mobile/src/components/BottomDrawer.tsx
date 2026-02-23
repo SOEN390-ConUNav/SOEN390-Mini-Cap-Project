@@ -22,6 +22,30 @@ interface BottomDrawerProps {
   readonly useModal?: boolean;
 }
 
+interface CustomHandleProps {
+  readonly onPress: () => void;
+  readonly backgroundColor: string;
+  readonly handleColor: string;
+}
+
+function CustomHandle({
+  onPress,
+  backgroundColor,
+  handleColor,
+}: CustomHandleProps) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={[styles.handleWrapper, { backgroundColor }]}
+    >
+      <View
+        style={[styles.handleIndicator, { backgroundColor: handleColor }]}
+      />
+    </TouchableOpacity>
+  );
+}
+
 export default function BottomDrawer({
   visible,
   onClose,
@@ -43,20 +67,6 @@ export default function BottomDrawer({
   const nonModalSheetRef = useRef<BottomSheet>(null);
   const currentSnapIndex = useRef(initialSnapIndex);
 
-  const CustomHandle = ({ onPress }: { onPress: () => void }) => {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.7}
-        style={[styles.handleWrapper, { backgroundColor }]}
-      >
-        <View
-          style={[styles.handleIndicator, { backgroundColor: handleColor }]}
-        />
-      </TouchableOpacity>
-    );
-  };
-
   const onPress = () => {
     switch (handleMode) {
       case "dismiss":
@@ -67,7 +77,7 @@ export default function BottomDrawer({
         }
         break;
 
-      case "toggle":
+      case "toggle": {
         const nextIndex = currentSnapIndex.current === 0 ? 1 : 0;
         if (useModal) {
           modalSheetRef.current?.snapToIndex(nextIndex);
@@ -76,6 +86,7 @@ export default function BottomDrawer({
         }
         onPressAction?.();
         break;
+      }
 
       default:
         break;
@@ -113,7 +124,13 @@ export default function BottomDrawer({
           onSnapIndexChange?.(index);
         }}
         backgroundStyle={[styles.background, { backgroundColor }]}
-        handleComponent={() => <CustomHandle onPress={onPress} />}
+        handleComponent={() => (
+          <CustomHandle
+            onPress={onPress}
+            backgroundColor={backgroundColor}
+            handleColor={handleColor}
+          />
+        )}
       >
         <BottomSheetView
           style={[styles.contentContainer, contentContainerStyle]}
@@ -137,7 +154,13 @@ export default function BottomDrawer({
         onSnapIndexChange?.(index);
       }}
       backgroundStyle={[styles.background, { backgroundColor }]}
-      handleComponent={() => <CustomHandle onPress={onPress} />}
+      handleComponent={() => (
+        <CustomHandle
+          onPress={onPress}
+          backgroundColor={backgroundColor}
+          handleColor={handleColor}
+        />
+      )}
     >
       <BottomSheetView style={[styles.contentContainer, contentContainerStyle]}>
         {children}

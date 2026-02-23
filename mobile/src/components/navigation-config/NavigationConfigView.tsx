@@ -8,9 +8,7 @@ import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { OutdoorDirectionResponse } from "../../api/outdoorDirectionsApi";
 import { TRANSPORT_MODE_API_MAP } from "../../type";
 import { NAVIGATION_STATE } from "../../const";
-import useNavigationState, {
-  useNavigationStore,
-} from "../../hooks/useNavigationState";
+import { useNavigationStore } from "../../hooks/useNavigationState";
 
 interface NavigationConfigViewProps {
   readonly durations: OutdoorDirectionResponse[];
@@ -27,7 +25,6 @@ export default function NavigationConfigView({
 }: NavigationConfigViewProps) {
   const { navigationMode, setNavigationMode } = useNavigationConfig();
   const { isLoading } = useNavigationInfo();
-  const { setNavigationState } = useNavigationState();
   const getDurationForMode = (mode: string) => {
     const route = durations.find(
       (d) => d.transportMode?.toLowerCase() === mode.toLowerCase(),
