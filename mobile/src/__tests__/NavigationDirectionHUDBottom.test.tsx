@@ -55,6 +55,6 @@ describe("NavigationDirectionHUDBottom", () => {
 
     fireEvent.press(getByText("Hide steps"));
     expect(queryByText("Continue on Guy Street")).toBeNull();
-    expect(getByText("1 more steps")).toBeTruthy();
+    expect(getByText("1 more step")).toBeTruthy();
   });
 });
