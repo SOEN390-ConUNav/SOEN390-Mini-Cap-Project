@@ -1,32 +1,54 @@
 import { View, StyleSheet } from "react-native";
 import React from "react";
 import CircleIconButton from "../CircleIconButton";
-import NavigationInfoTop from "../navigation-info/NavigationInfoTop";
-import NavigationInfoTopExt from "../navigation-info/NavigationInfoTopExt";
+import NavigationInfoTopCombined from "../navigation-info/NavigationInfoTopCombined";
+import { Step } from "../../api/outdoorDirectionsApi";
 
 interface NavigationBarProps {
   readonly destination: string;
   readonly onPress?: () => void;
   readonly navigationInfoToggleState?: "maximize" | "minimize";
+  readonly navigationHUDToggleState?: "maximize" | "minimize";
+  readonly isCancellingNavigation?: boolean;
+  readonly navigationHUDStep?: Step;
 }
 const NavigationBar = ({
   destination,
   onPress,
   navigationInfoToggleState,
+  navigationHUDToggleState,
+  isCancellingNavigation = false,
+  navigationHUDStep,
 }: NavigationBarProps) => {
+  // In screen state wiring, index===0 (snapped down/hidden) maps to "maximize".
+  const showInfoExtended = isCancellingNavigation
+    ? true
+    : navigationInfoToggleState === "maximize";
+  const shouldShowHudTopExt = isCancellingNavigation
+    ? true
+    : navigationInfoToggleState !== "maximize" &&
+      navigationHUDToggleState === "maximize";
+
   return (
     <View style={styles.container}>
-      <View style={styles.circleButtonWrapper}>
-        <CircleIconButton icon="arrow-back" onPress={onPress} />
-      </View>
+      {!isCancellingNavigation && (
+        <View style={styles.circleButtonWrapper}>
+          <CircleIconButton icon="arrow-back" onPress={onPress} />
+        </View>
+      )}
 
-      <View style={styles.navigationWrapper}>
-        {navigationInfoToggleState === "maximize" && (
-          <NavigationInfoTopExt destination={destination} />
-        )}
-        {navigationInfoToggleState === "minimize" && (
-          <NavigationInfoTop destination={destination} />
-        )}
+      <View
+        style={[
+          styles.navigationWrapper,
+          isCancellingNavigation && styles.navigationWrapperNoBack,
+        ]}
+      >
+        <NavigationInfoTopCombined
+          destination={destination}
+          showInfoExtended={showInfoExtended}
+          showHudExtended={shouldShowHudTopExt}
+          hudStep={navigationHUDStep}
+        />
       </View>
     </View>
   );
@@ -47,6 +69,9 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
     justifyContent: "flex-start",
+  },
+  navigationWrapperNoBack: {
+    marginLeft: 0,
   },
 });
 

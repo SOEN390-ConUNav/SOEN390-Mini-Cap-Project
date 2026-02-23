@@ -8,12 +8,14 @@ interface NavigationInfoBottomProps {
   readonly visible: boolean;
   readonly onClose: () => void;
   readonly onPressAction?: () => void;
+  readonly onSnapIndexChange: (index: number) => void;
 }
 
 const NavigationInfoBottom = ({
   visible,
   onClose,
   onPressAction,
+  onSnapIndexChange,
 }: NavigationInfoBottomProps) => {
   const distance = useNavigationInfo((state) => state.pathDistance);
   const duration = useNavigationInfo((state) => state.pathDuration);
@@ -27,6 +29,7 @@ const NavigationInfoBottom = ({
       enableDynamicSizing={false}
       initialSnapIndex={1}
       onPressAction={onPressAction}
+      onSnapIndexChange={onSnapIndexChange}
     >
       <View>
         <Text style={styles.smallText}>Estimated Time Arrival</Text>

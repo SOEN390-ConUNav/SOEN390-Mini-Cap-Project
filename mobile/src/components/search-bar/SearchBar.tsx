@@ -3,17 +3,21 @@ import { StyleSheet, View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import RouteCard from "./RouteCard";
 import NavigationBar from "../navigation-bar/NavigationBar";
+import { Step } from "../../api/outdoorDirectionsApi";
 
 interface SearchBarProps {
   readonly placeholder: string;
   readonly onPress: () => void;
   readonly isConfiguring?: boolean;
   readonly isNavigating?: boolean;
+  readonly isCancellingNavigation?: boolean;
   readonly originLabel?: string;
   readonly destinationLabel?: string;
   readonly onBack?: () => void;
   readonly onSwap?: () => void;
   readonly navigationInfoToggleState?: "maximize" | "minimize";
+  readonly navigationHUDToggleState?: "maximize" | "minimize";
+  readonly navigationHUDStep?: Step;
 }
 
 export default function SearchBar({
@@ -21,11 +25,14 @@ export default function SearchBar({
   onPress,
   isConfiguring = false,
   isNavigating = false,
+  isCancellingNavigation = false,
   originLabel = "Current Location",
   destinationLabel = "Select destination",
   onBack,
   onSwap,
   navigationInfoToggleState,
+  navigationHUDToggleState,
+  navigationHUDStep,
 }: SearchBarProps) {
   if (isConfiguring) {
     return (
@@ -38,12 +45,15 @@ export default function SearchBar({
     );
   }
 
-  if (isNavigating) {
+  if (isNavigating || isCancellingNavigation) {
     return (
       <NavigationBar
         destination={destinationLabel}
         onPress={onBack}
         navigationInfoToggleState={navigationInfoToggleState}
+        navigationHUDToggleState={navigationHUDToggleState}
+        isCancellingNavigation={isCancellingNavigation}
+        navigationHUDStep={navigationHUDStep}
       />
     );
   }

@@ -36,7 +36,8 @@ import { NamedCoordinate } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 import NavigationInfoBottom from "../../components/navigation-info/NavigationInfoBottom";
-import NavigationDirectionHud from "../../components/navigation-direction/NavigationDirectionHUD";
+import NavigationDirectionHUDBottom from "../../components/navigation-direction/NavigationDirectionHUDBottom";
+import NavigationCancelBottom from "../../components/navigation-cancel/NavigationCancelBottom";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -79,6 +80,7 @@ export default function HomePageIndex() {
     isConfiguring,
     isSearching,
     isIdle,
+    isCancellingNavigation,
   } = useNavigationState();
   const { origin, setOrigin, destination, setDestination, swap, clear } =
     useNavigationEndpoints();
@@ -86,8 +88,10 @@ export default function HomePageIndex() {
     useNavigationConfig();
   const { setIsLoading, setPathDistance, setPathDuration, isLoading } =
     useNavigationInfo();
-  const toggleNavigationState = useRef<"maximize" | "minimize">("maximize");
   const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<
+    "maximize" | "minimize"
+  >("minimize");
+  const [toggleNavigationHUDState, setToggleNavigationHUDState] = useState<
     "maximize" | "minimize"
   >("minimize");
 
@@ -137,6 +141,7 @@ export default function HomePageIndex() {
     null;
 
   const hudSteps = activeRoute?.steps ?? [];
+  const hudTopStep = hudSteps[0];
   // ───────────────────────────────────────────────────────────────────────
 
   // When navigation starts, clear UI clutter + zoom to user ──────
@@ -187,11 +192,11 @@ export default function HomePageIndex() {
   useEffect(() => {
     navigation.setOptions({
       tabBarStyle:
-        isConfiguring || isNavigating
+        isConfiguring || isNavigating || isCancellingNavigation
           ? { display: "none" }
           : navStyles.tabBarStyle,
     });
-  }, [isConfiguring, isNavigating, navigation]);
+  }, [isConfiguring, isNavigating, isCancellingNavigation, navigation]);
 
   useEffect(() => {
     scheduleFreezeMarkers();
@@ -199,6 +204,24 @@ export default function HomePageIndex() {
       if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
     };
   }, [mapReady, showEnableLocation, isConfiguring, isNavigating]);
+
+  useEffect(() => {
+    const parent = navigation.getParent();
+    if (!parent) return;
+
+    parent.setOptions({
+      tabBarStyle:
+        isConfiguring || isNavigating || isCancellingNavigation
+          ? { display: "none" }
+          : navStyles.tabBarStyle,
+    });
+  }, [
+    navigationState,
+    navigation,
+    isConfiguring,
+    isNavigating,
+    isCancellingNavigation,
+  ]);
 
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
@@ -579,6 +602,7 @@ export default function HomePageIndex() {
     navigatingRef.current = true;
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
     setToggleNavigationInfoState("minimize");
+    setToggleNavigationHUDState("minimize");
   };
 
   const handleCloseNavConfig = () => {
@@ -586,10 +610,30 @@ export default function HomePageIndex() {
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
-  const onToggleNavigationState = () => {
+  const onToggleNavigationInfoState = () => {
     setToggleNavigationInfoState(
       toggleNavigationInfoState === "maximize" ? "minimize" : "maximize",
     );
+  };
+
+  const handleResumeNavigation = () => {
+    setNavigationState(NAVIGATION_STATE.NAVIGATING);
+  };
+
+  const handleCancelTrip = () => {
+    navigatingRef.current = false;
+    setIsLoading(false);
+    setNavigationState(NAVIGATION_STATE.IDLE);
+    setToggleNavigationInfoState("minimize");
+    setToggleNavigationHUDState("minimize");
+    setPathDistance("0");
+    setPathDuration("0");
+    setAllOutdoorRoutes([]);
+    clear();
+  };
+
+  const handleOpenSettings = () => {
+    router.push("/settings");
   };
 
   if (showEnableLocation) {
@@ -643,7 +687,9 @@ export default function HomePageIndex() {
         onRegionChangeComplete={handleRegionChangeComplete}
         onPress={() => {
           setShowBuildingPopup(false);
-          if (!isNavigating) setNavigationState(NAVIGATION_STATE.IDLE);
+          if (!isNavigating && !isCancellingNavigation) {
+            setNavigationState(NAVIGATION_STATE.IDLE);
+          }
         }}
         onMapReady={() => {
           setMapReady(true);
@@ -681,9 +727,7 @@ export default function HomePageIndex() {
           />
         )}
 
-        {(isConfiguring || isNavigating) && (
-          <DirectionPath destination={destination} />
-        )}
+        {!isSearching && !isIdle && <DirectionPath destination={destination} />}
       </MapView>
 
       {showBuildingPopup && selectedBuilding && !isNavigating && (
@@ -709,11 +753,15 @@ export default function HomePageIndex() {
       <View
         style={[
           styles.upcomingEventWrapper,
-          (showEnableLocation || isConfiguring || isNavigating) &&
+          (showEnableLocation ||
+            isConfiguring ||
+            isNavigating ||
+            isCancellingNavigation) &&
             styles.overlayHidden,
         ]}
         pointerEvents={
-          !showEnableLocation && !(isConfiguring || isNavigating)
+          !showEnableLocation &&
+          !(isConfiguring || isNavigating || isCancellingNavigation)
             ? "auto"
             : "none"
         }
@@ -776,30 +824,15 @@ export default function HomePageIndex() {
           onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
           isConfiguring={isConfiguring}
           isNavigating={isNavigating}
+          isCancellingNavigation={isCancellingNavigation}
           originLabel={origin?.label ?? "Current Location"}
           destinationLabel={destination?.label ?? "Select destination"}
           onBack={() => {
-            setIsLoading(false);
-            setNavigationState(NAVIGATION_STATE.IDLE);
-            setSelectedBuildingId(null);
-            setOutlineMode(false);
-            setShowBuildingPopup(false);
-            clear();
-          }}
-          onSwap={handleSwap}
-        />
-      </View>
-      <View style={styles.searchWrapper}>
-        <SearchBar
-          placeholder="Search"
-          onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
-          isConfiguring={isConfiguring}
-          isNavigating={isNavigating}
-          originLabel={origin?.label ?? "Current Location"}
-          destinationLabel={destination?.label ?? "Select destination"}
-          onBack={() => {
-            if (isNavigating) {
-              setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+            if (isCancellingNavigation) {
+              handleResumeNavigation();
+            } else if (isNavigating) {
+              setToggleNavigationInfoState("minimize");
+              setNavigationState(NAVIGATION_STATE.NAVIGATION_CANCELLING);
             } else {
               setIsLoading(false);
               setNavigationState(NAVIGATION_STATE.IDLE);
@@ -810,6 +843,8 @@ export default function HomePageIndex() {
             }
           }}
           navigationInfoToggleState={toggleNavigationInfoState}
+          navigationHUDToggleState={toggleNavigationHUDState}
+          navigationHUDStep={hudTopStep}
           onSwap={handleSwap}
         />
       </View>
@@ -825,26 +860,51 @@ export default function HomePageIndex() {
         onClose={() => handleCloseNavConfig()}
         onGo={() => handleGoNavConfig()}
       />
-      <NavigationDirectionHud
-        visible={isNavigating}
-        steps={hudSteps}
-        onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
-      />
-      <FloatingActionButton onPress={onPressFab} />
+      {!isCancellingNavigation && <FloatingActionButton onPress={onPressFab} />}
 
       <View
-        style={[styles.campusWrapper, isNavigating && styles.overlayHidden]}
-        pointerEvents={isNavigating ? "none" : "auto"}
+        style={[
+          styles.campusWrapper,
+          (isNavigating || isCancellingNavigation) && styles.overlayHidden,
+        ]}
+        pointerEvents={isNavigating || isCancellingNavigation ? "none" : "auto"}
       >
         <CampusSwitcher value={campus} onChange={onChangeCampus} />
       </View>
       {isNavigating && (
-        <NavigationInfoBottom
-          visible={isNavigating}
-          onClose={() => {
-            navigatingRef.current = false;
-          }}
-          onPressAction={onToggleNavigationState}
+        <>
+          <NavigationDirectionHUDBottom
+            visible={isNavigating}
+            steps={hudSteps}
+            onClose={() => {}}
+            onSnapIndexChange={(index) => {
+              if (index < 0) return;
+              setToggleNavigationHUDState(
+                index === 1 ? "minimize" : "maximize",
+              );
+            }}
+          />
+          <NavigationInfoBottom
+            visible={isNavigating}
+            onClose={() => {
+              navigatingRef.current = false;
+            }}
+            onPressAction={onToggleNavigationInfoState}
+            onSnapIndexChange={(index) => {
+              if (index < 0) return;
+              setToggleNavigationInfoState(
+                index === 1 ? "minimize" : "maximize",
+              );
+            }}
+          />
+        </>
+      )}
+
+      {isCancellingNavigation && (
+        <NavigationCancelBottom
+          onOpenSettings={handleOpenSettings}
+          onConfirmCancel={handleCancelTrip}
+          onResumeNavigation={handleResumeNavigation}
         />
       )}
     </View>
