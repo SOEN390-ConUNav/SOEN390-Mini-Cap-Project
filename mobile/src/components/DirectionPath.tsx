@@ -63,6 +63,7 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
   return (
     <>
       <Polyline
+        key={navigationMode}
         coordinates={routeCoords}
         strokeWidth={3}
         strokeColor={BURGUNDY}
