@@ -7,7 +7,13 @@ import { Coordinate, TRANSPORT_MODE_API_MAP } from "../type";
 import useNavigationConfig from "../hooks/useNavigationConfig";
 
 const BURGUNDY = "#800020";
-
+const POLYLINE_STYLES: Record<string, { color: string; dash?: number[] }> = {
+  WALK: { color: BURGUNDY, dash: [2, 5] }, // Dotted Red
+  SHUTTLE: { color: BURGUNDY }, // Solid Red
+  BUS: { color: "#0085CA" }, // Solid Blue
+  BIKE: { color: "#228B22", dash: [10, 5] }, // Dashed Green
+  CAR: { color: "#808080" }, // Solid Gray
+};
 interface DirectionPathProps {
   readonly destination: Coordinate | null;
 }
@@ -42,6 +48,11 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
     return () => clearTimeout(timer);
   }, [navigationMode]);
 
+  // Determine style based on current navigation mode
+  const currentStyle = useMemo(() => {
+    return POLYLINE_STYLES[navigationMode] || { color: BURGUNDY };
+  }, [navigationMode]);
+
   const routeCoords = useMemo(() => {
     if (!allOutdoorRoutes?.length) return [];
 
@@ -63,10 +74,11 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
   return (
     <>
       <Polyline
+        key={navigationMode}
         coordinates={routeCoords}
         strokeWidth={3}
-        strokeColor={BURGUNDY}
-        lineDashPattern={navigationMode === "WALK" ? [5, 5] : undefined}
+        strokeColor={currentStyle.color}
+        lineDashPattern={currentStyle.dash}
       />
       {destination && (
         <Marker
