@@ -49,7 +49,7 @@ class ShuttleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.distance").value("6.50 km"))
                 .andExpect(jsonPath("$.duration").value("30 mins"))
-                .andExpect(jsonPath("$.transportMode").value("shuttle"));
+                .andExpect(jsonPath("$.transportMode").value("SHUTTLE"));
     }
 
     @Test
