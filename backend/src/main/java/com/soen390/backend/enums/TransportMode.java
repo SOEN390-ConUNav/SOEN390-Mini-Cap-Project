@@ -4,5 +4,6 @@ public enum TransportMode {
     walking,
     driving,
     bicycling,
-    transit;
+    transit,
+    SHUTTLE
 }

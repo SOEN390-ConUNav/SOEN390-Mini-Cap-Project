@@ -1,7 +1,9 @@
 import { API_BASE_URL } from "../const";
 import { TransportModeApi } from "../type";
+import { checkAndGetViableShuttleDestination } from "../utils/navigationUtils";
 import {
   getOutdoorDirections,
+  getOutdoorDirectionsWithShuttle,
   OutdoorDirectionResponse,
 } from "./outdoorDirectionsApi";
 
@@ -65,6 +67,15 @@ export const getAllOutdoorDirectionsInfo = async (
     const results = await Promise.all(
       modes.map((mode) => getOutdoorDirections(originStr, destStr, mode)),
     );
+    const dest_shuttle = checkAndGetViableShuttleDestination(
+      destination,
+      origin,
+    );
+    if (dest_shuttle) {
+      results.push(
+        await getOutdoorDirectionsWithShuttle(originStr, destStr, dest_shuttle),
+      );
+    }
 
     const validResults = results.filter(
       (res): res is OutdoorDirectionResponse => res !== null,
