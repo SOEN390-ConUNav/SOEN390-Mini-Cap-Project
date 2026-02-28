@@ -14,6 +14,47 @@ const POLYLINE_STYLES: Record<string, { color: string; dash?: number[] }> = {
   BIKE: { color: "#228B22", dash: [10, 5] }, // Dashed Green
   CAR: { color: "#808080" }, // Solid Gray
 };
+
+const inferStyleFromInstruction = (
+  instruction: string,
+  defaultMode: string,
+) => {
+  const mode = defaultMode.toUpperCase();
+
+  // For walk, bike, car — skip instruction parsing, use mode directly
+  if (mode === "WALK" || mode === "WALKING") return POLYLINE_STYLES.WALK;
+  if (mode === "BIKE" || mode === "BICYCLING") return POLYLINE_STYLES.BIKE;
+  if (mode === "CAR" || mode === "DRIVING") return POLYLINE_STYLES.CAR;
+
+  const text = instruction.toLowerCase();
+
+  // If instruction mentions walking, use walk style
+  if (text.includes("walk") || text.includes("head ")) {
+    return POLYLINE_STYLES.WALK;
+  }
+
+  // If instruction mentions shuttle
+  if (text.includes("shuttle")) {
+    return POLYLINE_STYLES.SHUTTLE;
+  }
+
+  // If instruction mentions transit/bus/train
+  if (
+    text.includes("bus") ||
+    text.includes("train") ||
+    text.includes("take ") ||
+    text.includes("metro")
+  ) {
+    return POLYLINE_STYLES.BUS;
+  }
+
+  // Fallback to the overall route mode style
+  if (mode === "SHUTTLE") return POLYLINE_STYLES.SHUTTLE;
+  if (mode === "BUS" || mode === "TRANSIT") return POLYLINE_STYLES.BUS;
+
+  return POLYLINE_STYLES.WALK;
+};
+
 interface DirectionPathProps {
   readonly destination: Coordinate | null;
 }
@@ -48,12 +89,7 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
     return () => clearTimeout(timer);
   }, [navigationMode]);
 
-  // Determine style based on current navigation mode
-  const currentStyle = useMemo(() => {
-    return POLYLINE_STYLES[navigationMode] || { color: BURGUNDY };
-  }, [navigationMode]);
-
-  const routeCoords = useMemo(() => {
+  const routeSegments = useMemo(() => {
     if (!allOutdoorRoutes?.length) return [];
 
     const apiMode = TRANSPORT_MODE_API_MAP[navigationMode];
@@ -63,23 +99,40 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
 
     if (!route) return [];
 
-    // Prefer step-level polylines for accuracy, fall back to overview
+    // Prefer step-level polylines for segmented styling by parsing instructions
     if (route.steps?.length) {
-      return route.steps.flatMap((step) => decodeToCoords(step.polyline));
+      return route.steps.map((step) => ({
+        coordinates: decodeToCoords(step.polyline),
+        style: inferStyleFromInstruction(step.instruction, navigationMode),
+      }));
     }
 
-    return route.polyline ? decodeToCoords(route.polyline) : [];
+    if (route.polyline) {
+      // Fallback to overview polyline with a single style
+      const mode = navigationMode.toUpperCase();
+      const style = POLYLINE_STYLES[mode] || POLYLINE_STYLES.WALK;
+      return [
+        {
+          coordinates: decodeToCoords(route.polyline),
+          style: style,
+        },
+      ];
+    }
+
+    return [];
   }, [allOutdoorRoutes, navigationMode]);
 
   return (
     <>
-      <Polyline
-        key={navigationMode}
-        coordinates={routeCoords}
-        strokeWidth={3}
-        strokeColor={currentStyle.color}
-        lineDashPattern={currentStyle.dash}
-      />
+      {routeSegments.map((segment, index) => (
+        <Polyline
+          key={`${navigationMode}-segment-${index}`}
+          coordinates={segment.coordinates}
+          strokeWidth={3}
+          strokeColor={segment.style.color}
+          lineDashPattern={segment.style.dash}
+        />
+      ))}
       {destination && (
         <Marker
           coordinate={destination}

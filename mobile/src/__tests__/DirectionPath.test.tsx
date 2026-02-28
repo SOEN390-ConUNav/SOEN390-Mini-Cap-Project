@@ -32,14 +32,17 @@ jest.mock("@mapbox/polyline", () => ({
   decode: jest.fn(),
 }));
 
-// Mock TRANSPORT_MODE_API_MAP based on standard usage
-// (Adjust these mappings if your ../type file defines them differently)
 jest.mock("../type", () => ({
   TRANSPORT_MODE_API_MAP: {
     WALK: "walking",
+    WALKING: "walking",
     BUS: "transit",
+    TRANSIT: "transit",
     BIKE: "bicycling",
+    BICYCLING: "bicycling",
     SHUTTLE: "transit",
+    CAR: "driving",
+    DRIVING: "driving",
   },
 }));
 
@@ -50,7 +53,6 @@ describe("DirectionPath", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Setup polyline mock returns
     (polyline.decode as jest.Mock).mockImplementation((encoded: string) => {
       if (encoded === "step1") return [[45.497, -73.579]];
       if (encoded === "step2") return [[45.498, -73.58]];
@@ -59,46 +61,177 @@ describe("DirectionPath", () => {
     });
   });
 
-  it("renders empty polyline when no routes are available", () => {
+  it("renders no polylines when allOutdoorRoutes is empty", () => {
     mockUseNavigationConfig.mockReturnValue({
       navigationMode: "WALK",
       allOutdoorRoutes: [],
     });
 
-    const { getByTestId } = render(
+    const { queryAllByTestId } = render(
       <DirectionPath destination={mockDestination} />,
     );
 
-    const polylineNode = getByTestId("Polyline");
-    expect(polylineNode.props.coordinates).toEqual([]);
+    expect(queryAllByTestId("Polyline")).toHaveLength(0);
   });
 
-  it("decodes and renders step-level polylines for the selected transport mode", () => {
+  it("renders no polylines when no route matches the navigation mode", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "BUS",
+      allOutdoorRoutes: [
+        {
+          transportMode: "walking",
+          steps: [{ polyline: "step1", instruction: "Walk to stop" }],
+        },
+      ],
+    });
+
+    const { queryAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    expect(queryAllByTestId("Polyline")).toHaveLength(0);
+  });
+
+  it("renders one Polyline per step when steps are available", () => {
     mockUseNavigationConfig.mockReturnValue({
       navigationMode: "WALK",
       allOutdoorRoutes: [
         {
           transportMode: "walking",
-          steps: [{ polyline: "step1" }, { polyline: "step2" }],
+          steps: [
+            { polyline: "step1", instruction: "Head north" },
+            { polyline: "step2", instruction: "Continue walking" },
+          ],
         },
       ],
     });
 
-    const { getByTestId } = render(
+    const { queryAllByTestId } = render(
       <DirectionPath destination={mockDestination} />,
     );
 
-    const polylineNode = getByTestId("Polyline");
+    expect(queryAllByTestId("Polyline")).toHaveLength(2);
+  });
+
+  it("decodes polylines from each step correctly", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "WALK",
+      allOutdoorRoutes: [
+        {
+          transportMode: "walking",
+          steps: [
+            { polyline: "step1", instruction: "Head north" },
+            { polyline: "step2", instruction: "Turn left" },
+          ],
+        },
+      ],
+    });
+
+    render(<DirectionPath destination={mockDestination} />);
 
     expect(polyline.decode).toHaveBeenCalledWith("step1");
     expect(polyline.decode).toHaveBeenCalledWith("step2");
-    expect(polylineNode.props.coordinates).toEqual([
-      { latitude: 45.497, longitude: -73.579 },
-      { latitude: 45.498, longitude: -73.58 },
-    ]);
+  });
 
-    // Verify dashed line style for WALK mode
-    expect(polylineNode.props.lineDashPattern).toEqual([5, 5]);
+  it("applies WALK style (burgundy dotted) for walk mode steps", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "WALK",
+      allOutdoorRoutes: [
+        {
+          transportMode: "walking",
+          steps: [{ polyline: "step1", instruction: "Head north" }],
+        },
+      ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines[0].props.strokeColor).toBe("#800020");
+    expect(polylines[0].props.lineDashPattern).toEqual([2, 5]);
+  });
+
+  it("applies BUS style (solid blue, no dash) for transit mode steps", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "BUS",
+      allOutdoorRoutes: [
+        {
+          transportMode: "transit",
+          steps: [{ polyline: "step1", instruction: "Take the 105 bus" }],
+        },
+      ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines[0].props.strokeColor).toBe("#0085CA");
+    expect(polylines[0].props.lineDashPattern).toBeUndefined();
+  });
+
+  it("applies BIKE style (green dashed) for bike mode steps", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "BIKE",
+      allOutdoorRoutes: [
+        {
+          transportMode: "bicycling",
+          steps: [{ polyline: "step1", instruction: "Ride along path" }],
+        },
+      ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines[0].props.strokeColor).toBe("#228B22");
+    expect(polylines[0].props.lineDashPattern).toEqual([10, 5]);
+  });
+
+  it("applies SHUTTLE style (solid burgundy) when instruction mentions shuttle", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "SHUTTLE",
+      allOutdoorRoutes: [
+        {
+          transportMode: "transit",
+          steps: [{ polyline: "step1", instruction: "Take the shuttle to EV" }],
+        },
+      ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines[0].props.strokeColor).toBe("#800020");
+    expect(polylines[0].props.lineDashPattern).toBeUndefined();
+  });
+
+  it("infers WALK style when transit step instruction mentions walking", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "BUS",
+      allOutdoorRoutes: [
+        {
+          transportMode: "transit",
+          steps: [{ polyline: "step1", instruction: "Walk to the bus stop" }],
+        },
+      ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    const polylines = getAllByTestId("Polyline");
+    // "walk" in instruction → WALK style
+    expect(polylines[0].props.strokeColor).toBe("#800020");
+    expect(polylines[0].props.lineDashPattern).toEqual([2, 5]);
   });
 
   it("falls back to overview polyline when steps are missing", () => {
@@ -112,22 +245,61 @@ describe("DirectionPath", () => {
       ],
     });
 
-    const { getByTestId } = render(
+    const { getAllByTestId } = render(
       <DirectionPath destination={mockDestination} />,
     );
 
-    const polylineNode = getByTestId("Polyline");
-
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines).toHaveLength(1);
     expect(polyline.decode).toHaveBeenCalledWith("overview");
-    expect(polylineNode.props.coordinates).toEqual([
+    expect(polylines[0].props.coordinates).toEqual([
       { latitude: 45.499, longitude: -73.581 },
     ]);
-
-    // BUS mode should not have dashed lines
-    expect(polylineNode.props.lineDashPattern).toBeUndefined();
+    // BUS overview mode → solid blue, no dash
+    expect(polylines[0].props.strokeColor).toBe("#0085CA");
+    expect(polylines[0].props.lineDashPattern).toBeUndefined();
   });
 
-  it("renders a marker at the destination", () => {
+  it("falls back to WALK style for overview polyline with unknown mode", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "WALK",
+      allOutdoorRoutes: [
+        {
+          transportMode: "walking",
+          polyline: "overview",
+        },
+      ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines).toHaveLength(1);
+    expect(polylines[0].props.strokeColor).toBe("#800020");
+    expect(polylines[0].props.lineDashPattern).toEqual([2, 5]);
+  });
+
+  it("renders no polylines when route has neither steps nor overview polyline", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "BIKE",
+      allOutdoorRoutes: [
+        {
+          transportMode: "bicycling",
+          // no steps, no polyline
+        },
+      ],
+    });
+
+    const { queryAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    expect(queryAllByTestId("Polyline")).toHaveLength(0);
+  });
+
+  it("renders a Marker at the destination coordinate", () => {
     mockUseNavigationConfig.mockReturnValue({
       navigationMode: "WALK",
       allOutdoorRoutes: [],
@@ -137,11 +309,24 @@ describe("DirectionPath", () => {
       <DirectionPath destination={mockDestination} />,
     );
 
-    const markerNode = getByTestId("Marker");
-    expect(markerNode.props.coordinate).toEqual(mockDestination);
+    const marker = getByTestId("Marker");
+    expect(marker.props.coordinate).toEqual(mockDestination);
   });
 
-  it("does not render a marker if destination is not provided", () => {
+  it("renders Marker with correct anchor prop", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "WALK",
+      allOutdoorRoutes: [],
+    });
+
+    const { getByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    expect(getByTestId("Marker").props.anchor).toEqual({ x: 0.5, y: 1 });
+  });
+
+  it("does not render a Marker when destination is null", () => {
     mockUseNavigationConfig.mockReturnValue({
       navigationMode: "WALK",
       allOutdoorRoutes: [],
@@ -152,22 +337,39 @@ describe("DirectionPath", () => {
     expect(queryByTestId("Marker")).toBeNull();
   });
 
-  it("handles a valid matching mode but missing polyline gracefully", () => {
+  it("applies strokeWidth of 3 to all polyline segments", () => {
     mockUseNavigationConfig.mockReturnValue({
-      navigationMode: "BIKE",
+      navigationMode: "WALK",
       allOutdoorRoutes: [
         {
-          transportMode: "bicycling",
-          // Empty object without steps or polyline
+          transportMode: "walking",
+          steps: [
+            { polyline: "step1", instruction: "Head north" },
+            { polyline: "step2", instruction: "Turn left" },
+          ],
         },
       ],
+    });
+
+    const { getAllByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    getAllByTestId("Polyline").forEach((p) => {
+      expect(p.props.strokeWidth).toBe(3);
+    });
+  });
+
+  it("renders EndPin icon inside the Marker", () => {
+    mockUseNavigationConfig.mockReturnValue({
+      navigationMode: "WALK",
+      allOutdoorRoutes: [],
     });
 
     const { getByTestId } = render(
       <DirectionPath destination={mockDestination} />,
     );
 
-    const polylineNode = getByTestId("Polyline");
-    expect(polylineNode.props.coordinates).toEqual([]);
+    expect(getByTestId("Ionicons")).toBeTruthy();
   });
 });
