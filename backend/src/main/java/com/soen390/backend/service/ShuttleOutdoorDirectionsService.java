@@ -20,12 +20,12 @@ public class ShuttleOutdoorDirectionsService {
         this.googleMapsService = googleMapsService;
     }
 
-    public OutdoorDirectionResponse getShuttleOutdoorDirections(String origin, String destination, Campus destination_campus) {
+    public OutdoorDirectionResponse getShuttleOutdoorDirections(String origin, String destination, Campus destinationCampus) {
         String loyolaCoords = String.format("%f,%f", CampusConstants.LOYOLA.getLatitude(), CampusConstants.LOYOLA.getLongitude());
         String sgwCoords = String.format("%f,%f", CampusConstants.SGW.getLatitude(), CampusConstants.SGW.getLongitude());
 
-        String destShuttleCoords = (destination_campus == Campus.LOYOLA) ? loyolaCoords : sgwCoords;
-        String originShuttleCoords = (destination_campus == Campus.LOYOLA) ? sgwCoords : loyolaCoords;
+        String destShuttleCoords = (destinationCampus == Campus.LOYOLA) ? loyolaCoords : sgwCoords;
+        String originShuttleCoords = (destinationCampus == Campus.LOYOLA) ? sgwCoords : loyolaCoords;
 
         OutdoorDirectionResponse walkToBus = googleMapsService.getDirections(origin, originShuttleCoords, TransportMode.walking);
         OutdoorDirectionResponse shuttleLeg = googleMapsService.getDirections(originShuttleCoords, destShuttleCoords, TransportMode.transit);
@@ -35,7 +35,7 @@ public class ShuttleOutdoorDirectionsService {
         int walkMins = (int) extractDouble(walkToBus.getDuration());
         LocalTime arrivalAtStop = LocalTime.now(java.time.ZoneId.of("America/Montreal")).plusMinutes(walkMins);
 
-        String departureLocation = (destination_campus == Campus.LOYOLA) ? "SGW" : "LOY";
+        String departureLocation = (destinationCampus == Campus.LOYOLA) ? "SGW" : "LOY";
         String nextDeparture = findNextDeparture(arrivalAtStop, departureLocation);
 
         int waitTime = 0;

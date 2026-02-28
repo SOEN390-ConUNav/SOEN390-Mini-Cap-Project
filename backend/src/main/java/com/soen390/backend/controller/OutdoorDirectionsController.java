@@ -7,7 +7,6 @@ import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.service.GoogleMapsService;
 import com.soen390.backend.service.ShuttleOutdoorDirectionsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/directions/outdoor")
 public class OutdoorDirectionsController {
-    String ERROR = "error";
+    private static final String error = "error";
     private final GoogleMapsService mapsService;
 
     private final ShuttleOutdoorDirectionsService shuttleOutdoorDirectionsService;
@@ -38,9 +37,9 @@ public class OutdoorDirectionsController {
                     mapsService.getDirections(origin, destination, transportMode);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR, e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(error, e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(ERROR, e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(error, e.getMessage()));
         }
     }
 
@@ -53,9 +52,9 @@ public class OutdoorDirectionsController {
             OutdoorDirectionResponse response = shuttleOutdoorDirectionsService.getShuttleOutdoorDirections(origin, destination, destinationShuttle);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR, e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(error, e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(ERROR, e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(error, e.getMessage()));
         }
     }
 }
