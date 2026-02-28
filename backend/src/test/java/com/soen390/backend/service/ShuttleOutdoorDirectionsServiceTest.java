@@ -45,7 +45,7 @@ class ShuttleOutdoorDirectionsServiceTest {
              MockedStatic<LocalTime> mockedTime = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
 
             mockedDate.when(LocalDate::now).thenReturn(monday);
-            mockedTime.when(LocalTime::now).thenReturn(tenAM);
+            mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse walk1 = new OutdoorDirectionResponse(
                     "1.0 km", "5 mins", "p1", TransportMode.walking, new ArrayList<>());
@@ -79,7 +79,7 @@ class ShuttleOutdoorDirectionsServiceTest {
              MockedStatic<LocalTime> mockedTime = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
 
             mockedDate.when(LocalDate::now).thenReturn(sunday);
-            mockedTime.when(LocalTime::now).thenReturn(tenAM);
+            mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse dummy = new OutdoorDirectionResponse(
                     "1 km", "5 mins", "p", TransportMode.walking, new ArrayList<>());
@@ -102,7 +102,7 @@ class ShuttleOutdoorDirectionsServiceTest {
              MockedStatic<LocalTime> mockedTime = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
 
             mockedDate.when(LocalDate::now).thenReturn(monday);
-            mockedTime.when(LocalTime::now).thenReturn(tenAM);
+            mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse walk1 = new OutdoorDirectionResponse(
                     "1.0 km", "5 mins", "p1", TransportMode.walking, new ArrayList<>());
@@ -134,7 +134,7 @@ class ShuttleOutdoorDirectionsServiceTest {
              MockedStatic<LocalTime> mockedTime = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
 
             mockedDate.when(LocalDate::now).thenReturn(monday);
-            mockedTime.when(LocalTime::now).thenReturn(lateNight);
+            mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(lateNight);
 
             OutdoorDirectionResponse dummy = new OutdoorDirectionResponse(
                     "1 km", "5 mins", "p", TransportMode.walking, new ArrayList<>());
@@ -157,7 +157,7 @@ class ShuttleOutdoorDirectionsServiceTest {
              MockedStatic<LocalTime> mockedTime = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
 
             mockedDate.when(LocalDate::now).thenReturn(friday);
-            mockedTime.when(LocalTime::now).thenReturn(tenAM);
+            mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse walk1 = new OutdoorDirectionResponse(
                     "1.0 km", "5 mins", "p1", TransportMode.walking, new ArrayList<>());
