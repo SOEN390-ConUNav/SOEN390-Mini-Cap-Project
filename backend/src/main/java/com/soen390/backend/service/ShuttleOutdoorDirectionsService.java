@@ -2,7 +2,6 @@ package com.soen390.backend.service;
 
 import com.soen390.backend.enums.*;
 import com.soen390.backend.object.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
@@ -14,8 +13,12 @@ import java.util.List;
 
 @Service
 public class ShuttleOutdoorDirectionsService {
-    @Autowired
-    private GoogleMapsService googleMapsService;
+    String minutes = " mins";
+    private final GoogleMapsService googleMapsService;
+
+    ShuttleOutdoorDirectionsService(GoogleMapsService googleMapsService) {
+        this.googleMapsService = googleMapsService;
+    }
 
     public OutdoorDirectionResponse getShuttleOutdoorDirections(String origin, String destination, Campus destination_campus) {
         String loyolaCoords = String.format("%f,%f", CampusConstants.LOYOLA.getLatitude(), CampusConstants.LOYOLA.getLongitude());
@@ -31,8 +34,6 @@ public class ShuttleOutdoorDirectionsService {
 
         int walkMins = (int) extractDouble(walkToBus.getDuration());
         LocalTime arrivalAtStop = LocalTime.now(java.time.ZoneId.of("America/Montreal")).plusMinutes(walkMins);
-        // this is to test with working hours since when its passed 18:30 you won't get any shuttles
-        // LocalTime arrivalAtStop = LocalTime.of(10, 0).plusMinutes(walkMins);
 
         String departureLocation = (destination_campus == Campus.LOYOLA) ? "SGW" : "LOY";
         String nextDeparture = findNextDeparture(arrivalAtStop, departureLocation);
@@ -62,7 +63,7 @@ public class ShuttleOutdoorDirectionsService {
         List<RouteStep> allSteps = new ArrayList<>();
         allSteps.addAll(walkToBus.getSteps());
         if (waitTime > 0) {
-            allSteps.add(new RouteStep("Wait for shuttle", "0 km", waitTime + " mins", ManeuverType.STRAIGHT, ""));
+            allSteps.add(new RouteStep("Wait for shuttle", "0 km", waitTime + minutes, ManeuverType.STRAIGHT, ""));
         }
         allSteps.add(manualShuttleStep);
         allSteps.addAll(walkToDest.getSteps());
@@ -71,11 +72,11 @@ public class ShuttleOutdoorDirectionsService {
         String totalDistance = sumMetricStrings(walkToBus.getDistance(), shuttleLeg.getDistance(), walkToDest.getDistance(), "km");
 
         double totalMins = extractDouble(walkToBus.getDuration()) + waitTime + extractDouble(shuttleLeg.getDuration()) + extractDouble(walkToDest.getDuration());
-        String totalDuration = (int) totalMins + " mins";
+        String totalDuration = (int) totalMins + minutes;
 
         return new OutdoorDirectionResponse(totalDistance, totalDuration,
                 walkToBus.getPolyline() + shuttleLeg.getPolyline() + walkToDest.getPolyline(),
-                TransportMode.shuttle, allSteps);
+                TransportMode.SHUTTLE, allSteps);
     }
 
     private String findNextDeparture(LocalTime arrivalTime, String location) {
@@ -100,7 +101,7 @@ public class ShuttleOutdoorDirectionsService {
 
     private String sumMetricStrings(String s1, String s2, String s3, String unit) {
         double total = extractDouble(s1) + extractDouble(s2) + extractDouble(s3);
-        return (unit.equals("km")) ? String.format("%.2f km", total) : (int) total + " mins";
+        return (unit.equals("km")) ? String.format("%.2f km", total) : (int) total + minutes;
     }
 
     private double extractDouble(String s) {

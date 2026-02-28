@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "../const";
-import { Coordinate, TransportModeApi } from "../type";
+import { TransportModeApi } from "../type";
 import { checkAndGetViableShuttleDestination } from "../utils/navigationUtils";
 import {
   getOutdoorDirections,

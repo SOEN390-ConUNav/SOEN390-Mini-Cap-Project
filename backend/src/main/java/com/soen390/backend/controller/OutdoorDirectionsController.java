@@ -17,14 +17,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/directions/outdoor")
 public class OutdoorDirectionsController {
-
+    String ERROR = "error";
     private final GoogleMapsService mapsService;
 
-    @Autowired
-    private ShuttleOutdoorDirectionsService shuttleOutdoorDirectionsService;
+    private final ShuttleOutdoorDirectionsService shuttleOutdoorDirectionsService;
 
-    public OutdoorDirectionsController(GoogleMapsService mapsService) {
+    public OutdoorDirectionsController(GoogleMapsService mapsService, ShuttleOutdoorDirectionsService shuttleOutdoorDirectionsService) {
         this.mapsService = mapsService;
+        this.shuttleOutdoorDirectionsService = shuttleOutdoorDirectionsService;
     }
 
 
@@ -38,9 +38,9 @@ public class OutdoorDirectionsController {
                     mapsService.getDirections(origin, destination, transportMode);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR, e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(ERROR, e.getMessage()));
         }
     }
 
@@ -53,9 +53,9 @@ public class OutdoorDirectionsController {
             OutdoorDirectionResponse response = shuttleOutdoorDirectionsService.getShuttleOutdoorDirections(origin, destination, destinationShuttle);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR, e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(ERROR, e.getMessage()));
         }
     }
 }

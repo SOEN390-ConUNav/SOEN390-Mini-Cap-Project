@@ -37,7 +37,7 @@ class ShuttleControllerTest {
     @Test
     void testGetDirectionsWithShuttle_Success() throws Exception {
         OutdoorDirectionResponse mockResponse = new OutdoorDirectionResponse(
-                "6.50 km", "30 mins", "polyline123", TransportMode.shuttle, new ArrayList<>());
+                "6.50 km", "30 mins", "polyline123", TransportMode.SHUTTLE, new ArrayList<>());
 
         when(shuttleOutdoorDirectionsService.getShuttleOutdoorDirections(anyString(), anyString(), any(Campus.class)))
                 .thenReturn(mockResponse);

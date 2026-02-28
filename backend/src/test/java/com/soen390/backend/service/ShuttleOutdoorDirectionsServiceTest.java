@@ -63,7 +63,7 @@ class ShuttleOutdoorDirectionsServiceTest {
                     "SGW_Start", "LOY_End", Campus.LOYOLA);
 
             assertNotNull(result);
-            assertEquals(TransportMode.shuttle, result.getTransportMode());
+            assertEquals(TransportMode.SHUTTLE, result.getTransportMode());
             assertEquals("6.50 km", result.getDistance());
             // Walk(5) + Wait(10 mins to next shuttle after 10:05) + Shuttle(10) + Walk(5) = 30 mins
             assertEquals("30 mins", result.getDuration());
@@ -120,7 +120,7 @@ class ShuttleOutdoorDirectionsServiceTest {
                     "LOY_Start", "SGW_End", Campus.SGW);
 
             assertNotNull(result);
-            assertEquals(TransportMode.shuttle, result.getTransportMode());
+            assertEquals(TransportMode.SHUTTLE, result.getTransportMode());
             assertEquals("6.50 km", result.getDistance());
         }
     }
@@ -175,7 +175,7 @@ class ShuttleOutdoorDirectionsServiceTest {
                     "SGW_Start", "LOY_End", Campus.LOYOLA);
 
             assertNotNull(result, "Friday shuttle should still run");
-            assertEquals(TransportMode.shuttle, result.getTransportMode());
+            assertEquals(TransportMode.SHUTTLE, result.getTransportMode());
         }
     }
 }
