@@ -13,7 +13,7 @@ import java.util.List;
 
 @Service
 public class ShuttleOutdoorDirectionsService {
-    static final String minutes = " mins";
+    static final String MINUTES = " mins";
     private final GoogleMapsService googleMapsService;
 
     ShuttleOutdoorDirectionsService(GoogleMapsService googleMapsService) {
@@ -63,7 +63,7 @@ public class ShuttleOutdoorDirectionsService {
         List<RouteStep> allSteps = new ArrayList<>();
         allSteps.addAll(walkToBus.getSteps());
         if (waitTime > 0) {
-            allSteps.add(new RouteStep("Wait for shuttle", "0 km", waitTime + minutes, ManeuverType.STRAIGHT, ""));
+            allSteps.add(new RouteStep("Wait for shuttle", "0 km", waitTime + MINUTES, ManeuverType.STRAIGHT, ""));
         }
         allSteps.add(manualShuttleStep);
         allSteps.addAll(walkToDest.getSteps());
@@ -72,7 +72,7 @@ public class ShuttleOutdoorDirectionsService {
         String totalDistance = sumMetricStrings(walkToBus.getDistance(), shuttleLeg.getDistance(), walkToDest.getDistance(), "km");
 
         double totalMins = extractDouble(walkToBus.getDuration()) + waitTime + extractDouble(shuttleLeg.getDuration()) + extractDouble(walkToDest.getDuration());
-        String totalDuration = (int) totalMins + minutes;
+        String totalDuration = (int) totalMins + MINUTES;
 
         return new OutdoorDirectionResponse(totalDistance, totalDuration,
                 walkToBus.getPolyline() + shuttleLeg.getPolyline() + walkToDest.getPolyline(),
@@ -101,7 +101,7 @@ public class ShuttleOutdoorDirectionsService {
 
     private String sumMetricStrings(String s1, String s2, String s3, String unit) {
         double total = extractDouble(s1) + extractDouble(s2) + extractDouble(s3);
-        return (unit.equals("km")) ? String.format("%.2f km", total) : (int) total + minutes;
+        return (unit.equals("km")) ? String.format("%.2f km", total) : (int) total + MINUTES;
     }
 
     private double extractDouble(String s) {
