@@ -15,7 +15,7 @@ const POLYLINE_STYLES: Record<string, { color: string; dash?: number[] }> = {
   CAR: { color: "#808080" }, // Solid Gray
 };
 
-const inferStyleFromInstruction = (
+export const inferStyleFromInstruction = (
   instruction: string,
   defaultMode: string,
 ) => {
