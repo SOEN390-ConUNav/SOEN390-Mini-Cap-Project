@@ -83,4 +83,5 @@ public class OutdoorDirectionsControllerTest {
                 .andExpect(jsonPath("$.error").value("Unexpected error from Google Maps API."))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
+
 }
