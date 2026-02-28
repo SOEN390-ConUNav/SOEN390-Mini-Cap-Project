@@ -7,6 +7,7 @@ import com.soen390.backend.object.OutdoorDirectionResponse;
 import com.soen390.backend.object.RouteStep;
 import com.soen390.backend.enums.TransportMode;
 import com.soen390.backend.service.GoogleMapsService;
+import com.soen390.backend.service.ShuttleOutdoorDirectionsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -32,6 +33,9 @@ public class OutdoorDirectionsControllerTest {
 
     @MockitoBean
     private GoogleMapsService googleMapsService;
+
+    @MockitoBean
+    private ShuttleOutdoorDirectionsService shuttleOutdoorDirectionsService;
 
     @Test
     void getDirectionsShouldReturn200AndJson() throws Exception {
