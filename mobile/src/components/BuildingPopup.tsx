@@ -42,9 +42,9 @@ export default function BuildingPopup({
       accessibility={accessibility}
       onClose={onClose}
       renderTopContent={() =>
-        image != null ? (
+        image == null ? null : (
           <Image source={image} style={styles.image} resizeMode="cover" />
-        ) : null
+        )
       }
       renderBody={() => (
         <>

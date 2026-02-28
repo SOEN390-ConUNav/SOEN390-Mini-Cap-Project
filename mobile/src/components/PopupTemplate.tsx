@@ -13,16 +13,16 @@ export interface AccessibilityInfo {
 }
 
 interface PopupTemplateProps {
-  title: string;
-  accessibility?: AccessibilityInfo;
-  onClose: () => void;
-  dismissOnBackdropPress?: boolean;
-  renderTopContent?: () => React.ReactNode;
-  renderBody: () => React.ReactNode;
-  renderButtons: () => React.ReactNode;
+  readonly title: string;
+  readonly accessibility?: AccessibilityInfo;
+  readonly onClose: () => void;
+  readonly dismissOnBackdropPress?: boolean;
+  readonly renderTopContent?: () => React.ReactNode;
+  readonly renderBody: () => React.ReactNode;
+  readonly renderButtons: () => React.ReactNode;
 }
 
-function AccessibilityIcons({ acc }: { acc: AccessibilityInfo }) {
+function AccessibilityIcons({ acc }: { readonly acc: AccessibilityInfo }) {
   if (!acc.hasParking && !acc.hasElevator && !acc.isAccessible) return null;
   return (
     <View style={styles.iconsRow}>
