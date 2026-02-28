@@ -1,4 +1,4 @@
-package com.soen390.backend.object;
+package com.soen390.backend.enums;
 
 public enum CampusConstants {
     SGW(45.49733989962878, -73.57903014967104, "SGW"),
