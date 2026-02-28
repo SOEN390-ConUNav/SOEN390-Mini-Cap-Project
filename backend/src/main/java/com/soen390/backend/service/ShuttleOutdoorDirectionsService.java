@@ -30,7 +30,7 @@ public class ShuttleOutdoorDirectionsService {
 
 
         int walkMins = (int) extractDouble(walkToBus.getDuration());
-        LocalTime arrivalAtStop = LocalTime.now().plusMinutes(walkMins);
+        LocalTime arrivalAtStop = LocalTime.now(java.time.ZoneId.of("America/Montreal")).plusMinutes(walkMins);
         // this is to test with working hours since when its passed 18:30 you won't get any shuttles
         // LocalTime arrivalAtStop = LocalTime.of(10, 0).plusMinutes(walkMins);
 
