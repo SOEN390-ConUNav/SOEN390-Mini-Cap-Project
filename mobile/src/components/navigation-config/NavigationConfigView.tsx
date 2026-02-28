@@ -79,6 +79,12 @@ export default function NavigationConfigView({
               onSelect={() => setNavigationMode("BIKE")}
             />
             <NavigationTransportCard
+              mode="CAR"
+              duration={getDurationForMode(TRANSPORT_MODE_API_MAP.CAR)}
+              isSelected={navigationMode === "CAR"}
+              onSelect={() => setNavigationMode("CAR")}
+            />
+            <NavigationTransportCard
               mode="BUS"
               duration={getDurationForMode(TRANSPORT_MODE_API_MAP.BUS)}
               isSelected={navigationMode === "BUS"}
@@ -114,8 +120,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    width: "95%",
-    paddingHorizontal: 5,
+    width: "100%",
     marginBottom: 20,
     borderRadius: 5,
     backgroundColor: "#D9D9D9",
