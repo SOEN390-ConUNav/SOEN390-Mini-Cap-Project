@@ -13,7 +13,7 @@ import java.util.List;
 
 @Service
 public class ShuttleOutdoorDirectionsService {
-    String minutes = " mins";
+    static final String minutes = " mins";
     private final GoogleMapsService googleMapsService;
 
     ShuttleOutdoorDirectionsService(GoogleMapsService googleMapsService) {

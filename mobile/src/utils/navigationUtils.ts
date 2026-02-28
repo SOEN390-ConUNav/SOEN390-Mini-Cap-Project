@@ -34,9 +34,9 @@ export function calculateETA(duration: string) {
 
 //FUNCTIONS AND VARIABLES TO CHECK IF SHUTTLE IS A VIABLE MODE OF TRANSPORT
 const DEFAULT_RADIUS = 1000;
-const SGW_STOP = BUILDINGS.find((b) => b.id == "H")?.marker;
-const LOYOLA_STOP = BUILDINGS.find((b) => b.id == "VE")?.marker;
-
+const SGW_STOP = BUILDINGS.find((b) => b.id === "H")?.marker;
+const LOYOLA_STOP = BUILDINGS.find((b) => b.id === "VE")?.marker;
+const RADIUS = 3000;
 export function checkAndGetViableShuttleDestination(
   targetCoords: Coordinate,
   origin: Coordinate,
@@ -51,12 +51,12 @@ export function checkAndGetViableShuttleDestination(
     dest_shuttle = isWithinRadius(LOYOLA_STOP, targetCoords, DEFAULT_RADIUS)
       ? "LOYOLA"
       : "";
-    if (isWithinRadius(LOYOLA_STOP, origin, 3000)) return false;
+    if (isWithinRadius(LOYOLA_STOP, origin, RADIUS)) return false;
   } else {
     dest_shuttle = isWithinRadius(SGW_STOP, targetCoords, DEFAULT_RADIUS)
       ? "SGW"
       : "";
-    if (isWithinRadius(SGW_STOP, origin, 3000)) return false;
+    if (isWithinRadius(SGW_STOP, origin, RADIUS)) return false;
   }
   return dest_shuttle;
 }
