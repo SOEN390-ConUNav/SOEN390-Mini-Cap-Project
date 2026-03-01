@@ -24,6 +24,7 @@ const NavigationInfoBottom = ({
       visible={visible}
       onClose={onClose}
       snapPoints={["5%", "25%"]}
+      useModal={false}
       enablePanDownToClose={false}
       handleMode={"toggle"}
       enableDynamicSizing={false}

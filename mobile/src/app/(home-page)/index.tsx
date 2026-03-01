@@ -1,13 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useLocalSearchParams, useRouter } from "expo-router";
-import { hasIndoorMaps, getDefaultFloor } from "../../utils/buildingIndoorMaps";
+import {
+  hasIndoorMaps,
+  getAvailableFloors,
+  getDefaultFloor,
+} from "../../utils/buildingIndoorMaps";
 import MapView, {
   Marker,
   Polygon,
   PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
+import polyline from "@mapbox/polyline";
 import * as Location from "expo-location";
 import SearchBar from "../../components/search-bar/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
@@ -32,9 +37,15 @@ import DirectionPath from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
-import { NamedCoordinate } from "../../type";
+import { getAvailableRooms } from "../../api/indoorDirectionsApi";
+import { NamedCoordinate, TRANSPORT_MODE_API_MAP } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
+import {
+  parseIndoorEventInfo,
+  pickEntranceRoom,
+  resolveClassroomForFloor,
+} from "../../utils/eventIndoorNavigation";
 import NavigationInfoBottom from "../../components/navigation-info/NavigationInfoBottom";
 import NavigationDirectionHUDBottom from "../../components/navigation-direction/NavigationDirectionHUDBottom";
 import NavigationCancelBottom from "../../components/navigation-cancel/NavigationCancelBottom";
@@ -56,6 +67,9 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
   longitudeDelta: 0.0028,
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
+const ARRIVAL_DISTANCE_THRESHOLD_METERS = 10;
+const LIVE_REROUTE_MIN_INTERVAL_MS = 3000;
+const LIVE_REROUTE_MIN_MOVE_METERS = 10;
 
 type EventDetailsPayload = {
   title: string;
@@ -65,6 +79,13 @@ type EventDetailsPayload = {
   onDirections: () => void;
   onChangeCalendar: () => void;
   onLogout: () => void;
+};
+
+type PendingEventIndoorTarget = {
+  buildingId: BuildingId;
+  destination: { latitude: number; longitude: number };
+  floor: string;
+  classroom: string;
 };
 
 export default function HomePageIndex() {
@@ -117,6 +138,8 @@ export default function HomePageIndex() {
   const [eventDetails, setEventDetails] = useState<EventDetailsPayload | null>(
     null,
   );
+  const [pendingEventIndoorTarget, setPendingEventIndoorTarget] =
+    useState<PendingEventIndoorTarget | null>(null);
 
   const [mapReady, setMapReady] = useState(false);
   const [freezeMarkers, setFreezeMarkers] = useState(false);
@@ -126,10 +149,55 @@ export default function HomePageIndex() {
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
   const navigatingRef = useRef(false);
+  const arrivalHandlingRef = useRef(false);
+  const isNavigatingRef = useRef(isNavigating);
+  const destinationRef = useRef(destination);
+  const navigationModeRef = useRef(navigationMode);
+  const allOutdoorRoutesRef = useRef(allOutdoorRoutes);
+  const routeArrivalTargetRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const rerouteInFlightRef = useRef(false);
+  const lastRerouteAtRef = useRef(0);
+  const lastRerouteOriginRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const latestLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  } | null>(null);
 
   useEffect(() => {
     checkLocationPermission();
   }, []);
+
+  useEffect(() => {
+    arrivalHandlingRef.current = false;
+  }, [pendingEventIndoorTarget]);
+
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+  }, [isNavigating]);
+
+  useEffect(() => {
+    destinationRef.current = destination;
+  }, [destination]);
+
+  useEffect(() => {
+    navigationModeRef.current = navigationMode;
+  }, [navigationMode]);
+
+  useEffect(() => {
+    allOutdoorRoutesRef.current = allOutdoorRoutes;
+    routeArrivalTargetRef.current = getActiveRouteEndpoint();
+  }, [allOutdoorRoutes]);
+
+  useEffect(() => {
+    routeArrivalTargetRef.current = getActiveRouteEndpoint();
+  }, [navigationMode]);
 
   // ── Derive active route steps for the HUD ──────────────────────────────
   const activeRoute =
@@ -145,12 +213,28 @@ export default function HomePageIndex() {
 
   // When navigation starts, clear UI clutter + zoom to user ──────
   useEffect(() => {
-    if (!isNavigating) return;
+    if (!isNavigating) {
+      rerouteInFlightRef.current = false;
+      lastRerouteAtRef.current = 0;
+      lastRerouteOriginRef.current = null;
+      latestLocationRef.current = null;
+      routeArrivalTargetRef.current = null;
+      return;
+    }
     setShowBuildingPopup(false);
     setSelectedBuildingId(null);
     setOutlineMode(false);
     getOneFix()
-      .then((fix) => animateToRegion({ ...fix, ...NAVIGATION_ZOOM }))
+      .then((fix) => {
+        const currentCoords = {
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+        };
+        animateToRegion({ ...fix, ...NAVIGATION_ZOOM });
+        lastRerouteOriginRef.current = currentCoords;
+        lastRerouteAtRef.current = Date.now();
+        void refreshOutdoorRouteFromCurrentLocation(currentCoords);
+      })
       .catch(() => {});
   }, [isNavigating]);
 
@@ -241,7 +325,31 @@ export default function HomePageIndex() {
           timeInterval: 1000,
           distanceInterval: 1,
         },
-        () => {},
+        (location) => {
+          if (!isNavigatingRef.current) return;
+          if (!destinationRef.current) return;
+
+          const currentCoords = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            accuracy: location.coords.accuracy ?? 0,
+          };
+          latestLocationRef.current = currentCoords;
+          const now = Date.now();
+          const elapsedSinceReroute = now - lastRerouteAtRef.current;
+          const movedSinceReroute = lastRerouteOriginRef.current
+            ? getDistanceMeters(currentCoords, lastRerouteOriginRef.current)
+            : Number.POSITIVE_INFINITY;
+
+          if (
+            elapsedSinceReroute < LIVE_REROUTE_MIN_INTERVAL_MS &&
+            movedSinceReroute < LIVE_REROUTE_MIN_MOVE_METERS
+          ) {
+            return;
+          }
+
+          void refreshOutdoorRouteFromCurrentLocation(currentCoords);
+        },
       );
     } catch (error) {
       console.error("Error watching location:", error);
@@ -259,6 +367,113 @@ export default function HomePageIndex() {
 
   const animateToRegion = (r: Region) => {
     mapRef.current?.animateToRegion(r, 650);
+  };
+
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+
+  const getDistanceMeters = (
+    from: { latitude: number; longitude: number },
+    to: { latitude: number; longitude: number },
+  ) => {
+    const earthRadius = 6371000;
+    const dLat = toRadians(to.latitude - from.latitude);
+    const dLng = toRadians(to.longitude - from.longitude);
+    const lat1 = toRadians(from.latitude);
+    const lat2 = toRadians(to.latitude);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadius * c;
+  };
+
+  const decodeRouteEndCoordinate = (encodedPolyline?: string) => {
+    if (!encodedPolyline) return null;
+    try {
+      const points = polyline.decode(encodedPolyline);
+      if (!points.length) return null;
+      const [lat, lng] = points[points.length - 1];
+      return { latitude: lat, longitude: lng };
+    } catch {
+      return null;
+    }
+  };
+
+  const getActiveRouteEndpoint = () => {
+    const routes = allOutdoorRoutesRef.current ?? [];
+    if (!routes.length) return null;
+
+    const desiredMode = TRANSPORT_MODE_API_MAP[navigationModeRef.current];
+    const active =
+      routes.find(
+        (route) =>
+          route.transportMode?.toLowerCase() === desiredMode?.toLowerCase(),
+      ) ?? routes[0];
+
+    const stepEndpoint = active.steps?.length
+      ? decodeRouteEndCoordinate(
+          active.steps[active.steps.length - 1]?.polyline,
+        )
+      : null;
+    return stepEndpoint ?? decodeRouteEndCoordinate(active.polyline);
+  };
+
+  const refreshOutdoorRouteFromCurrentLocation = async (coords: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    const activeDestination = destinationRef.current;
+    if (!activeDestination || rerouteInFlightRef.current) return;
+
+    rerouteInFlightRef.current = true;
+    try {
+      const newOrigin = {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        label: "Current Location",
+      };
+      const destinationCoords = {
+        latitude: activeDestination.latitude,
+        longitude: activeDestination.longitude,
+        label: activeDestination.label ?? "Selected Location",
+      };
+
+      setOrigin(newOrigin);
+      const routes = await getAllOutdoorDirectionsInfo(
+        newOrigin,
+        destinationCoords,
+      );
+      if (!routes.length) return;
+
+      setAllOutdoorRoutes(routes);
+      allOutdoorRoutesRef.current = routes;
+      routeArrivalTargetRef.current = getActiveRouteEndpoint();
+
+      const routeForMetrics =
+        routes.find(
+          (r) =>
+            r.transportMode?.toUpperCase() ===
+            navigationModeRef.current?.toUpperCase(),
+        ) ??
+        routes.find((r) => r.transportMode?.toUpperCase() === "WALKING") ??
+        routes[0];
+
+      if (routeForMetrics) {
+        setPathDistance(routeForMetrics.distance);
+        setPathDuration(routeForMetrics.duration);
+      }
+
+      lastRerouteAtRef.current = Date.now();
+      lastRerouteOriginRef.current = {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      };
+    } catch (error) {
+      console.warn("Live reroute failed:", error);
+    } finally {
+      rerouteInFlightRef.current = false;
+    }
   };
 
   const scheduleFreezeMarkers = () => {
@@ -313,6 +528,7 @@ export default function HomePageIndex() {
 
   const onChangeCampus = (next: "SGW" | "LOYOLA") => {
     setEventDetails(null);
+    setPendingEventIndoorTarget(null);
     setCampus(next);
     scheduleFreezeMarkers();
     animateToRegion({
@@ -345,6 +561,7 @@ export default function HomePageIndex() {
 
   const onPressBuilding = (b: Building) => {
     if (isNavigating) return;
+    setPendingEventIndoorTarget(null);
     setNavigationState(NAVIGATION_STATE.IDLE);
     if (selectedBuildingId !== b.id || !outlineMode) {
       setDestination({
@@ -360,6 +577,7 @@ export default function HomePageIndex() {
 
   const onPressDirections = async () => {
     setShowBuildingPopup(false);
+    setPendingEventIndoorTarget(null);
     if (!selectedBuilding) return;
 
     setIsLoading(true);
@@ -390,6 +608,8 @@ export default function HomePageIndex() {
         destCoords,
       );
       setAllOutdoorRoutes(routes);
+      allOutdoorRoutesRef.current = routes;
+      routeArrivalTargetRef.current = getActiveRouteEndpoint();
 
       const walkRoute = routes.find(
         (r) => r.transportMode?.toUpperCase() === "WALKING",
@@ -416,6 +636,7 @@ export default function HomePageIndex() {
       longitude: number;
     },
     destinationLabel = "Selected Location",
+    eventIndoorTarget: PendingEventIndoorTarget | null = null,
   ) => {
     const currLocation = await getOneFix();
     const originCoords = {
@@ -431,12 +652,16 @@ export default function HomePageIndex() {
 
     setOrigin(originCoords);
     setDestination(labeledDestCoords);
+    setPendingEventIndoorTarget(null);
     const routes = await getAllOutdoorDirectionsInfo(
       originCoords,
       labeledDestCoords,
     );
     setAllOutdoorRoutes(routes);
+    allOutdoorRoutesRef.current = routes;
+    routeArrivalTargetRef.current = getActiveRouteEndpoint();
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+    setPendingEventIndoorTarget(eventIndoorTarget);
   };
 
   const parseLatLng = (
@@ -452,8 +677,15 @@ export default function HomePageIndex() {
     return { latitude, longitude };
   };
 
-  const onPressEventDirections = async (locationText: string) => {
+  const onPressEventDirections = async ({
+    locationText,
+    detailsText,
+  }: {
+    locationText: string;
+    detailsText: string;
+  }) => {
     try {
+      setPendingEventIndoorTarget(null);
       const maybeCoords = parseLatLng(locationText);
       if (maybeCoords) {
         await routeToDestination(maybeCoords);
@@ -462,9 +694,24 @@ export default function HomePageIndex() {
 
       const localBuildingMatch = findBuildingFromLocationText(locationText);
       if (localBuildingMatch) {
+        const { classroom, floor } = parseIndoorEventInfo(
+          locationText,
+          detailsText,
+          localBuildingMatch.id,
+        );
+        const pendingIndoorTarget =
+          classroom && floor
+            ? {
+                buildingId: localBuildingMatch.id,
+                destination: localBuildingMatch.marker,
+                floor,
+                classroom,
+              }
+            : null;
         await routeToDestination(
           localBuildingMatch.marker,
           localBuildingMatch.name,
+          pendingIndoorTarget,
         );
         return;
       }
@@ -499,6 +746,193 @@ export default function HomePageIndex() {
     }
   };
 
+  const finishOutdoorNavigation = () => {
+    navigatingRef.current = false;
+    setIsLoading(false);
+    setNavigationState(NAVIGATION_STATE.IDLE);
+    setToggleNavigationInfoState("minimize");
+    setToggleNavigationHUDState("minimize");
+    setPathDistance("0");
+    setPathDuration("0");
+    setAllOutdoorRoutes([]);
+    allOutdoorRoutesRef.current = [];
+    routeArrivalTargetRef.current = null;
+    clear();
+  };
+
+  const handleArrivedAtEventBuilding = async () => {
+    if (!pendingEventIndoorTarget) return;
+
+    const availableFloors = getAvailableFloors(
+      pendingEventIndoorTarget.buildingId,
+    );
+    const isTargetFloorSupported = availableFloors.some(
+      (f) => f.toUpperCase() === pendingEventIndoorTarget.floor.toUpperCase(),
+    );
+
+    if (!isTargetFloorSupported) {
+      finishOutdoorNavigation();
+      setPendingEventIndoorTarget(null);
+      Alert.alert(
+        "Indoor directions unavailable",
+        "Floor for your next class is not supported.",
+      );
+      return;
+    }
+
+    let rooms: string[] = [];
+    try {
+      rooms = await getAvailableRooms(
+        pendingEventIndoorTarget.buildingId,
+        pendingEventIndoorTarget.floor,
+      );
+    } catch {
+      rooms = [];
+    }
+
+    const resolvedDestinationRoom =
+      rooms.length > 0
+        ? (resolveClassroomForFloor(
+            rooms,
+            pendingEventIndoorTarget.buildingId,
+            pendingEventIndoorTarget.floor,
+            pendingEventIndoorTarget.classroom,
+          ) ?? pendingEventIndoorTarget.classroom)
+        : pendingEventIndoorTarget.classroom;
+    const entranceRoom = rooms.length > 0 ? pickEntranceRoom(rooms) : null;
+
+    finishOutdoorNavigation();
+    setPendingEventIndoorTarget(null);
+
+    router.push({
+      pathname: "/indoor-navigation",
+      params: {
+        buildingId: pendingEventIndoorTarget.buildingId,
+        floor: pendingEventIndoorTarget.floor,
+        endRoom: resolvedDestinationRoom,
+        ...(entranceRoom ? { startRoom: entranceRoom } : {}),
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!isNavigating || !pendingEventIndoorTarget) return;
+
+    let arrivalSub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+
+    const startArrivalWatch = async () => {
+      try {
+        arrivalSub = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 800,
+            distanceInterval: 0,
+          },
+          (location) => {
+            if (cancelled || arrivalHandlingRef.current) return;
+
+            const currentPosition = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              accuracy: location.coords.accuracy ?? 0,
+            };
+            latestLocationRef.current = currentPosition;
+
+            const distanceToIndoorTarget = getDistanceMeters(
+              currentPosition,
+              pendingEventIndoorTarget.destination,
+            );
+            const activeDestination = destinationRef.current;
+            const distanceToOutdoorDestination = activeDestination
+              ? getDistanceMeters(currentPosition, {
+                  latitude: activeDestination.latitude,
+                  longitude: activeDestination.longitude,
+                })
+              : Number.POSITIVE_INFINITY;
+            const routeEndpoint = routeArrivalTargetRef.current;
+            const distanceToRouteEndpoint = routeEndpoint
+              ? getDistanceMeters(currentPosition, routeEndpoint)
+              : Number.POSITIVE_INFINITY;
+            const effectiveThreshold =
+              ARRIVAL_DISTANCE_THRESHOLD_METERS +
+              Math.min(Math.max(currentPosition.accuracy ?? 0, 0), 25);
+            const smallestDistance = Math.min(
+              distanceToIndoorTarget,
+              distanceToOutdoorDestination,
+              distanceToRouteEndpoint,
+            );
+
+            if (smallestDistance > effectiveThreshold) return;
+
+            arrivalHandlingRef.current = true;
+            void handleArrivedAtEventBuilding().catch(() => {
+              arrivalHandlingRef.current = false;
+            });
+          },
+        );
+      } catch {
+        // If watch setup fails, keep fallback check below.
+      }
+    };
+
+    void startArrivalWatch();
+
+    const fallbackIntervalId = setInterval(async () => {
+      if (arrivalHandlingRef.current) return;
+
+      try {
+        const latestCoords = latestLocationRef.current;
+        let currentPosition = latestCoords;
+        if (!currentPosition) {
+          const currentFix = await Location.getCurrentPositionAsync({});
+          currentPosition = {
+            latitude: currentFix.coords.latitude,
+            longitude: currentFix.coords.longitude,
+            accuracy: currentFix.coords.accuracy ?? 0,
+          };
+        }
+        const distanceToIndoorTarget = getDistanceMeters(
+          currentPosition,
+          pendingEventIndoorTarget.destination,
+        );
+        const activeDestination = destinationRef.current;
+        const distanceToOutdoorDestination = activeDestination
+          ? getDistanceMeters(currentPosition, {
+              latitude: activeDestination.latitude,
+              longitude: activeDestination.longitude,
+            })
+          : Number.POSITIVE_INFINITY;
+        const routeEndpoint = routeArrivalTargetRef.current;
+        const distanceToRouteEndpoint = routeEndpoint
+          ? getDistanceMeters(currentPosition, routeEndpoint)
+          : Number.POSITIVE_INFINITY;
+        const effectiveThreshold =
+          ARRIVAL_DISTANCE_THRESHOLD_METERS +
+          Math.min(Math.max(currentPosition.accuracy ?? 0, 0), 25);
+        const smallestDistance = Math.min(
+          distanceToIndoorTarget,
+          distanceToOutdoorDestination,
+          distanceToRouteEndpoint,
+        );
+
+        if (smallestDistance > effectiveThreshold) return;
+
+        arrivalHandlingRef.current = true;
+        await handleArrivedAtEventBuilding();
+      } catch {
+        arrivalHandlingRef.current = false;
+        // Ignore noisy location errors; we'll retry on next interval tick.
+      }
+    }, 1200);
+
+    return () => {
+      cancelled = true;
+      arrivalSub?.remove();
+      clearInterval(fallbackIntervalId);
+    };
+  }, [isNavigating, pendingEventIndoorTarget]);
+
   const handleRegionChangeComplete = (r: Region) => {
     setRegion(r);
     if (outlineMode && r.latitudeDelta > OUTLINE_EXIT_LAT_DELTA) {
@@ -514,6 +948,7 @@ export default function HomePageIndex() {
     name,
   }: NamedCoordinate) => {
     try {
+      setPendingEventIndoorTarget(null);
       const currentPos = await Location.getCurrentPositionAsync({});
 
       const originCoords = {
@@ -535,6 +970,8 @@ export default function HomePageIndex() {
         destCoords,
       );
       setAllOutdoorRoutes(routes);
+      allOutdoorRoutesRef.current = routes;
+      routeArrivalTargetRef.current = getActiveRouteEndpoint();
 
       setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
 
@@ -557,6 +994,7 @@ export default function HomePageIndex() {
     if (!origin || !destination) return;
 
     setIsLoading(true);
+    setPendingEventIndoorTarget(null);
 
     const newOrigin = destination;
     const newDest = origin;
@@ -565,6 +1003,8 @@ export default function HomePageIndex() {
     try {
       const routes = await getAllOutdoorDirectionsInfo(newOrigin, newDest);
       setAllOutdoorRoutes(routes);
+      allOutdoorRoutesRef.current = routes;
+      routeArrivalTargetRef.current = getActiveRouteEndpoint();
 
       const walkRoute = routes.find(
         (r) => r.transportMode?.toUpperCase() === "WALKING",
@@ -590,6 +1030,7 @@ export default function HomePageIndex() {
 
   const handleCloseNavConfig = () => {
     if (navigatingRef.current) return;
+    setPendingEventIndoorTarget(null);
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
@@ -604,15 +1045,9 @@ export default function HomePageIndex() {
   };
 
   const handleCancelTrip = () => {
-    navigatingRef.current = false;
-    setIsLoading(false);
-    setNavigationState(NAVIGATION_STATE.IDLE);
-    setToggleNavigationInfoState("minimize");
-    setToggleNavigationHUDState("minimize");
-    setPathDistance("0");
-    setPathDuration("0");
-    setAllOutdoorRoutes([]);
-    clear();
+    finishOutdoorNavigation();
+    setPendingEventIndoorTarget(null);
+    latestLocationRef.current = null;
   };
 
   const handleOpenSettings = () => {
@@ -671,6 +1106,7 @@ export default function HomePageIndex() {
         onPress={() => {
           setShowBuildingPopup(false);
           if (!isNavigating && !isCancellingNavigation) {
+            setPendingEventIndoorTarget(null);
             setNavigationState(NAVIGATION_STATE.IDLE);
           }
         }}
@@ -751,8 +1187,8 @@ export default function HomePageIndex() {
       >
         <UpcomingEventButton
           onMainButtonPress={() => setShowBuildingPopup(false)}
-          onRequestDirections={(locationText) => {
-            void onPressEventDirections(locationText);
+          onRequestDirections={(payload) => {
+            void onPressEventDirections(payload);
           }}
           onOpenEventDetails={({
             title,
@@ -818,6 +1254,7 @@ export default function HomePageIndex() {
               setNavigationState(NAVIGATION_STATE.NAVIGATION_CANCELLING);
             } else {
               setIsLoading(false);
+              setPendingEventIndoorTarget(null);
               setNavigationState(NAVIGATION_STATE.IDLE);
               setSelectedBuildingId(null);
               setOutlineMode(false);
@@ -834,7 +1271,10 @@ export default function HomePageIndex() {
 
       <SearchPanel
         visible={isSearching}
-        onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
+        onClose={() => {
+          setPendingEventIndoorTarget(null);
+          setNavigationState(NAVIGATION_STATE.IDLE);
+        }}
         onSelectLocation={handleSelectLocation}
       />
       <NavigationConfigView
