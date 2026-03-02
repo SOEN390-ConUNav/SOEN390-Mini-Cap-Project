@@ -1,7 +1,11 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import DirectionPath from "../components/DirectionPath";
-import { inferStyleFromInstruction } from "../components/DirectionPath";
+import {
+  inferStyleFromInstruction,
+  BURGUNDY,
+  POLYLINE_STYLES,
+} from "../utils/polylineStyles";
 import useNavigationConfig from "../hooks/useNavigationConfig";
 import polyline from "@mapbox/polyline";
 
@@ -374,14 +378,6 @@ describe("DirectionPath", () => {
     expect(getByTestId("Ionicons")).toBeTruthy();
   });
 });
-
-const BURGUNDY = "#800020";
-
-const POLYLINE_STYLES = {
-  WALK: { color: BURGUNDY, dash: [2, 5] },
-  SHUTTLE: { color: BURGUNDY },
-  BUS: { color: "#0085CA" },
-};
 
 describe("inferStyleFromInstruction - fallback lines", () => {
   // These tests use a generic instruction that doesn't trigger walk/shuttle/bus keyword detection
