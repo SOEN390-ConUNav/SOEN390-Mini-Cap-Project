@@ -1,5 +1,8 @@
-import { getOutdoorDirections } from "../api/outdoorDirectionsApi";
-
+import {
+  getOutdoorDirections,
+  OutdoorDirectionResponse,
+} from "../api/outdoorDirectionsApi";
+import { getOutdoorDirectionsWithShuttle } from "../api/outdoorDirectionsApi";
 globalThis.fetch = jest.fn();
 
 describe("outdoorDirectionsApi", () => {
@@ -72,6 +75,129 @@ describe("outdoorDirectionsApi", () => {
     expect(console.error).toHaveBeenCalledWith(
       "Failed to fetch directions:",
       expect.any(Error),
+    );
+  });
+});
+
+//shuttle
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+
+const mockResponse: OutdoorDirectionResponse = {
+  distance: "6.50 km",
+  duration: "30 mins",
+  polyline: "polyline123",
+  transportMode: "shuttle",
+  steps: [],
+};
+
+describe("getOutdoorDirectionsWithShuttle", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("returns data on success", async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      headers: { get: () => "100" },
+      json: async () => mockResponse,
+    });
+
+    const result = await getOutdoorDirectionsWithShuttle(
+      "SGW_Start",
+      "LOY_End",
+      "LOYOLA",
+    );
+
+    expect(result).toEqual(mockResponse);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("destinationShuttle=LOYOLA"),
+    );
+  });
+
+  it("returns null on 204 status", async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 204,
+      ok: true,
+      headers: { get: () => null },
+      json: async () => null,
+    });
+
+    const result = await getOutdoorDirectionsWithShuttle(
+      "SGW_Start",
+      "LOY_End",
+      "LOYOLA",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when content-length is 0", async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      headers: { get: () => "0" },
+      json: async () => null,
+    });
+
+    const result = await getOutdoorDirectionsWithShuttle(
+      "SGW_Start",
+      "LOY_End",
+      "LOYOLA",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when response is not ok", async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 502,
+      ok: false,
+      headers: { get: () => "50" },
+      json: async () => ({ error: "Bad Gateway" }),
+    });
+
+    const result = await getOutdoorDirectionsWithShuttle(
+      "SGW_Start",
+      "LOY_End",
+      "LOYOLA",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when fetch throws", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+    const result = await getOutdoorDirectionsWithShuttle(
+      "SGW_Start",
+      "LOY_End",
+      "LOYOLA",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("encodes origin and destination in the URL", async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      headers: { get: () => "100" },
+      json: async () => mockResponse,
+    });
+
+    await getOutdoorDirectionsWithShuttle(
+      "45.495, -73.578",
+      "45.458, -73.638",
+      "LOYOLA",
+    );
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining(encodeURIComponent("45.495, -73.578")),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining(encodeURIComponent("45.458, -73.638")),
     );
   });
 });

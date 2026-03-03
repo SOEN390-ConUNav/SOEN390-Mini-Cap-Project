@@ -1,6 +1,7 @@
 package com.soen390.backend.enums;
 
 public enum ManeuverType {
+    SHUTTLE("shuttle"),
     TURN_SLIGHT_LEFT("turn-slight-left"),
     TURN_SHARP_LEFT("turn-sharp-left"),
     TURN_LEFT("turn-left"),
@@ -31,6 +32,7 @@ public enum ManeuverType {
     public String getValue() {
         return value;
     }
+
     public static ManeuverType fromString(String text) {
         for (ManeuverType maneuver : ManeuverType.values()) {
             if (maneuver.value.equalsIgnoreCase(text)) {

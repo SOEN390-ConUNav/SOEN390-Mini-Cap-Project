@@ -86,7 +86,9 @@ export default function NavigationConfigView({
             />
             <NavigationTransportCard
               mode="SHUTTLE"
-              duration="N/A"
+              duration={
+                getDurationForMode(TRANSPORT_MODE_API_MAP.SHUTTLE) || "N/A"
+              }
               isSelected={navigationMode === "SHUTTLE"}
               onSelect={() => setNavigationMode("SHUTTLE")}
             />
