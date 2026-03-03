@@ -5,8 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import polyline from "@mapbox/polyline";
 import { Coordinate, TRANSPORT_MODE_API_MAP } from "../type";
 import useNavigationConfig from "../hooks/useNavigationConfig";
-
-const BURGUNDY = "#800020";
+import {
+  inferStyleFromInstruction,
+  BURGUNDY,
+  POLYLINE_STYLES,
+} from "../utils/polylineStyles";
 
 interface DirectionPathProps {
   readonly destination: Coordinate | null;
@@ -42,7 +45,7 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
     return () => clearTimeout(timer);
   }, [navigationMode]);
 
-  const routeCoords = useMemo(() => {
+  const routeSegments = useMemo(() => {
     if (!allOutdoorRoutes?.length) return [];
 
     const apiMode = TRANSPORT_MODE_API_MAP[navigationMode];
@@ -52,23 +55,40 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
 
     if (!route) return [];
 
-    // Prefer step-level polylines for accuracy, fall back to overview
+    // Prefer step-level polylines for segmented styling by parsing instructions
     if (route.steps?.length) {
-      return route.steps.flatMap((step) => decodeToCoords(step.polyline));
+      return route.steps.map((step) => ({
+        coordinates: decodeToCoords(step.polyline),
+        style: inferStyleFromInstruction(step.instruction, navigationMode),
+      }));
     }
 
-    return route.polyline ? decodeToCoords(route.polyline) : [];
+    if (route.polyline) {
+      // Fallback to overview polyline with a single style
+      const mode = navigationMode.toUpperCase();
+      const style = POLYLINE_STYLES[mode] || POLYLINE_STYLES.WALK;
+      return [
+        {
+          coordinates: decodeToCoords(route.polyline),
+          style: style,
+        },
+      ];
+    }
+
+    return [];
   }, [allOutdoorRoutes, navigationMode]);
 
   return (
     <>
-      <Polyline
-        key={navigationMode}
-        coordinates={routeCoords}
-        strokeWidth={3}
-        strokeColor={BURGUNDY}
-        lineDashPattern={navigationMode === "WALK" ? [5, 5] : undefined}
-      />
+      {routeSegments.map((segment, index) => (
+        <Polyline
+          key={`${navigationMode}-segment-${index}`}
+          coordinates={segment.coordinates}
+          strokeWidth={3}
+          strokeColor={segment.style.color}
+          lineDashPattern={segment.style.dash}
+        />
+      ))}
       {destination && (
         <Marker
           coordinate={destination}
