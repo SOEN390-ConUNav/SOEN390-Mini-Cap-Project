@@ -89,6 +89,8 @@ export default function SearchPanel({
     longitude: number;
   } | null>(null);
   const [customDistance, setCustomDistance] = useState<string>("5");
+  const [selectedLocationDetail, setSelectedLocationDetail] = useState<any>(null);
+  const [locationDetailVisible, setLocationDetailVisible] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -363,6 +365,92 @@ export default function SearchPanel({
               </View>
             </Modal>
 
+            {/* Location Details Modal */}
+            <Modal
+              visible={locationDetailVisible}
+              animationType="slide"
+              transparent
+            >
+              <Pressable
+                style={styles.backdrop}
+                onPress={() => setLocationDetailVisible(false)}
+              />
+              <View style={styles.detailModal}>
+                <View style={styles.detailModalHeader}>
+                  <Pressable
+                    onPress={() => setLocationDetailVisible(false)}
+                    style={styles.closeBtn}
+                  >
+                    <Ionicons name="close" size={24} color={BURGUNDY} />
+                  </Pressable>
+                </View>
+
+                {selectedLocationDetail && (
+                  <ScrollView
+                    style={styles.detailModalContent}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Text style={styles.detailTitle}>
+                      {selectedLocationDetail.name}
+                    </Text>
+
+                    <View style={styles.detailSection}>
+                      <Ionicons name="location" size={18} color={BURGUNDY} />
+                      <View style={styles.detailSectionContent}>
+                        <Text style={styles.detailLabel}>Address</Text>
+                        <Text style={styles.detailValue}>
+                          {selectedLocationDetail.address}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailSection}>
+                      <Ionicons
+                        name="navigate-circle"
+                        size={18}
+                        color={BURGUNDY}
+                      />
+                      <View style={styles.detailSectionContent}>
+                        <Text style={styles.detailLabel}>Distance</Text>
+                        <Text style={styles.detailValue}>
+                          {selectedLocationDetail.distanceKm} km away
+                        </Text>
+                      </View>
+                    </View>
+
+                    {selectedLocationDetail.rating && (
+                      <View style={styles.detailSection}>
+                        <Ionicons name="star" size={18} color={BURGUNDY} />
+                        <View style={styles.detailSectionContent}>
+                          <Text style={styles.detailLabel}>Rating</Text>
+                          <Text style={styles.detailValue}>
+                            {selectedLocationDetail.rating.toFixed(1)} / 5.0
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.detailNavigateButton}
+                      onPress={() => {
+                        onSelectLocation({
+                          ...selectedLocationDetail.location,
+                          name: selectedLocationDetail.name,
+                        });
+                        setLocationDetailVisible(false);
+                        onClose();
+                      }}
+                    >
+                      <Ionicons name="navigate" size={20} color="#fff" />
+                      <Text style={styles.detailNavigateButtonText}>
+                        Get Directions
+                      </Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                )}
+              </View>
+            </Modal>
+
             <View style={{ flex: 1 }}>
               <FlatList
                 data={nearby.filter((item) => {
@@ -390,7 +478,17 @@ export default function SearchPanel({
                   const distanceKm = (distance / 1000).toFixed(1);
 
                   return (
-                    <View style={styles.poiItem}>
+                    <TouchableOpacity
+                      style={styles.poiItem}
+                      onPress={() => {
+                        setSelectedLocationDetail({
+                          ...item,
+                          distanceKm,
+                          distance,
+                        });
+                        setLocationDetailVisible(true);
+                      }}
+                    >
                       <View style={styles.poiTextContainer}>
                         <Text
                           style={styles.placeName}
@@ -413,19 +511,8 @@ export default function SearchPanel({
                         </Text>
                       </View>
 
-                      <TouchableOpacity
-                        style={styles.directionsButton}
-                        onPress={() => {
-                          onSelectLocation({
-                            ...item.location,
-                            name: item.name,
-                          });
-                          onClose();
-                        }}
-                      >
-                        <Ionicons name="navigate" size={18} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
+                      <Ionicons name="chevron-forward" size={20} color={BURGUNDY} />
+                    </TouchableOpacity>
                   );
                 }}
               />
@@ -734,5 +821,79 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "600",
+  },
+  detailModal: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 15,
+  },
+  detailModalHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  detailModalContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 20,
+  },
+  detailSection: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
+  },
+  detailSectionContent: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: "#888",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
+  },
+  detailNavigateButton: {
+    backgroundColor: BURGUNDY,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  detailNavigateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
