@@ -42,7 +42,7 @@ public class PlacesOfInterestService {
             rawJson = restClient.post()
                     .uri("https://places.googleapis.com/v1/places:searchNearby")
                     .header("X-Goog-Api-Key", apiKey)
-                    .header("X-Goog-FieldMask", "places.displayName,places.formattedAddress,places.location,places.accessibilityOptions,places.restroom,places.parkingOptions,places.rating")
+                    .header("X-Goog-FieldMask", "places.displayName,places.formattedAddress,places.location,places.rating,places.currentOpeningHours,places.nationalPhoneNumber")
                     .body(body)
                     .retrieve()
                     .body(String.class);

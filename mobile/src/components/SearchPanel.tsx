@@ -69,6 +69,7 @@ function calculateDistance(
   return R * c; // Distance in meters
 }
 
+
 export default function SearchPanel({
   visible,
   onClose,
@@ -257,7 +258,7 @@ export default function SearchPanel({
                       <Text style={styles.placeName}>{item.name}</Text>
                       <Text style={styles.address}>{item.address}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} />
+                    <Ionicons name="chevron-forward" size={18} color={BURGUNDY}/>
                   </TouchableOpacity>
                 )}
               />
@@ -429,6 +430,31 @@ export default function SearchPanel({
                         </View>
                       </View>
                     )}
+
+                    {selectedLocationDetail.openingHours && (
+                      <View style={styles.detailSection}>
+                        <Ionicons name="time" size={18} color={BURGUNDY} />
+                        <View style={styles.detailSectionContent}>
+                          <Text style={styles.detailLabel}>Opening Hours</Text>
+                          <Text style={styles.detailValue}>
+                            {selectedLocationDetail.openingHours}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {selectedLocationDetail.phoneNumber && (
+                      <View style={styles.detailSection}>
+                        <Ionicons name="call" size={18} color={BURGUNDY} />
+                        <View style={styles.detailSectionContent}>
+                          <Text style={styles.detailLabel}>Phone Number</Text>
+                          <Text style={styles.detailValue}>
+                            {selectedLocationDetail.phoneNumber}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                          
 
                     <TouchableOpacity
                       style={styles.detailNavigateButton}
