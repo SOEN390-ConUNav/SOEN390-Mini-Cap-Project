@@ -20,7 +20,7 @@ public class OutdoorPlacesOfInterestController {
 
     @PostMapping("/api/places/outdoor")
     public ResponseEntity<String> getPlaces(
-            @RequestParam(defaultValue = "10", required = false) int maxResultCount,
+            @RequestParam(defaultValue = "20", required = false) int maxResultCount,
             @RequestParam(defaultValue = "500", required = false) double radius,
             @RequestParam double latitude,
             @RequestParam double longitude,

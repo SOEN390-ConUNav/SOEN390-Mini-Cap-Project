@@ -50,6 +50,25 @@ async function getUserLocation() {
   };
 }
 
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in meters
+}
+
 export default function SearchPanel({
   visible,
   onClose,
@@ -63,6 +82,13 @@ export default function SearchPanel({
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
+  const [maxDistance, setMaxDistance] = useState<number>(5000); // 5 km in meters
+  const [distanceFilterVisible, setDistanceFilterVisible] = useState(false);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [customDistance, setCustomDistance] = useState<string>("5");
 
   useEffect(() => {
     if (visible) {
@@ -83,9 +109,15 @@ export default function SearchPanel({
 
     setLoading(true);
     try {
-      const { latitude, longitude } = await getUserLocation();
-      const results = await getNearbyPlaces(latitude, longitude, placeType);
+      const location = await getUserLocation();
+      setUserLocation(location);
+      const results = await getNearbyPlaces(
+        location.latitude,
+        location.longitude,
+        placeType
+      );
       setNearby(results);
+      cacheRef.current[placeType] = results;
     } catch (e) {
       console.error(e);
     } finally {
@@ -147,33 +179,37 @@ export default function SearchPanel({
         </View>
 
         {/* Filters */}
-        <View style={styles.filtersWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filters}
-          >
-            {PLACE_TYPES.map((item) => (
-              <TouchableOpacity
-                key={item.value}
-                onPress={() => setActiveFilter(item.value)}
-                style={[
-                  styles.filterChip,
-                  activeFilter === item.value && styles.activeChip,
-                ]}
+         {query.length === 0 && (
+            <>
+            <View style={styles.filtersWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filters}
               >
-                <Text
-                  style={[
-                    styles.filterText,
-                    activeFilter === item.value && styles.activeText,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                {PLACE_TYPES.map((item) => (
+                  <TouchableOpacity
+                    key={item.value}
+                    onPress={() => setActiveFilter(item.value)}
+                    style={[
+                      styles.filterChip,
+                      activeFilter === item.value && styles.activeChip,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterText,
+                        activeFilter === item.value && styles.activeText,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            </>
+          )}
 
         {/* Recents */}
         {recentSearches.length > 0 && query.length === 0 && (
@@ -230,42 +266,168 @@ export default function SearchPanel({
         {/* Nearby Results */}
         {query.length === 0 && (
           <>
-            <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
+            <View style={styles.nearbyHeaderContainer}>
+              <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
+              <TouchableOpacity
+                onPress={() => setDistanceFilterVisible(true)}
+                style={styles.filterIconButton}
+              >
+                <Ionicons name="funnel" size={18} color={BURGUNDY} />
+                <Text style={styles.filterButtonText}>Filter</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Distance Filter Modal */}
+            <Modal
+              visible={distanceFilterVisible}
+              animationType="slide"
+              transparent
+            >
+              <Pressable
+                style={styles.backdrop}
+                onPress={() => setDistanceFilterVisible(false)}
+              />
+              <View style={styles.filterModal}>
+                <View style={styles.filterModalHeader}>
+                  <Text style={styles.filterModalTitle}>Filter by Distance</Text>
+                  <Pressable
+                    onPress={() => setDistanceFilterVisible(false)}
+                    style={styles.closeBtn}
+                  >
+                    <Ionicons name="close" size={24} color={BURGUNDY} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.filterOptions}>
+                  <Text style={styles.filterSubtitle}>Preset Distances</Text>
+                  {[
+                    { label: "100m", value: 100 },
+                    { label: "500m", value: 500 },
+                    { label: "1 km", value: 1000 },
+                    { label: "2 km", value: 2000 },
+                    { label: "5 km", value: 5000 },
+                    { label: "10 km", value: 10000 },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => {
+                        setMaxDistance(option.value);
+                        setDistanceFilterVisible(false);
+                      }}
+                      style={[
+                        styles.distanceOption,
+                        maxDistance === option.value &&
+                          styles.distanceOptionSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.distanceOptionText,
+                          maxDistance === option.value &&
+                            styles.distanceOptionTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                      {maxDistance === option.value && (
+                        <Ionicons name="checkmark" size={20} color={BURGUNDY} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+
+                  <Text style={styles.filterSubtitle}>Custom Distance</Text>
+                  <View style={styles.customDistanceContainer}>
+                    <TextInput
+                      style={styles.customDistanceInput}
+                      placeholder="Enter distance"
+                      value={customDistance}
+                      onChangeText={setCustomDistance}
+                      keyboardType="decimal-pad"
+                      placeholderTextColor="#999"
+                    />
+                    <Text style={styles.customDistanceUnit}>km</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const distanceInMeters = parseFloat(customDistance) * 1000;
+                      if (!isNaN(distanceInMeters) && distanceInMeters > 0) {
+                        setMaxDistance(distanceInMeters);
+                        setDistanceFilterVisible(false);
+                      }
+                    }}
+                    style={styles.applyCustomButton}
+                  >
+                    <Text style={styles.applyCustomButtonText}>Apply Custom Distance</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
             <View style={{ flex: 1 }}>
               <FlatList
-                data={nearby}
+                data={nearby.filter((item) => {
+                  if (!userLocation) return true;
+                  const distance = calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    item.location.latitude,
+                    item.location.longitude
+                  );
+                  return distance <= maxDistance;
+                })}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <View style={styles.poiItem}>
-                    <View style={styles.poiTextContainer}>
-                      <Text
-                        style={styles.placeName}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {item.name}
-                      </Text>
+                renderItem={({ item }) => {
+                  const distance = userLocation
+                    ? Math.round(
+                        calculateDistance(
+                          userLocation.latitude,
+                          userLocation.longitude,
+                          item.location.latitude,
+                          item.location.longitude
+                        )
+                      )
+                    : 0;
+                  const distanceKm = (distance / 1000).toFixed(1);
 
-                      <Text
-                        style={styles.address}
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
+                  return (
+                    <View style={styles.poiItem}>
+                      <View style={styles.poiTextContainer}>
+                        <Text
+                          style={styles.placeName}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.name}
+                        </Text>
+
+                        <Text
+                          style={styles.address}
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                        >
+                          {item.address}
+                        </Text>
+
+                        <Text style={styles.distanceText}>
+                          {distanceKm} km away
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.directionsButton}
+                        onPress={() => {
+                          onSelectLocation({
+                            ...item.location,
+                            name: item.name,
+                          });
+                          onClose();
+                        }}
                       >
-                        {item.address}
-                      </Text>
+                        <Ionicons name="navigate" size={18} color="#fff" />
+                      </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                      style={styles.directionsButton}
-                      onPress={() => {
-                        onSelectLocation({ ...item.location, name: item.name });
-                        onClose();
-                      }}
-                    >
-                      <Ionicons name="navigate" size={18} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                )}
+                  );
+                }}
               />
 
               {loading && (
@@ -453,5 +615,124 @@ const styles = StyleSheet.create({
   recentSearchText: {
     marginLeft: 8,
     color: "#333",
+  },
+  nearbyHeaderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  filterIconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(128, 0, 32, 0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  filterButtonText: {
+    color: BURGUNDY,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  filterModal: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 10,
+  },
+  filterModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: BURGUNDY,
+  },
+  filterOptions: {
+    gap: 8,
+  },
+  distanceOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  distanceOptionSelected: {
+    backgroundColor: "rgba(128, 0, 32, 0.1)",
+    borderColor: BURGUNDY,
+  },
+  distanceOptionText: {
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
+  },
+  distanceOptionTextSelected: {
+    color: BURGUNDY,
+    fontWeight: "700",
+  },
+  distanceText: {
+    fontSize: 12,
+    color: BURGUNDY,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  filterSubtitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#555",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  customDistanceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  customDistanceInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  customDistanceUnit: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
+  applyCustomButton: {
+    backgroundColor: BURGUNDY,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  applyCustomButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

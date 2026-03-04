@@ -28,7 +28,8 @@ export async function getNearbyPlaces(
       `${API_BASE_URL}/api/places/outdoor` +
         `?latitude=${latitude}` +
         `&longitude=${longitude}` +
-        `&placeType=${placeType}`,
+        `&placeType=${placeType}` +
+        `&maxResultCount=20`,
       { method: "POST" },
     );
 
