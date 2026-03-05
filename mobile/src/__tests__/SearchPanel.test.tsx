@@ -562,4 +562,59 @@ describe("SearchPanel", () => {
     fireEvent.press(getByText("Close"));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("selects recent search item and updates query", async () => {
+    mockGetSearchHistory.mockResolvedValue([{ query: "coffee" }]);
+
+    const { getByText, queryByText } = render(<SearchPanel {...defaultProps} />);
+
+    // Wait for recent searches to load
+    await waitFor(() => {
+      expect(getByText("coffee")).toBeTruthy();
+    });
+
+    // Click on recent search - this will trigger setQuery and handleSearch
+    fireEvent.press(getByText("coffee"));
+
+    // After clicking, the query should be updated
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalled();
+    });
+  });
+
+  it("closes distance filter modal by pressing backdrop", async () => {
+    const { getByTestId, queryByText } = render(<SearchPanel {...defaultProps} />);
+
+    await waitFor(() => {
+      fireEvent.press(getByTestId("distance-filter-button"));
+    });
+
+    expect(queryByText("Filter by Distance")).toBeTruthy();
+
+    // Press backdrop to close
+    fireEvent.press(getByTestId("distance-filter-backdrop"));
+
+    // Modal should close
+    await waitFor(() => {
+      expect(queryByText("Filter by Distance")).toBeFalsy();
+    });
+  });
+
+  it("closes details modal by pressing backdrop", async () => {
+    const { getAllByText, queryByText, getByTestId } = render(<SearchPanel {...defaultProps} />);
+
+    await waitFor(() => {
+      fireEvent.press(getAllByText("Test Restaurant")[0]);
+    });
+
+    expect(queryByText("Get Directions")).toBeTruthy();
+
+    // Press backdrop to close
+    fireEvent.press(getByTestId("details-modal-backdrop"));
+
+    // Modal should close
+    await waitFor(() => {
+      expect(queryByText("Get Directions")).toBeFalsy();
+    });
+  });
 });

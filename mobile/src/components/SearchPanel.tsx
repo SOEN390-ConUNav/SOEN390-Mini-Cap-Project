@@ -272,6 +272,7 @@ export default function SearchPanel({
               transparent
             >
               <Pressable
+                testID="distance-filter-backdrop"
                 style={styles.backdrop}
                 onPress={() => setDistanceFilterVisible(false)}
               />
@@ -359,6 +360,7 @@ export default function SearchPanel({
               transparent
             >
               <Pressable
+                testID="details-modal-backdrop"
                 style={styles.backdrop}
                 onPress={() => setLocationDetailVisible(false)}
               />
