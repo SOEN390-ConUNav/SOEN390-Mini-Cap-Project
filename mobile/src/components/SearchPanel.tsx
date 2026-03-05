@@ -16,6 +16,7 @@ import * as Location from "expo-location";
 import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { getOpenStatusText, calculateDistance } from "../utils/location";
+import { useDistanceFilter } from "../hooks/useDistanceFilter";
 
 const BURGUNDY = "#800020";
 
@@ -64,20 +65,11 @@ export default function SearchPanel({
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
-  const [maxDistance, setMaxDistance] = useState<number>(5000); // 5 km in meters
-  const [distanceFilterVisible, setDistanceFilterVisible] = useState(false);
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [customDistance, setCustomDistance] = useState<string>("5");
-  const [selectedLocationDetail, setSelectedLocationDetail] = useState<any>(null);
-  const [locationDetailVisible, setLocationDetailVisible] = useState(false);
-  const [showHours, setShowHours] = useState(false);
+  const {distance, location, hours} = useDistanceFilter();
   const todayIndexJS = new Date().getDay(); 
   // Convert to Google format (Monday first)
   const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
-  const statusText = getOpenStatusText(selectedLocationDetail?.openingHours)
+  const statusText = getOpenStatusText(location.selectedLocationDetail?.openingHours)
 
   useEffect(() => {
     if (visible) {
@@ -98,11 +90,11 @@ export default function SearchPanel({
 
     setLoading(true);
     try {
-      const location = await getUserLocation();
-      setUserLocation(location);
+      const coords = await getUserLocation();
+      location.setUserLocation(coords);
       const results = await getNearbyPlaces(
-        location.latitude,
-        location.longitude,
+        coords.latitude,
+        coords.longitude,
         placeType
       );
       setNearby(results);
@@ -257,7 +249,7 @@ export default function SearchPanel({
               <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
               <TouchableOpacity
                 testID="distance-filter-button"
-                onPress={() => setDistanceFilterVisible(true)}
+                onPress={() => distance.setDistanceFilterVisible(true)}
                 style={styles.filterIconButton}
               >
                 <Ionicons name="funnel" size={18} color={BURGUNDY} />
@@ -267,21 +259,21 @@ export default function SearchPanel({
 
             {/* Distance Filter Modal */}
             <Modal
-              visible={distanceFilterVisible}
+              visible={distance.distanceFilterVisible}
               animationType="slide"
               transparent
             >
               <Pressable
                 testID="distance-filter-backdrop"
                 style={styles.backdrop}
-                onPress={() => setDistanceFilterVisible(false)}
+                onPress={() => distance.setDistanceFilterVisible(false)}
               />
               <View style={styles.filterModal}>
                 <View style={styles.filterModalHeader}>
                   <Text style={styles.filterModalTitle}>Filter by Distance</Text>
                   <Pressable
                     testID="close-filter-button"
-                    onPress={() => setDistanceFilterVisible(false)}
+                    onPress={() => distance.setDistanceFilterVisible(false)}
                     style={styles.closeBtn}
                   >
                     <Ionicons name="close" size={24} color={BURGUNDY} />
@@ -301,25 +293,25 @@ export default function SearchPanel({
                     <TouchableOpacity
                       key={option.value}
                       onPress={() => {
-                        setMaxDistance(option.value);
-                        setDistanceFilterVisible(false);
+                        distance.setMaxDistance(option.value);
+                        distance.setDistanceFilterVisible(false);
                       }}
                       style={[
                         styles.distanceOption,
-                        maxDistance === option.value &&
+                        distance.maxDistance === option.value &&
                           styles.distanceOptionSelected,
                       ]}
                     >
                       <Text
                         style={[
                           styles.distanceOptionText,
-                          maxDistance === option.value &&
+                          distance.maxDistance === option.value &&
                             styles.distanceOptionTextSelected,
                         ]}
                       >
                         {option.label}
                       </Text>
-                      {maxDistance === option.value && (
+                      {distance.maxDistance === option.value && (
                         <Ionicons name="checkmark" size={20} color={BURGUNDY} />
                       )}
                     </TouchableOpacity>
@@ -330,8 +322,8 @@ export default function SearchPanel({
                     <TextInput
                       style={styles.customDistanceInput}
                       placeholder="Enter distance"
-                      value={customDistance}
-                      onChangeText={setCustomDistance}
+                      value={distance.customDistance}
+                      onChangeText={distance.setCustomDistance}
                       keyboardType="decimal-pad"
                       placeholderTextColor="#999"
                     />
@@ -339,10 +331,10 @@ export default function SearchPanel({
                   </View>
                   <TouchableOpacity
                     onPress={() => {
-                      const distanceInMeters = Number.parseFloat(customDistance) * 1000;
+                      const distanceInMeters = Number.parseFloat(distance.customDistance) * 1000;
                       if (!Number.isNaN(distanceInMeters) && distanceInMeters > 0) {
-                        setMaxDistance(distanceInMeters);
-                        setDistanceFilterVisible(false);
+                        distance.setMaxDistance(distanceInMeters);
+                        distance.setDistanceFilterVisible(false);
                       }
                     }}
                     style={styles.applyCustomButton}
@@ -355,33 +347,33 @@ export default function SearchPanel({
 
             {/* Location Details Modal */}
             <Modal
-              visible={locationDetailVisible}
+              visible={location.locationDetailVisible}
               animationType="slide"
               transparent
             >
               <Pressable
                 testID="details-modal-backdrop"
                 style={styles.backdrop}
-                onPress={() => setLocationDetailVisible(false)}
+                onPress={() => location.setLocationDetailVisible(false)}
               />
               <View style={styles.detailModal}>
                 <View style={styles.detailModalHeader}>
                   <Pressable
                     testID="close-details-button"
-                    onPress={() => setLocationDetailVisible(false)}
+                    onPress={() => location.setLocationDetailVisible(false)}
                     style={styles.closeBtn}
                   >
                     <Ionicons name="close" size={24} color={BURGUNDY} />
                   </Pressable>
                 </View>
 
-                {selectedLocationDetail && (
+                {location.selectedLocationDetail && (
                   <ScrollView
                     style={styles.detailModalContent}
                     showsVerticalScrollIndicator={false}
                   >
                     <Text style={styles.detailTitle}>
-                      {selectedLocationDetail.name}
+                      {location.selectedLocationDetail.name}
                     </Text>
 
                     <View style={styles.detailSection}>
@@ -389,7 +381,7 @@ export default function SearchPanel({
                       <View style={styles.detailSectionContent}>
                         <Text style={styles.detailLabel}>Address</Text>
                         <Text style={styles.detailValue}>
-                          {selectedLocationDetail.address}
+                          {location.selectedLocationDetail.address}
                         </Text>
                       </View>
                     </View>
@@ -403,18 +395,18 @@ export default function SearchPanel({
                       <View style={styles.detailSectionContent}>
                         <Text style={styles.detailLabel}>Distance</Text>
                         <Text style={styles.detailValue}>
-                          {selectedLocationDetail.distanceKm} km away
+                          {location.selectedLocationDetail.distanceKm} km away
                         </Text>
                       </View>
                     </View>
 
-                    {selectedLocationDetail.rating && (
+                    {location.selectedLocationDetail.rating && (
                       <View style={styles.detailSection}>
                         <Ionicons name="star" size={18} color={BURGUNDY} />
                         <View style={styles.detailSectionContent}>
                           <Text style={styles.detailLabel}>Rating</Text>
                           <Text style={styles.detailValue}>
-                            {selectedLocationDetail.rating.toFixed(1)} / 5.0
+                            {location.selectedLocationDetail.rating.toFixed(1)} / 5.0
                           </Text>
                         </View>
                       </View>
@@ -429,16 +421,16 @@ export default function SearchPanel({
                         <Text style={styles.detailLabel}>Opening Hours</Text>
                         <TouchableOpacity
                           testID="opening-hours-toggle"
-                          onPress={() => setShowHours(!showHours)}
+                          onPress={() => hours.setShowHours(!hours.showHours)}
                           style={styles.hoursHeader}
                         >
-                             {selectedLocationDetail.openingHours?.openNow !== undefined && (
+                             {location.selectedLocationDetail.openingHours?.openNow !== undefined && (
                                 <View style={styles.openStatusContainer}>
                                   <View
                                     style={[
                                       styles.statusDot,
                                       {
-                                        backgroundColor: selectedLocationDetail.openingHours.openNow
+                                        backgroundColor: location.selectedLocationDetail.openingHours.openNow
                                           ? "#22c55e"
                                           : "#ef4444",
                                       },
@@ -449,13 +441,13 @@ export default function SearchPanel({
                                     style={[
                                       styles.openStatusText,
                                       {
-                                        color: selectedLocationDetail.openingHours.openNow
+                                        color: location.selectedLocationDetail.openingHours.openNow
                                           ? "#22c55e"
                                           : "#ef4444",
                                       },
                                     ]}
                                   >
-                                    {selectedLocationDetail.openingHours.openNow
+                                    {location.selectedLocationDetail.openingHours.openNow
                                       ? "Open"
                                       : "Closed"}
                                   </Text>
@@ -468,14 +460,14 @@ export default function SearchPanel({
                                 </View>
                               )}
                           <Ionicons
-                            name={showHours ? "chevron-up" : "chevron-down"}
+                            name={hours.showHours ? "chevron-up" : "chevron-down"}
                             size={16}
                             color="#777"
                           />
                         </TouchableOpacity>
 
-                        {showHours &&
-                          selectedLocationDetail.openingHours.weekdayDescriptions?.map(
+                        {hours.showHours &&
+                          location.selectedLocationDetail.openingHours.weekdayDescriptions?.map(
                             (day: string, index: number) => (
                               <Text
                                 key={`${day}-${index}`}
@@ -491,13 +483,13 @@ export default function SearchPanel({
                       </View>
                     </View>
 
-                    {selectedLocationDetail.phoneNumber && (
+                    {location.selectedLocationDetail.phoneNumber && (
                       <View style={styles.detailSection}>
                         <Ionicons name="call" size={18} color={BURGUNDY} />
                         <View style={styles.detailSectionContent}>
                           <Text style={styles.detailLabel}>Phone Number</Text>
                           <Text style={styles.detailValue}>
-                            {selectedLocationDetail.phoneNumber}
+                            {location.selectedLocationDetail.phoneNumber}
                           </Text>
                         </View>
                       </View>
@@ -508,10 +500,10 @@ export default function SearchPanel({
                       style={styles.detailNavigateButton}
                       onPress={() => {
                         onSelectLocation({
-                          ...selectedLocationDetail.location,
-                          name: selectedLocationDetail.name,
+                          ...location.selectedLocationDetail.location,
+                          name: location.selectedLocationDetail.name,
                         });
-                        setLocationDetailVisible(false);
+                        location.setLocationDetailVisible(false);
                         onClose();
                       }}
                     >
@@ -528,39 +520,39 @@ export default function SearchPanel({
             <View style={{ flex: 1 }}>
               <FlatList
                 data={nearby.filter((item) => {
-                  if (!userLocation) return true;
-                  const distance = calculateDistance(
-                    userLocation.latitude,
-                    userLocation.longitude,
+                  if (!location.userLocation) return true;
+                  const distanceValue = calculateDistance(
+                    location.userLocation.latitude,
+                    location.userLocation.longitude,
                     item.location.latitude,
                     item.location.longitude
                   );
-                  return distance <= maxDistance;
+                  return distanceValue <= distance.maxDistance;
                 })}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => {
-                  const distance = userLocation
+                  const distanceValue = location.userLocation
                     ? Math.round(
                         calculateDistance(
-                          userLocation.latitude,
-                          userLocation.longitude,
+                          location.userLocation.latitude,
+                          location.userLocation.longitude,
                           item.location.latitude,
                           item.location.longitude
                         )
                       )
                     : 0;
-                  const distanceKm = (distance / 1000).toFixed(1);
+                  const distanceKm = (distanceValue / 1000).toFixed(1);
 
                   return (
                     <TouchableOpacity
                       style={styles.poiItem}
                       onPress={() => {
-                        setSelectedLocationDetail({
+                        location.setSelectedLocationDetail({
                           ...item,
                           distanceKm,
                           distance,
                         });
-                        setLocationDetailVisible(true);
+                        location.setLocationDetailVisible(true);
                       }}
                     >
                       <View style={styles.poiTextContainer}>
