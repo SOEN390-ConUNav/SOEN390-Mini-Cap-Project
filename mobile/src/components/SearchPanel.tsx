@@ -169,7 +169,6 @@ export default function SearchPanel({
 
         {/* Filters */}
          {query.length === 0 && (
-            <>
             <View style={styles.filtersWrapper}>
               <ScrollView
                 horizontal
@@ -197,7 +196,6 @@ export default function SearchPanel({
                 ))}
               </ScrollView>
             </View>
-            </>
           )}
 
         {/* Recents */}
@@ -281,6 +279,7 @@ export default function SearchPanel({
                 <View style={styles.filterModalHeader}>
                   <Text style={styles.filterModalTitle}>Filter by Distance</Text>
                   <Pressable
+                    testID="close-filter-button"
                     onPress={() => setDistanceFilterVisible(false)}
                     style={styles.closeBtn}
                   >
@@ -339,8 +338,8 @@ export default function SearchPanel({
                   </View>
                   <TouchableOpacity
                     onPress={() => {
-                      const distanceInMeters = parseFloat(customDistance) * 1000;
-                      if (!isNaN(distanceInMeters) && distanceInMeters > 0) {
+                      const distanceInMeters = Number.parseFloat(customDistance) * 1000;
+                      if (!Number.isNaN(distanceInMeters) && distanceInMeters > 0) {
                         setMaxDistance(distanceInMeters);
                         setDistanceFilterVisible(false);
                       }
@@ -366,6 +365,7 @@ export default function SearchPanel({
               <View style={styles.detailModal}>
                 <View style={styles.detailModalHeader}>
                   <Pressable
+                    testID="close-details-button"
                     onPress={() => setLocationDetailVisible(false)}
                     style={styles.closeBtn}
                   >
@@ -476,7 +476,7 @@ export default function SearchPanel({
                           selectedLocationDetail.openingHours.weekdayDescriptions?.map(
                             (day: string, index: number) => (
                               <Text
-                                key={index}
+                                key={`${day}-${index}`}
                                 style={[
                                   styles.hoursRow,
                                   index === todayIndex && styles.todayHoursRow,

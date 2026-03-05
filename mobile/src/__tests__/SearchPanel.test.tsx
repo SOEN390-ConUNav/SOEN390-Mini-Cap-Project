@@ -365,17 +365,31 @@ describe("SearchPanel", () => {
 
     expect(queryByText("Filter by Distance")).toBeTruthy();
 
+    // Press the close button
+    fireEvent.press(getByTestId("close-filter-button"));
+
+    // Modal should close
+    await waitFor(() => {
+      expect(queryByText("Filter by Distance")).toBeFalsy();
+    });
   });
 
   it("closes details modal with close button", async () => {
-    const { getByText, queryByText, getAllByText } = render(<SearchPanel {...defaultProps} />);
+    const { getAllByText, queryByText, getByTestId } = render(<SearchPanel {...defaultProps} />);
 
     await waitFor(() => {
       fireEvent.press(getAllByText("Test Restaurant")[0]);
     });
 
-    expect(getByText("Get Directions")).toBeTruthy();
+    expect(queryByText("Get Directions")).toBeTruthy();
 
+    // Press the close button
+    fireEvent.press(getByTestId("close-details-button"));
+
+    // Modal should close
+    await waitFor(() => {
+      expect(queryByText("Get Directions")).toBeFalsy();
+    });
   });
 
   it("handles location permission denied", async () => {
