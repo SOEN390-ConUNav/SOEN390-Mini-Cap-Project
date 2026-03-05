@@ -1,34 +1,64 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { StyleSheet, View, StatusBar, Platform, Text } from "react-native";
+import {
+  StyleSheet,
+  View,
+  StatusBar,
+  Platform,
+  Text,
+  Switch,
+  TouchableOpacity,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import Constants from 'expo-constants';
-import { getIndoorDirections, getAvailableRooms, getRoomPoints, getPointsOfInterest, RoomPoint, PoiItem } from '../api/indoorDirectionsApi';
-import { IndoorDirectionResponse } from '../types/indoorDirections';
-import IndoorSearchBar from '../components/IndoorSearchBar';
-import BottomPanel from '../components/BottomPanel';
-import DirectionsPanel from '../components/DirectionsPanel';
-import RoomListModal from '../components/RoomListModal';
-import FloorPlanWebView, { FloorPlanWebViewRef, PoiMarker, RoomMarkerData } from '../components/FloorPlanWebView';
-import FloorSelector from '../components/FloorSelector';
-import { BuildingId } from '../data/buildings';
-import { getBackendBuildingId, getDefaultFloor, getAvailableFloors } from '../utils/buildingIndoorMaps';
+import Constants from "expo-constants";
+import {
+  getIndoorDirections,
+  getAvailableRooms,
+  getRoomPoints,
+  getPointsOfInterest,
+  RoomPoint,
+  PoiItem,
+} from "../api/indoorDirectionsApi";
+import { IndoorDirectionResponse } from "../types/indoorDirections";
+import IndoorSearchBar from "../components/IndoorSearchBar";
+import BottomPanel from "../components/BottomPanel";
+import DirectionsPanel from "../components/DirectionsPanel";
+import RoomListModal from "../components/RoomListModal";
+import FloorPlanWebView, {
+  FloorPlanWebViewRef,
+  PoiMarker,
+  RoomMarkerData,
+} from "../components/FloorPlanWebView";
+import FloorSelector from "../components/FloorSelector";
+import { BuildingId } from "../data/buildings";
+import {
+  getBackendBuildingId,
+  getDefaultFloor,
+  getAvailableFloors,
+} from "../utils/buildingIndoorMaps";
 
 export default function IndoorNavigation() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ buildingId?: string; floor?: string }>();
-  
-  
-  const buildingId = (params.buildingId as BuildingId) || 'H';
+  const params = useLocalSearchParams<{
+    buildingId?: string;
+    floor?: string;
+  }>();
+
+  const buildingId = (params.buildingId as BuildingId) || "H";
   const defaultFloor = getDefaultFloor(buildingId);
   const availableFloors = getAvailableFloors(buildingId);
-  const initialFloor = (params.floor && availableFloors.includes(params.floor)) ? params.floor : defaultFloor;
+  const initialFloor =
+    params.floor && availableFloors.includes(params.floor)
+      ? params.floor
+      : defaultFloor;
   const [currentFloor, setCurrentFloor] = useState<string>(initialFloor);
   const backendBuildingId = getBackendBuildingId(buildingId, currentFloor);
-  
 
-  useEffect(() => {
-  }, [buildingId, currentFloor, backendBuildingId, availableFloors]);
-  
+  useEffect(() => {}, [
+    buildingId,
+    currentFloor,
+    backendBuildingId,
+    availableFloors,
+  ]);
 
   useEffect(() => {
     if (params.floor && availableFloors.includes(params.floor)) {
@@ -36,21 +66,24 @@ export default function IndoorNavigation() {
     }
   }, [params.floor, availableFloors]);
 
-  
-
   const mapViewRef = useRef<FloorPlanWebViewRef>(null);
   const [availableRooms, setAvailableRooms] = useState<string[]>([]);
-  const [startRoom, setStartRoom] = useState<string>('');
-  const [endRoom, setEndRoom] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [startRoom, setStartRoom] = useState<string>("");
+  const [endRoom, setEndRoom] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [showRoomList, setShowRoomList] = useState<boolean>(false);
-  const [selectingFor, setSelectingFor] = useState<'start' | 'end' | null>(null);
+  const [selectingFor, setSelectingFor] = useState<"start" | "end" | null>(
+    null,
+  );
   const [isLoadingRoute, setIsLoadingRoute] = useState<boolean>(false);
-  const [routeData, setRouteData] = useState<IndoorDirectionResponse | null>(null);
+  const [routeData, setRouteData] = useState<IndoorDirectionResponse | null>(
+    null,
+  );
   const [showRouteDetails, setShowRouteDetails] = useState<boolean>(false);
   const [roomPoints, setRoomPoints] = useState<RoomPoint[]>([]);
   const [pois, setPois] = useState<PoiItem[]>([]);
-  
+  const [avoidStairs, setAvoidStairs] = useState<boolean>(false);
+
   const handleClearRoute = useCallback(() => {
     mapViewRef.current?.clearRoute();
   }, []);
@@ -60,9 +93,9 @@ export default function IndoorNavigation() {
   useEffect(() => {
     if (prevBuildingRef.current !== buildingId) {
       prevBuildingRef.current = buildingId;
-      setStartRoom('');
-      setEndRoom('');
-      setSearchQuery('');
+      setStartRoom("");
+      setEndRoom("");
+      setSearchQuery("");
       setRouteData(null);
       setShowRouteDetails(false);
       setShowRoomList(false);
@@ -73,78 +106,108 @@ export default function IndoorNavigation() {
     }
   }, [buildingId, handleClearRoute]);
 
-  const handleFloorChange = useCallback((newFloor: string) => {
-    setCurrentFloor(newFloor);
- 
-    setStartRoom('');
-    setEndRoom('');
-    handleClearRoute();
-    setRouteData(null);
+  const handleFloorChange = useCallback(
+    (newFloor: string) => {
+      setCurrentFloor(newFloor);
+      router.setParams({ floor: newFloor });
 
-    router.setParams({ floor: newFloor });
-  }, [router, handleClearRoute]);
+      setRouteData((currentData) => {
+        if (currentData && currentData.startFloor !== currentData.endFloor) {
+          return currentData;
+        }
+
+        handleClearRoute();
+        return null;
+      });
+    },
+    [router, handleClearRoute],
+  );
+
+  const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
+    if (!roomId) return fallbackFloor;
+    const match = roomId.match(/[a-zA-Z]+-?(\d)/);
+    return match ? match[1] : fallbackFloor;
+  };
 
   const fetchRoute = useCallback(async () => {
     if (!startRoom || !endRoom || startRoom === endRoom) {
       return;
     }
-    
+
     setIsLoadingRoute(true);
-    
+
     try {
-      
-  
-      const response = await getIndoorDirections(backendBuildingId, startRoom, endRoom, currentFloor, currentFloor);
-      
+      const originFloor = getFloorFromRoom(startRoom, currentFloor);
+      const destFloor = getFloorFromRoom(endRoom, currentFloor);
+
+      const response = await getIndoorDirections(
+        buildingId,
+        startRoom,
+        endRoom,
+        originFloor,
+        destFloor,
+        avoidStairs,
+      );
+
       if (response.routePoints && response.routePoints.length > 0) {
         if (mapViewRef.current) {
           mapViewRef.current.drawRoute(response.routePoints);
-        } else {
-          
         }
         setRouteData(response);
       } else {
-        console.warn('No route points in response');
+        console.warn("No route points in response");
         handleClearRoute();
         setRouteData(null);
       }
     } catch (error: any) {
-  
       handleClearRoute();
       setRouteData(null);
     } finally {
       setIsLoadingRoute(false);
     }
-  }, [startRoom, endRoom, backendBuildingId, currentFloor, handleClearRoute]);
+  }, [
+    startRoom,
+    endRoom,
+    backendBuildingId,
+    currentFloor,
+    avoidStairs,
+    handleClearRoute,
+  ]);
 
-
-
- 
   useEffect(() => {
-    const loadRooms = async () => {
+    const loadAllRooms = async () => {
       try {
+        const roomPromises = availableFloors.map((floorNum) =>
+          getAvailableRooms(buildingId, floorNum),
+        );
 
-        const rooms = await getAvailableRooms(buildingId, currentFloor);
+        const roomsArrays = await Promise.all(roomPromises);
 
-        setAvailableRooms(rooms);
+        const combinedRooms = roomsArrays.flat();
+
+        const uniqueRooms = Array.from(new Set(combinedRooms)).sort((a, b) =>
+          a.localeCompare(b),
+        );
+
+        setAvailableRooms(uniqueRooms);
       } catch (error) {
-        console.error('Failed to load rooms:', error);
+        console.error("Failed to load rooms:", error);
         setAvailableRooms([]);
       }
     };
-    loadRooms();
-  }, [buildingId, currentFloor]);
 
-  // Fetch room points when building/floor changes 
+    if (availableFloors && availableFloors.length > 0) {
+      loadAllRooms();
+    }
+  }, [buildingId, availableFloors]);
+
+  // Fetch room points when building/floor changes
   useEffect(() => {
     const loadRoomPoints = async () => {
       try {
         const points = await getRoomPoints(buildingId, currentFloor);
         setRoomPoints(points);
-      
-      } catch (error) {
-       
-      }
+      } catch (error) {}
     };
     loadRoomPoints();
   }, [buildingId, currentFloor]);
@@ -155,57 +218,57 @@ export default function IndoorNavigation() {
       try {
         const items = await getPointsOfInterest(buildingId, currentFloor);
         setPois(items);
-       
       } catch (error) {
-        console.error('Failed to load POIs:', error);
+        console.error("Failed to load POIs:", error);
       }
     };
     loadPois();
   }, [buildingId, currentFloor]);
 
-  const handlePoiTap = useCallback((poi: PoiMarker) => {
-    
-    setEndRoom(poi.id);
-    if (!startRoom) {
-      setSelectingFor('start');
-      setShowRoomList(true);
-    }
-  }, [startRoom]);
+  const handlePoiTap = useCallback(
+    (poi: PoiMarker) => {
+      setEndRoom(poi.id);
+      if (!startRoom) {
+        setSelectingFor("start");
+        setShowRoomList(true);
+      }
+    },
+    [startRoom],
+  );
 
+  const handleRoomTap = useCallback(
+    (room: RoomMarkerData) => {
+      setEndRoom(room.id);
+      if (!startRoom) {
+        setSelectingFor("start");
+        setShowRoomList(true);
+      }
+    },
+    [startRoom],
+  );
 
-  const handleRoomTap = useCallback((room: RoomMarkerData) => {
-
-    setEndRoom(room.id);
-    if (!startRoom) {
-      setSelectingFor('start');
-      setShowRoomList(true);
-    }
-  }, [startRoom]);
-
- 
   useEffect(() => {
     if (startRoom && endRoom && startRoom !== endRoom) {
       fetchRoute();
     } else {
- 
       handleClearRoute();
       setRouteData(null);
     }
   }, [startRoom, endRoom, fetchRoute, handleClearRoute]);
 
-  const filteredRooms = availableRooms.filter(room =>
-    room.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRooms = availableRooms.filter((room) =>
+    room.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const selectRoom = (room: string) => {
-    if (selectingFor === 'start') {
+    if (selectingFor === "start") {
       setStartRoom(room);
-    } else if (selectingFor === 'end') {
+    } else if (selectingFor === "end") {
       setEndRoom(room);
     }
     setShowRoomList(false);
     setSelectingFor(null);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   const swapLocations = () => {
@@ -215,63 +278,110 @@ export default function IndoorNavigation() {
   };
 
   const clearStart = () => {
-    setStartRoom('');
+    setStartRoom("");
   };
 
   const clearEnd = () => {
-    setEndRoom('');
+    setEndRoom("");
   };
 
-  const statusBarHeight = Constants.statusBarHeight || (Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0);
+  const statusBarHeight =
+    Constants.statusBarHeight ||
+    (Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 0);
+
+  const getDisplayedRoute = () => {
+    if (!routeData || !routeData.routePoints) return undefined;
+
+    const transitionIndex = routeData.routePoints.findIndex(
+      (p) => p.label && p.label.startsWith("TRANSITION_"),
+    );
+
+    if (transitionIndex === -1) {
+      return routeData.routePoints; // Single floor route
+    }
+
+    const startFloor = routeData.startFloor;
+    const endFloor = routeData.endFloor;
+
+    if (currentFloor === startFloor) {
+      return routeData.routePoints.slice(0, transitionIndex + 1);
+    } else if (currentFloor === endFloor) {
+      return routeData.routePoints.slice(transitionIndex + 1);
+    }
+
+    return undefined;
+  };
+
+  const displayedRoutePoints = getDisplayedRoute();
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
-  
+
       <View style={styles.mapContainer}>
         <FloorPlanWebView
           ref={mapViewRef}
           buildingId={buildingId}
           floorNumber={currentFloor}
-          routePoints={routeData?.routePoints || undefined}
-          roomData={roomPoints.length > 0 ? roomPoints.map(r => ({
-            x: r.x, y: r.y, id: r.id,
-          })) : undefined}
-          poiData={pois.length > 0 ? pois.map(p => ({
-            x: p.x, y: p.y, id: p.id, displayName: p.displayName, type: p.type,
-          })) : undefined}
+          routePoints={displayedRoutePoints}
+          roomData={
+            roomPoints.length > 0
+              ? roomPoints.map((r) => ({
+                  x: r.x,
+                  y: r.y,
+                  id: r.id,
+                }))
+              : undefined
+          }
+          poiData={
+            pois.length > 0
+              ? pois.map((p) => ({
+                  x: p.x,
+                  y: p.y,
+                  id: p.id,
+                  displayName: p.displayName,
+                  type: p.type,
+                }))
+              : undefined
+          }
           onPoiTap={handlePoiTap}
           onRoomTap={handleRoomTap}
         />
       </View>
 
-
       {availableFloors.length > 1 && (
-        <View style={[styles.floorSelectorContainer, { top: statusBarHeight + 16 }]}>
+        <View
+          style={[styles.floorSelectorContainer, { top: statusBarHeight + 16 }]}
+        >
           <FloorSelector
             currentFloor={currentFloor}
             availableFloors={availableFloors}
             onFloorSelect={handleFloorChange}
-            buildingName={routeData?.buildingName || 'Hall Building'}
+            buildingName={routeData?.buildingName || "Hall Building"}
           />
         </View>
       )}
 
-     
       <IndoorSearchBar
         startRoom={startRoom}
         endRoom={endRoom}
         isLoadingRoute={isLoadingRoute}
         statusBarHeight={statusBarHeight}
-        buildingName={routeData?.buildingName || (buildingId === 'H' ? 'Hall Building' : buildingId === 'VL' ? 'Vanier Library Building' : 'Building')}
+        buildingName={
+          routeData?.buildingName ||
+          (buildingId === "H"
+            ? "Hall Building"
+            : buildingId === "VL"
+              ? "Vanier Library Building"
+              : "Building")
+        }
         floor={currentFloor}
         onStartPress={() => {
-          setSelectingFor('start');
+          setSelectingFor("start");
           setShowRoomList(true);
         }}
         onEndPress={() => {
-          setSelectingFor('end');
+          setSelectingFor("end");
           setShowRoomList(true);
         }}
         onClearStart={clearStart}
@@ -279,13 +389,57 @@ export default function IndoorNavigation() {
         onSwap={swapLocations}
       />
 
-   
       {routeData?.stairMessage && (
         <View style={styles.stairBanner}>
-          <Text style={styles.stairBannerText}>🚶 {routeData.stairMessage}</Text>
+          <Text style={styles.stairBannerText}>
+            🚶 {routeData.stairMessage}
+          </Text>
         </View>
       )}
 
+      <View style={styles.accessibilityToggleContainer}>
+        <Text style={styles.accessibilityText}>
+          Avoid Stairs / Wheelchair Accessible
+        </Text>
+        <Switch
+          value={avoidStairs}
+          onValueChange={(value) => {
+            setAvoidStairs(value);
+            if (startRoom && endRoom) {
+              setTimeout(fetchRoute, 50);
+            }
+          }}
+          trackColor={{ false: "#ccc", true: "#8B1538" }}
+          thumbColor={avoidStairs ? "#fff" : "#f4f3f4"}
+        />
+      </View>
+
+      {routeData &&
+        routeData.startFloor &&
+        routeData.endFloor &&
+        routeData.startFloor !== routeData.endFloor && (
+          <View style={styles.floorTransitionContainer}>
+            {currentFloor === routeData.startFloor ? (
+              <TouchableOpacity
+                style={styles.transitionButton}
+                onPress={() => handleFloorChange(routeData.endFloor)}
+              >
+                <Text style={styles.transitionButtonText}>
+                  Go to Floor {routeData.endFloor}
+                </Text>
+              </TouchableOpacity>
+            ) : currentFloor === routeData.endFloor ? (
+              <TouchableOpacity
+                style={styles.transitionButton}
+                onPress={() => handleFloorChange(routeData.startFloor)}
+              >
+                <Text style={styles.transitionButtonText}>
+                  Back to Floor {routeData.startFloor}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
 
       <BottomPanel
         startRoom={startRoom}
@@ -298,7 +452,6 @@ export default function IndoorNavigation() {
         }}
       />
 
-
       {showRouteDetails && (
         <DirectionsPanel
           routeData={routeData}
@@ -306,7 +459,6 @@ export default function IndoorNavigation() {
         />
       )}
 
-     
       <RoomListModal
         visible={showRoomList}
         selectingFor={selectingFor}
@@ -317,7 +469,7 @@ export default function IndoorNavigation() {
         onClose={() => {
           setShowRoomList(false);
           setSelectingFor(null);
-          setSearchQuery('');
+          setSearchQuery("");
         }}
       />
     </View>
@@ -327,37 +479,85 @@ export default function IndoorNavigation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   mapContainer: {
     flex: 1,
   },
   floorSelectorContainer: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     zIndex: 11,
   },
   stairBanner: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 180,
     left: 16,
     right: 16,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: "#FFF3E0",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
     zIndex: 12,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: "#FF9800",
   },
   stairBannerText: {
-    color: '#E65100',
+    color: "#E65100",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
+  },
+
+  accessibilityToggleContainer: {
+    position: "absolute",
+    top: 200,
+    left: 16,
+    right: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  accessibilityText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+  },
+
+  floorTransitionContainer: {
+    position: "absolute",
+    bottom: 260, // Sits right above your bottom panels
+    alignSelf: "center",
+    zIndex: 15,
+  },
+  transitionButton: {
+    backgroundColor: "#8B1538", // Concordia Burgundy
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  transitionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
