@@ -17,6 +17,7 @@ import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { getOpenStatusText, calculateDistance } from "../utils/location";
 import { useDistanceFilter } from "../hooks/useDistanceFilter";
+import NearbyPlaceItem from "./NearbyPlaceItem";
 
 const BURGUNDY = "#800020";
 
@@ -530,58 +531,17 @@ export default function SearchPanel({
                   return distanceValue <= distance.maxDistance;
                 })}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => {
-                  const distanceValue = location.userLocation
-                    ? Math.round(
-                        calculateDistance(
-                          location.userLocation.latitude,
-                          location.userLocation.longitude,
-                          item.location.latitude,
-                          item.location.longitude
-                        )
-                      )
-                    : 0;
-                  const distanceKm = (distanceValue / 1000).toFixed(1);
-
-                  return (
-                    <TouchableOpacity
-                      style={styles.poiItem}
-                      onPress={() => {
-                        location.setSelectedLocationDetail({
-                          ...item,
-                          distanceKm,
-                          distance,
-                        });
+                renderItem={({ item }) => (
+                  <NearbyPlaceItem
+                      item={item}
+                      userLocation={location.userLocation}
+                      onSelect={(locationDetail) => {
+                        location.setSelectedLocationDetail(locationDetail);
                         location.setLocationDetailVisible(true);
                       }}
-                    >
-                      <View style={styles.poiTextContainer}>
-                        <Text
-                          style={styles.placeName}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {item.name}
-                        </Text>
-
-                        <Text
-                          style={styles.address}
-                          numberOfLines={2}
-                          ellipsizeMode="tail"
-                        >
-                          {item.address}
-                        </Text>
-
-                        <Text style={styles.distanceText}>
-                          {distanceKm} km away
-                        </Text>
-                      </View>
-
-                      <Ionicons name="chevron-forward" size={20} color={BURGUNDY} />
-                    </TouchableOpacity>
-                  );
-                }}
-              />
+                    />
+                  )}
+                />
 
               {loading && (
                 <View style={styles.loadingOverlay}>
