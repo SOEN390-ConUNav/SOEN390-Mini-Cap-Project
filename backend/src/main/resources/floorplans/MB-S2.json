@@ -67,5 +67,14 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
+  },
+  "pois": [
+  {
+    "id": "MB-Elevator-S2",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 686.5,
+    "y": 812
   }
+]
 }

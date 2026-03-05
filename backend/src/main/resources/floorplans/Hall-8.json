@@ -123,5 +123,14 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
+  }, 
+  "pois": [
+  {
+    "id": "H8-Elevator",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 364.2746,
+    "y": 404.23332
   }
+]
 }

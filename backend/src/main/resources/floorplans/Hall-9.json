@@ -141,5 +141,14 @@
     "alignThreshold": 25.0,
     "maxNeighbors": 0,
     "strictAlignment": false
+  },
+  "pois": [
+  {
+    "id": "H9-Elevator",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 362.26783,
+    "y": 369.42458
   }
+]
 }

@@ -66,5 +66,21 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
+  },
+  "pois": [
+  {
+    "id": "MB-Elevator-1",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 686.5,
+    "y": 812
+  },
+  {
+    "id": "MB-Stairs-1",
+    "displayName": "Stairs",
+    "type": "stairs",
+    "x": 353.55951,
+    "y": 819.02002
   }
+]
 }

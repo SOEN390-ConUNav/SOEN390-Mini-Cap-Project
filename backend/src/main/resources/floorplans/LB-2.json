@@ -94,5 +94,35 @@
     "alignThreshold": 6.0,
     "maxNeighbors": 4,
     "strictAlignment": true
+  },
+  "pois": [
+  {
+    "id": "LB-Elevator-1",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 334.26617,
+    "y": 422.01102
+  },
+  {
+    "id": "LB-Elevator-2",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 383.80917,
+    "y": 650.02832
+  },
+  {
+    "id": "LB-Stairs-1",
+    "displayName": "Stairs",
+    "type": "stairs",
+    "x": 174.80748,
+    "y": 500.772
+  },
+  {
+    "id": "LB-Stairs-2",
+    "displayName": "Stairs",
+    "type": "stairs",
+    "x": 176.86403,
+    "y": 528.53552
   }
+]
 }

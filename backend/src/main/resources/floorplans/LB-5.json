@@ -83,5 +83,28 @@
     "alignThreshold": 6.0,
     "maxNeighbors": 4,
     "strictAlignment": true
+  },
+  "pois": [
+  {
+    "id": "LB-Elevator-5",
+    "displayName": "Elevator",
+    "type": "elevator",
+    "x": 414.52377,
+    "y": 673.27661
+  },
+  {
+    "id": "LB-Stairs-Top-5",
+    "displayName": "Stairs",
+    "type": "stairs",
+    "x": 548.25366,
+    "y": 224.00079
+  },
+  {
+    "id": "LB-Stairs-Bottom-5",
+    "displayName": "Stairs",
+    "type": "stairs",
+    "x": 552.1214,
+    "y": 815.20123
   }
+]
 }
