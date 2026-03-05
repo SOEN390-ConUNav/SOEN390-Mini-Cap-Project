@@ -24,7 +24,7 @@ export const inferStyleFromInstruction = (
   const text = instruction.toLowerCase();
 
   // If instruction mentions walking, use walk style
-  if (text.includes("walk") || text.includes("head ")) {
+  if (text.includes("walk")) {
     return POLYLINE_STYLES.WALK;
   }
 
@@ -37,15 +37,10 @@ export const inferStyleFromInstruction = (
   if (
     text.includes("bus") ||
     text.includes("train") ||
-    text.includes("take ") ||
     text.includes("metro")
   ) {
     return POLYLINE_STYLES.BUS;
   }
-
-  // Fallback to the overall route mode style
-  if (mode === "SHUTTLE") return POLYLINE_STYLES.SHUTTLE;
-  if (mode === "BUS" || mode === "TRANSIT") return POLYLINE_STYLES.BUS;
 
   return POLYLINE_STYLES.WALK;
 };

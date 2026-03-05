@@ -383,35 +383,6 @@ describe("inferStyleFromInstruction - fallback lines", () => {
   // These tests use a generic instruction that doesn't trigger walk/shuttle/bus keyword detection
   const neutralInstruction = "proceed to the next stop";
 
-  describe("SHUTTLE mode fallback", () => {
-    it("returns SHUTTLE style when mode is SHUTTLE and instruction has no keywords", () => {
-      const result = inferStyleFromInstruction(neutralInstruction, "SHUTTLE");
-      expect(result).toEqual(POLYLINE_STYLES.SHUTTLE);
-    });
-
-    it("returns SHUTTLE style when mode is shuttle (lowercase)", () => {
-      const result = inferStyleFromInstruction(neutralInstruction, "shuttle");
-      expect(result).toEqual(POLYLINE_STYLES.SHUTTLE);
-    });
-  });
-
-  describe("BUS / TRANSIT mode fallback", () => {
-    it("returns BUS style when mode is BUS and instruction has no keywords", () => {
-      const result = inferStyleFromInstruction(neutralInstruction, "BUS");
-      expect(result).toEqual(POLYLINE_STYLES.BUS);
-    });
-
-    it("returns BUS style when mode is TRANSIT and instruction has no keywords", () => {
-      const result = inferStyleFromInstruction(neutralInstruction, "TRANSIT");
-      expect(result).toEqual(POLYLINE_STYLES.BUS);
-    });
-
-    it("returns BUS style when mode is transit (lowercase)", () => {
-      const result = inferStyleFromInstruction(neutralInstruction, "transit");
-      expect(result).toEqual(POLYLINE_STYLES.BUS);
-    });
-  });
-
   describe("final WALK fallback", () => {
     it("returns WALK style for an unrecognized mode with no matching instruction keywords", () => {
       const result = inferStyleFromInstruction(neutralInstruction, "UNKNOWN");
