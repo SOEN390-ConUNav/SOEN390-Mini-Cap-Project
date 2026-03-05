@@ -27,6 +27,7 @@ public class IndoorDirectionService {
     }
 
     private String detectStairMessageFromRoute(List<IndoorDirectionResponse.RoutePoint> routePoints) {
+        if (routePoints == null) return null;
         for (IndoorDirectionResponse.RoutePoint rp : routePoints) {
             if (rp.getLabel() != null && rp.getLabel().toLowerCase().contains(KEYWORD_STAIRS)) {
                 return MSG_STAIRS_INVOLVED;
@@ -40,161 +41,273 @@ public class IndoorDirectionService {
             String origin,
             String destination,
             String originFloor,
-            String destinationFloor) {
-
-        List<IndoorRouteStep> steps = generatePlaceholderSteps(
-                destination, originFloor, destinationFloor);
+            String destinationFloor,
+            boolean avoidStairs) {
 
         String buildingName = getBuildingName(buildingId);
         pathfindingService.setBuilding(buildingId);
 
-        List<IndoorDirectionResponse.RoutePoint> routePoints = calculateRoute(
-                buildingId, origin, destination,
-                originFloor != null ? originFloor : "1");
+        String startFloor = originFloor != null ? originFloor : "1";
+        String endFloor = destinationFloor != null ? destinationFloor : startFloor;
 
-        String distance = calculateDistance();
-        String duration = calculateDuration();
-       
+        List<IndoorDirectionResponse.RoutePoint> routePoints;
+
+        if (startFloor.equals(endFloor)) {
+            routePoints = calculateRoute(buildingId, origin, destination, startFloor, avoidStairs);
+        } else {
+            routePoints = calculateCrossFloorRoute(buildingId, origin, destination, startFloor, endFloor, avoidStairs);
+        }
+
+        double exactDistance = calculatePreciseDistance(routePoints);
+        String distance = formatFinalDistance(exactDistance);
+        String duration = formatFinalDuration(exactDistance);
+
+        String usedTransition = detectTransitionType(routePoints);
+        List<IndoorRouteStep> steps = generateRealSteps(destination, startFloor, endFloor, usedTransition);
 
         IndoorDirectionResponse.BuildingInfo buildingInfo = new IndoorDirectionResponse.BuildingInfo(
-                buildingName, buildingId,
-                originFloor != null ? originFloor : "1",
-                destinationFloor != null ? destinationFloor : "1");
+                buildingName, buildingId, startFloor, endFloor);
 
         IndoorDirectionResponse response = new IndoorDirectionResponse(
                 distance, duration, buildingInfo, steps, routePoints);
 
-        String effectiveFloor = originFloor != null ? originFloor : "1";
-        String stairMsg = detectStairMessage(buildingId, origin, destination, effectiveFloor);
+        String stairMsg = detectStairMessage(buildingId, origin, destination, startFloor);
         if (stairMsg == null) {
             stairMsg = detectStairMessageFromRoute(routePoints);
         }
-        if (stairMsg != null) {
+        boolean routeUsedStairs = "STAIRS".equals(usedTransition);
+
+        if (stairMsg != null && routeUsedStairs) {
             response.setStairMessage(stairMsg);
         }
 
         return response;
     }
 
-    /**
-     * Detect if the route involves stairs and return an appropriate message.
-     */
+// --- OPTIMIZED ROUTING METHODS ---
+
+    private List<IndoorDirectionResponse.RoutePoint> calculateCrossFloorRoute(
+            String buildingId, String originRoomId, String destinationRoomId,
+            String startFloor, String endFloor, boolean avoidStairs) {
+
+        String startPlanId = convertBuildingIdForPathfinding(buildingId, startFloor);
+        String endPlanId = convertBuildingIdForPathfinding(buildingId, endFloor);
+
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+        PathfindingService.Waypoint origin = resolvePoint(startPlanId, originRoomId);
+        PathfindingService.Waypoint dest = resolvePoint(endPlanId, destinationRoomId);
+
+        if (origin == null || dest == null) return new ArrayList<>();
+
+        List<IndoorDirectionsController.PoiResponse> startConnectors = filterPois(helper.getPoisForBuilding(startPlanId), avoidStairs);
+        List<IndoorDirectionsController.PoiResponse> endConnectors = filterPois(helper.getPoisForBuilding(endPlanId), avoidStairs);
+
+        if (startConnectors.isEmpty() || endConnectors.isEmpty()) return new ArrayList<>();
+
+        IndoorDirectionsController.PoiResponse bestStart = null;
+        IndoorDirectionsController.PoiResponse bestEnd = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (var s : startConnectors) {
+            for (var e : endConnectors) {
+                if (!poiKey(s).isEmpty() && poiKey(s).equals(poiKey(e))) {
+                    double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
+                    double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
+                    if (d1 + d2 < minDistance) {
+                        minDistance = d1 + d2;
+                        bestStart = s;
+                        bestEnd = e;
+                    }
+                }
+            }
+        }
+
+        if (bestStart == null || bestEnd == null) return new ArrayList<>();
+
+        List<IndoorDirectionResponse.RoutePoint> leg1 = buildRoute(
+                startPlanId,
+                new FloorPlanData.Point(origin.x, origin.y),
+                new FloorPlanData.Point(bestStart.x, bestStart.y),
+                originRoomId,
+                bestStart.id,
+                avoidStairs
+        );
+
+        List<IndoorDirectionResponse.RoutePoint> leg2 = buildRoute(
+                endPlanId,
+                new FloorPlanData.Point(bestEnd.x, bestEnd.y),
+                new FloorPlanData.Point(dest.x, dest.y),
+                bestEnd.id,
+                destinationRoomId,
+                avoidStairs
+        );
+
+        List<IndoorDirectionResponse.RoutePoint> fullRoute = new ArrayList<>(leg1);
+        String type = bestStart.type.toUpperCase().contains("ELEVATOR") ? "ELEVATOR" : "STAIRS";
+
+        fullRoute.add(new IndoorDirectionResponse.RoutePoint(bestStart.x, bestStart.y, "TRANSITION_" + type + "_TO_" + endFloor));
+
+        if (!leg2.isEmpty()) {
+            fullRoute.addAll(leg2);
+        }
+
+        return fullRoute;
+    }
+
+    private List<IndoorDirectionsController.PoiResponse> filterPois(
+            List<IndoorDirectionsController.PoiResponse> all,
+            boolean avoidStairs
+    ) {
+        if (all == null || all.isEmpty()) return Collections.emptyList();
+
+        String preferred = avoidStairs ? "elevator" : "stairs";
+        String fallback  = avoidStairs ? "stairs"   : "elevator";
+
+        List<IndoorDirectionsController.PoiResponse> preferredList = new ArrayList<>();
+        List<IndoorDirectionsController.PoiResponse> fallbackList  = new ArrayList<>();
+
+        for (IndoorDirectionsController.PoiResponse p : all) {
+            String type = (p == null || p.type == null) ? "" : p.type.toLowerCase();
+
+            if (type.contains(preferred)) preferredList.add(p);
+            if (type.contains(fallback))  fallbackList.add(p);
+        }
+
+        return !preferredList.isEmpty() ? preferredList : fallbackList;
+    }
+
+    private List<IndoorDirectionResponse.RoutePoint> calculateRoute(
+            String buildingId, String originRoomId,
+            String destinationRoomId, String floor, boolean avoidStairs) {
+
+        String planId = convertBuildingIdForPathfinding(buildingId, floor);
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+
+        PathfindingService.Waypoint sCoord = resolvePoint(planId, originRoomId);
+        PathfindingService.Waypoint eCoord = resolvePoint(planId, destinationRoomId);
+
+        if (sCoord == null || eCoord == null) return new ArrayList<>();
+
+        return buildRoute(planId,
+                new FloorPlanData.Point(sCoord.x, sCoord.y),
+                new FloorPlanData.Point(eCoord.x, eCoord.y),
+                originRoomId, destinationRoomId,
+                avoidStairs);
+    }
+
+
+    private double calculatePreciseDistance(List<IndoorDirectionResponse.RoutePoint> pts) {
+        if (pts == null || pts.size() < 2) return 0d;
+        double sum = 0d;
+        for (int i = 1; i < pts.size(); i++) {
+            double dx = pts.get(i).getX() - pts.get(i - 1).getX();
+            double dy = pts.get(i).getY() - pts.get(i - 1).getY();
+            sum += Math.sqrt((dx * dx) + (dy * dy));
+        }
+        return sum;
+    }
+
+    private String formatFinalDistance(double exactDistance) {
+        return String.format("%.0f m", exactDistance);
+    }
+
+    private String formatFinalDuration(double exactDistance) {
+        if (exactDistance <= 0) return "0 sec";
+        double seconds = exactDistance / 1.4d;
+        int m = (int) (seconds / 60);
+        int s = (int) (seconds % 60);
+        return m > 0 ? m + " min " + s + " sec" : s + " sec";
+    }
+
+    private List<IndoorRouteStep> generateRealSteps(
+            String destination,
+            String originFloor,
+            String destinationFloor,
+            String usedTransition
+    ) {
+        List<IndoorRouteStep> steps = new ArrayList<>();
+        steps.add(new IndoorRouteStep("Follow the path", "0 m", "0 sec",
+                IndoorManeuverType.STRAIGHT, originFloor, null, null));
+
+        if (!originFloor.equals(destinationFloor)) {
+            boolean goingUp = parseFloorNumber(destinationFloor) > parseFloorNumber(originFloor);
+
+            IndoorManeuverType maneuver;
+            if ("ELEVATOR".equals(usedTransition)) {
+                maneuver = goingUp ? IndoorManeuverType.ELEVATOR_UP : IndoorManeuverType.ELEVATOR_DOWN;
+            } else {
+                maneuver = goingUp ? IndoorManeuverType.STAIRS_UP : IndoorManeuverType.STAIRS_DOWN;
+            }
+
+            steps.add(new IndoorRouteStep(
+                    "Transition to floor " + destinationFloor,
+                    "0 m",
+                    "30 sec",
+                    maneuver,
+                    originFloor,
+                    null,
+                    null
+            ));
+        }
+
+        steps.add(new IndoorRouteStep("Arrive at " + destination, "0 m", "0 sec",
+                IndoorManeuverType.ENTER_ROOM, destinationFloor, destination, null));
+
+        return steps;
+    }
+
     private String detectStairMessage(String buildingId, String origin, String destination, String floor) {
         String lo = origin.toLowerCase();
         String ld = destination.toLowerCase();
-
         String hallStairMsg = detectHallSecondFloorStairs(buildingId, floor, lo, ld);
-        if (hallStairMsg != null) {
-            return hallStairMsg;
-        }
+        if (hallStairMsg != null) return hallStairMsg;
         return detectGenericStairs(lo, ld);
     }
 
     private String detectHallSecondFloorStairs(String buildingId, String floor, String lo, String ld) {
         boolean isHall = "H".equals(buildingId) || (buildingId != null && buildingId.startsWith(PREFIX_HALL));
         boolean isSecondFloor = "2".equals(floor) || (buildingId != null && buildingId.endsWith("-2"));
-        if (!isHall || !isSecondFloor) {
-            return null;
-        }
-        boolean originIsEntrance = isHallEntrance(lo);
-        boolean destIsEntrance = isHallEntrance(ld);
-        if (originIsEntrance && !destIsEntrance) {
-            return MSG_STAIRS_UP;
-        }
-        if (!originIsEntrance && destIsEntrance) {
-            return MSG_STAIRS_DOWN;
-        }
+        if (!isHall || !isSecondFloor) return null;
+        if (isHallEntrance(lo) && !isHallEntrance(ld)) return MSG_STAIRS_UP;
+        if (!isHallEntrance(lo) && isHallEntrance(ld)) return MSG_STAIRS_DOWN;
         return null;
     }
 
     private static boolean isHallEntrance(String label) {
-        return label.contains("maisonneuve") || label.contains("bishop")
-                || label.contains("mckay") || label.contains("underground");
+        return label.contains("maisonneuve") || label.contains("bishop") || label.contains("mckay") || label.contains("underground");
     }
 
     private String detectGenericStairs(String lo, String ld) {
-        boolean originIsStairs = lo.contains(KEYWORD_STAIRS);
-        boolean destIsStairs = ld.contains(KEYWORD_STAIRS);
-        if (!originIsStairs && !destIsStairs) {
-            return null;
-        }
-        if (lo.contains("stairs-up") || ld.contains("stairs-up") || lo.contains("stairs-to")) {
-            return MSG_STAIRS_UP_GENERIC;
-        }
-        if (lo.contains("stairs-down") || ld.contains("stairs-down")
-                || lo.contains("stairs-coming") || lo.contains("stairs-from")) {
-            return MSG_STAIRS_DOWN_GENERIC;
-        }
+        if (!lo.contains(KEYWORD_STAIRS) && !ld.contains(KEYWORD_STAIRS)) return null;
+        if (lo.contains("stairs-up") || ld.contains("stairs-up")) return MSG_STAIRS_UP_GENERIC;
+        if (lo.contains("stairs-down") || ld.contains("stairs-down")) return MSG_STAIRS_DOWN_GENERIC;
         return MSG_STAIRS_INVOLVED;
     }
 
-    /**
-     *  placeholder step-by-step text directions.
-     */
-    private List<IndoorRouteStep> generatePlaceholderSteps(
-            String destination,
-            String originFloor, String destinationFloor) {
-
-        List<IndoorRouteStep> steps = new ArrayList<>();
-
-        if (originFloor != null && destinationFloor != null
-                && !originFloor.equals(destinationFloor)) {
-            int originFloorNum = parseFloorNumber(originFloor);
-            int destFloorNum = parseFloorNumber(destinationFloor);
-            IndoorManeuverType elevatorType = destFloorNum > originFloorNum
-                    ? IndoorManeuverType.ELEVATOR_UP
-                    : IndoorManeuverType.ELEVATOR_DOWN;
-            steps.add(new IndoorRouteStep(
-                    "Take elevator to floor " + destinationFloor,
-                    "0 m", "30 sec", elevatorType,
-                    originFloor, null, "Elevator"));
-        }
-
-        String floorLabel = destinationFloor != null ? destinationFloor : originFloor;
-        steps.add(new IndoorRouteStep(
-                "Walk straight down the hallway",
-                "20 m", "30 sec", IndoorManeuverType.STRAIGHT,
-                floorLabel, null, "Main hallway"));
-        steps.add(new IndoorRouteStep(
-                "Turn right",
-                "0 m", "0 sec", IndoorManeuverType.TURN_RIGHT,
-                floorLabel, null, null));
-        steps.add(new IndoorRouteStep(
-                "Enter " + destination,
-                "10 m", "15 sec", IndoorManeuverType.ENTER_ROOM,
-                floorLabel, destination, null));
-
-        return steps;
-    }
-
     private String getBuildingName(String buildingId) {
-        if (buildingId != null && buildingId.startsWith(PREFIX_HALL)) {
+        if ("H".equals(buildingId) || (buildingId != null && buildingId.startsWith(PREFIX_HALL)))
             return "Hall Building";
-        } else if (buildingId != null && buildingId.startsWith("VL-")) {
-            return "Vanier Library Building";
-        } else if (buildingId != null && buildingId.startsWith("LB-")) {
-            return "Webster Library Building";
-        } else if (buildingId != null && buildingId.startsWith("MB-")) {
-            return "John Molson School of Business";
-        }
-        else if (buildingId != null && buildingId.startsWith("CC-")) {
-            return "Central Building";
-        }
+        if (buildingId != null && buildingId.startsWith("VL-")) return "Vanier Library Building";
+        if (buildingId != null && buildingId.startsWith("LB-")) return "Webster Library Building";
+        if (buildingId != null && buildingId.startsWith("MB-")) return "John Molson School of Business";
+        if (buildingId != null && buildingId.startsWith("CC-")) return "Central Building";
+        if (buildingId != null && buildingId.startsWith("VE-") || "VE".equals(buildingId)) return "Engineering/Visual Arts Building";
         return "Building " + buildingId;
     }
 
-    /**
-     * Convert building ID from frontend format to pathfinding service format.
-     */
     private String convertBuildingIdForPathfinding(String buildingId, String floor) {
-        if (buildingId == null || floor == null) {
+        if (buildingId == null || floor == null) return buildingId;
+        if ("H".equals(buildingId) || "Hall-".equals(buildingId)) {
+            return PREFIX_HALL + floor;
+        }
+        if (buildingId.startsWith(PREFIX_HALL)
+                || buildingId.startsWith("VL-")
+                || buildingId.startsWith("LB-")
+                || buildingId.startsWith("MB-")
+                || buildingId.startsWith("CC-")
+                || buildingId.startsWith("VE-")) {
             return buildingId;
         }
-        if (buildingId.startsWith(PREFIX_HALL) || buildingId.startsWith("VL-")
-                || buildingId.startsWith("MB-")) {
-            return buildingId;
-        }
-        if ("H".equals(buildingId))  return PREFIX_HALL + floor;
         if ("VL".equals(buildingId)) return "VL-" + floor;
         if ("LB".equals(buildingId)) return "LB-" + floor;
         if ("MB".equals(buildingId)) return "MB-" + floor;
@@ -203,173 +316,110 @@ public class IndoorDirectionService {
         return buildingId;
     }
 
-    /**
-     * Get list of available rooms for a building/floor.
-     */
-    public List<String> getAvailableRooms(String buildingId, String floor) {
-        String pathfindingBuildingId = convertBuildingIdForPathfinding(buildingId, floor);
-        FloorPlanData floorPlan = new FloorPlanData(pathfindingBuildingId, floor);
-        return new ArrayList<>(floorPlan.getRoomPoints().keySet());
+    public List<String> getAvailableRooms(String bId, String f) {
+        return new ArrayList<>(getRoomPoints(bId, f).stream().map(r -> r.id).toList());
     }
 
-    /**
-     * Get all waypoints for a building/floor.
-     */
-    public List<IndoorDirectionsController.WaypointResponse> getWaypoints(String buildingId, String floor) {
-        String pathfindingBuildingId = convertBuildingIdForPathfinding(buildingId, floor);
-        List<PathfindingService.Waypoint> waypoints = pathfindingService.getWaypointsForBuilding(pathfindingBuildingId);
-        List<IndoorDirectionsController.WaypointResponse> response = new ArrayList<>();
-        for (PathfindingService.Waypoint wp : waypoints) {
-            response.add(new IndoorDirectionsController.WaypointResponse(wp.x, wp.y, wp.id));
-        }
-        return response;
+    public List<IndoorDirectionsController.WaypointResponse> getWaypoints(String bId, String f) {
+        String pId = convertBuildingIdForPathfinding(bId, f);
+        return pathfindingService.getWaypointsForBuilding(pId).stream()
+                .map(w -> new IndoorDirectionsController.WaypointResponse(w.x, w.y, w.id)).toList();
     }
 
-    /**
-     * Get all room points (coordinates) for a building/floor.
-     */
-    public List<IndoorDirectionsController.RoomPointResponse> getRoomPoints(String buildingId, String floor) {
-        String pathfindingBuildingId = convertBuildingIdForPathfinding(buildingId, floor);
-        FloorPlanData floorPlan = new FloorPlanData(pathfindingBuildingId, floor);
-        Map<String, FloorPlanData.Point> roomPoints = floorPlan.getRoomPoints();
+    public List<IndoorDirectionsController.RoomPointResponse> getRoomPoints(String bId, String f) {
+        String pId = convertBuildingIdForPathfinding(bId, f);
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+        Map<String, PathfindingService.Waypoint> coords = helper.getRoomCoordinateMap(pId);
         List<IndoorDirectionsController.RoomPointResponse> response = new ArrayList<>();
-        for (Map.Entry<String, FloorPlanData.Point> entry : roomPoints.entrySet()) {
-            response.add(new IndoorDirectionsController.RoomPointResponse(
-                entry.getValue().getX(), entry.getValue().getY(), entry.getKey()));
+        if(coords != null) {
+            for (Map.Entry<String, PathfindingService.Waypoint> entry : coords.entrySet()) {
+                response.add(new IndoorDirectionsController.RoomPointResponse(entry.getValue().x, entry.getValue().y, entry.getKey()));
+            }
         }
         return response;
     }
 
-    /**
-     * Get all Points of Interest for a building/floor.
-     */
-    public List<IndoorDirectionsController.PoiResponse> getPointsOfInterest(String buildingId, String floor) {
-        String pathfindingBuildingId = convertBuildingIdForPathfinding(buildingId, floor);
-        FloorPlanData floorPlan = new FloorPlanData(pathfindingBuildingId, floor);
-        List<FloorPlanData.PointOfInterest> pois = floorPlan.getPointsOfInterest();
-        List<IndoorDirectionsController.PoiResponse> response = new ArrayList<>();
-        for (FloorPlanData.PointOfInterest poi : pois) {
-            response.add(new IndoorDirectionsController.PoiResponse(
-                poi.x, poi.y, poi.id, poi.displayName, poi.type));
-        }
-        return response;
-    }
-
-    /**
-     * Calculate route between two rooms using pathfinding.
-     * Normalizes origin/destination ordering to ensure A→B is the reverse of B→A,
-     * except for Hall-2 where up/down stairs differ so direction matters.
-     */
-    private List<IndoorDirectionResponse.RoutePoint> calculateRoute(
-            String buildingId, String originRoomId,
-            String destinationRoomId, String floor) {
-
-        String pathfindingBuildingId = convertBuildingIdForPathfinding(buildingId, floor);
-
-        boolean isHall2 = "Hall-2".equals(pathfindingBuildingId);
-        boolean shouldReverse = !isHall2 && originRoomId.compareTo(destinationRoomId) > 0;
-        String normalizedOrigin = shouldReverse ? destinationRoomId : originRoomId;
-        String normalizedDest = shouldReverse ? originRoomId : destinationRoomId;
-
-        FloorPlanData floorPlan = new FloorPlanData(pathfindingBuildingId, floor);
-        String resolvedOriginId = resolveOriginEntrance(floorPlan, normalizedOrigin, normalizedDest);
-        String resolvedDestId = resolveDestinationEntrance(floorPlan, normalizedDest, resolvedOriginId);
-
-        FloorPlanData.Point originPoint = floorPlan.getRoomPoints().get(resolvedOriginId);
-        FloorPlanData.Point destPoint = floorPlan.getRoomPoints().get(resolvedDestId);
-
-        if (originPoint == null || destPoint == null) {
-            return new ArrayList<>();
-        }
-
-        List<IndoorDirectionResponse.RoutePoint> routePoints = buildRoute(
-                pathfindingBuildingId, originPoint, destPoint, resolvedOriginId, resolvedDestId);
-
-        if (shouldReverse) {
-            java.util.Collections.reverse(routePoints);
-        }
-        return routePoints;
-    }
-
-    private String resolveOriginEntrance(FloorPlanData floorPlan, String originId, String destId) {
-        FloorPlanData.Point originPoint = floorPlan.getRoomPoints().get(originId);
-        if (originPoint != null) {
-            return originId;
-        }
-        FloorPlanData.Point destPoint = floorPlan.getRoomPoints().get(destId);
-        if (destPoint != null) {
-            return floorPlan.resolveToClosestEntrance(originId, destPoint.getX(), destPoint.getY());
-        }
-        FloorPlanData.Point fallbackDest = getFirstEntrancePoint(floorPlan, destId);
-        if (fallbackDest != null) {
-            return floorPlan.resolveToClosestEntrance(originId, fallbackDest.getX(), fallbackDest.getY());
-        }
-        return originId;
-    }
-
-    private String resolveDestinationEntrance(FloorPlanData floorPlan, String destId, String resolvedOriginId) {
-        FloorPlanData.Point originPoint = floorPlan.getRoomPoints().get(resolvedOriginId);
-        if (originPoint != null) {
-            return floorPlan.resolveToClosestEntrance(destId, originPoint.getX(), originPoint.getY());
-        }
-        return destId;
-    }
-
-    private FloorPlanData.Point getFirstEntrancePoint(FloorPlanData floorPlan, String roomId) {
-        java.util.List<String> entrances = floorPlan.getRoomEntranceGroups().get(roomId);
-        if (entrances == null || entrances.isEmpty()) {
-            return null;
-        }
-        return floorPlan.getRoomPoints().get(entrances.get(0));
+    public List<IndoorDirectionsController.PoiResponse> getPointsOfInterest(String bId, String f) {
+        String pId = convertBuildingIdForPathfinding(bId, f);
+        return new PathfindingService.Waypoint(0,0,"helper").getPoisForBuilding(pId);
     }
 
     private List<IndoorDirectionResponse.RoutePoint> buildRoute(
             String pathfindingBuildingId,
             FloorPlanData.Point originPoint, FloorPlanData.Point destPoint,
-            String originId, String destId) {
+            String originId, String destId, boolean avoidStairs) {
 
         pathfindingService.setBuilding(pathfindingBuildingId);
+        PathfindingService.Waypoint startWp = pathfindingService.findNearestWaypoint(originPoint.getX(), originPoint.getY());
+        PathfindingService.Waypoint endWp = pathfindingService.findNearestWaypoint(destPoint.getX(), destPoint.getY());
 
-        PathfindingService.Waypoint startWp = pathfindingService.findNearestWaypoint(
-                originPoint.getX(), originPoint.getY());
-        PathfindingService.Waypoint endWp = pathfindingService.findNearestWaypoint(
-                destPoint.getX(), destPoint.getY());
-
-        if (startWp == null || endWp == null) {
-            return new ArrayList<>();
-        }
+        if (startWp == null || endWp == null) return new ArrayList<>();
 
         List<PathfindingService.Waypoint> waypointPath =
-                pathfindingService.findPathThroughWaypoints(startWp, endWp);
+                pathfindingService.findPathThroughWaypoints(startWp, endWp, avoidStairs);
 
-        if (waypointPath.isEmpty()) {
-            return new ArrayList<>();
-        }
+        if (waypointPath.isEmpty()) return new ArrayList<>();
 
         List<IndoorDirectionResponse.RoutePoint> routePoints = new ArrayList<>();
-        routePoints.add(new IndoorDirectionResponse.RoutePoint(
-                originPoint.getX(), originPoint.getY(), originId));
+        routePoints.add(new IndoorDirectionResponse.RoutePoint(originPoint.getX(), originPoint.getY(), originId));
         for (PathfindingService.Waypoint wp : waypointPath) {
             routePoints.add(new IndoorDirectionResponse.RoutePoint(wp.x, wp.y, wp.id));
         }
-        routePoints.add(new IndoorDirectionResponse.RoutePoint(
-                destPoint.getX(), destPoint.getY(), destId));
+        routePoints.add(new IndoorDirectionResponse.RoutePoint(destPoint.getX(), destPoint.getY(), destId));
         return routePoints;
     }
 
-    private String calculateDistance() {
-        return "—";
-    }
-
-    private String calculateDuration() {
-        return "—";
-    }
-
     private int parseFloorNumber(String floor) {
-        try {
-            return Integer.parseInt(floor.replaceAll("[^0-9-]", ""));
-        } catch (NumberFormatException e) {
-            return 0;
+        try { return Integer.parseInt(floor.replaceAll("[^0-9-]", "")); } catch (Exception e) { return 0; }
+    }
+
+
+    private String norm(String s) {
+        if (s == null) return "";
+        return s.trim().toLowerCase().replaceAll("\\s+", "");
+    }
+
+    private String typeBucket(IndoorDirectionsController.PoiResponse p) {
+        String t = (p == null || p.type == null) ? "" : p.type.toLowerCase();
+        if (t.contains("elevator")) return "elevator";
+        if (t.contains("stairs")) return "stairs";
+        return "";
+    }
+
+    private String poiKey(IndoorDirectionsController.PoiResponse p) {
+        return typeBucket(p) + "|" + norm(p.displayName);
+    }
+
+    private PathfindingService.Waypoint resolvePoint(String planId, String id) {
+        if (id == null) return null;
+
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+
+        // 1) Try rooms
+        PathfindingService.Waypoint w = helper.getRoomCoordinate(planId, id);
+        if (w != null) return w;
+
+        // 2) Try POIs
+        List<IndoorDirectionsController.PoiResponse> pois = helper.getPoisForBuilding(planId);
+        for (IndoorDirectionsController.PoiResponse p : pois) {
+            if (p != null && p.id != null && p.id.equals(id)) {
+                return new PathfindingService.Waypoint(p.x, p.y, p.id);
+            }
         }
+
+        return null;
+    }
+
+    private String detectTransitionType(List<IndoorDirectionResponse.RoutePoint> routePoints) {
+        if (routePoints == null) return null;
+
+        for (IndoorDirectionResponse.RoutePoint rp : routePoints) {
+            String label = rp.getLabel();
+            if (label == null) continue;
+
+            if (label.startsWith("TRANSITION_ELEVATOR")) return "ELEVATOR";
+            if (label.startsWith("TRANSITION_STAIRS"))   return "STAIRS";
+        }
+        return null;
     }
 }
