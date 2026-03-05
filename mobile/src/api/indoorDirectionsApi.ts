@@ -10,6 +10,7 @@ export async function getIndoorDirections(
   destination: string,
   originFloor?: string,
   destinationFloor?: string,
+  avoidStairs?: boolean,
 ): Promise<IndoorDirectionResponse> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -23,6 +24,12 @@ export async function getIndoorDirections(
 
   if (originFloor) params.append("originFloor", originFloor);
   if (destinationFloor) params.append("destinationFloor", destinationFloor);
+
+  if (avoidStairs !== undefined) {
+    params.append("avoidStairs", String(avoidStairs));
+  }
+
+  console.log("API base:", API_BASE_URL);
 
   try {
     const response = await fetch(
