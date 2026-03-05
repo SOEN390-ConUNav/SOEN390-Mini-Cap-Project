@@ -49,6 +49,7 @@ describe("RouteCard", () => {
   const onBack = jest.fn();
   const onSwap = jest.fn();
   const setIsLoading = jest.fn();
+  let navigationInfoState: { isLoading: boolean; setIsLoading: jest.Mock };
 
   const baseProps = {
     originLabel: "Hall Building",
@@ -59,10 +60,14 @@ describe("RouteCard", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseNavigationInfo.mockReturnValue({
+    navigationInfoState = {
       isLoading: false,
       setIsLoading,
-    });
+    };
+
+    mockUseNavigationInfo.mockImplementation((selector) =>
+      selector(navigationInfoState),
+    );
   });
 
   it("renders without crashing", () => {
@@ -93,15 +98,15 @@ describe("RouteCard", () => {
   });
 
   it("shows loading indicator and hides route rows when isLoading is true", () => {
-    mockUseNavigationInfo.mockReturnValue({ isLoading: true, setIsLoading });
+    navigationInfoState.isLoading = true;
     const { getByText, queryByText } = render(<RouteCard {...baseProps} />);
-    expect(getByText("Calculating route…")).toBeTruthy();
+    expect(getByText("Calculating route...")).toBeTruthy();
     expect(queryByText("From")).toBeNull();
     expect(queryByText("To")).toBeNull();
   });
 
   it("hides swap button when loading", () => {
-    mockUseNavigationInfo.mockReturnValue({ isLoading: true, setIsLoading });
+    navigationInfoState.isLoading = true;
     const { queryByTestId } = render(<RouteCard {...baseProps} />);
     expect(queryByTestId("swap-button")).toBeNull();
   });
@@ -120,13 +125,13 @@ describe("RouteCard", () => {
   });
 
   it("back button is still rendered while loading", () => {
-    mockUseNavigationInfo.mockReturnValue({ isLoading: true, setIsLoading });
+    navigationInfoState.isLoading = true;
     const { getByTestId } = render(<RouteCard {...baseProps} />);
     expect(getByTestId("icon-button-arrow-back")).toBeTruthy();
   });
 
   it("pressing back while loading still calls setIsLoading(false) and onBack", () => {
-    mockUseNavigationInfo.mockReturnValue({ isLoading: true, setIsLoading });
+    navigationInfoState.isLoading = true;
     const { getByTestId } = render(<RouteCard {...baseProps} />);
     fireEvent.press(getByTestId("icon-button-arrow-back"));
     expect(setIsLoading).toHaveBeenCalledWith(false);

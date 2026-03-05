@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useLocalSearchParams, useRouter } from "expo-router";
 import { hasIndoorMaps, getDefaultFloor } from "../../utils/buildingIndoorMaps";
@@ -8,7 +8,6 @@ import MapView, {
   PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
-import * as Location from "expo-location";
 import SearchBar from "../../components/search-bar/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
 import FloatingActionButton from "../../components/FloatingActionButton";
@@ -32,12 +31,17 @@ import DirectionPath from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
-import { NamedCoordinate } from "../../type";
+import { NamedCoordinate, TRANSPORT_MODE_API_MAP } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 import NavigationInfoBottom from "../../components/navigation-info/NavigationInfoBottom";
 import NavigationDirectionHUDBottom from "../../components/navigation-direction/NavigationDirectionHUDBottom";
 import NavigationCancelBottom from "../../components/navigation-cancel/NavigationCancelBottom";
+import useLocationService from "../../hooks/useLocationService";
+import useLocationStore from "../../hooks/useLocationStore";
+import useRerouting from "../../hooks/useRerouting";
+import useNavigationProgress from "../../hooks/useNavigationProgress";
+import LocationPromptModal from "../../components/LocationPromptModal";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -83,10 +87,12 @@ export default function HomePageIndex() {
   } = useNavigationState();
   const { origin, setOrigin, destination, setDestination, swap, clear } =
     useNavigationEndpoints();
-  const { allOutdoorRoutes, setAllOutdoorRoutes, navigationMode } =
-    useNavigationConfig();
-  const { setIsLoading, setPathDistance, setPathDuration } =
-    useNavigationInfo();
+  const allOutdoorRoutes = useNavigationConfig((s) => s.allOutdoorRoutes);
+  const setAllOutdoorRoutes = useNavigationConfig((s) => s.setAllOutdoorRoutes);
+  const navigationMode = useNavigationConfig((s) => s.navigationMode);
+  const setIsLoading = useNavigationInfo((s) => s.setIsLoading);
+  const setPathDistance = useNavigationInfo((s) => s.setPathDistance);
+  const setPathDuration = useNavigationInfo((s) => s.setPathDuration);
   const [toggleNavigationInfoState, setToggleNavigationInfoState] = useState<
     "maximize" | "minimize"
   >("minimize");
@@ -94,10 +100,51 @@ export default function HomePageIndex() {
     "maximize" | "minimize"
   >("minimize");
 
-  const [hasLocationPermission, setHasLocationPermission] = useState<
-    boolean | null
-  >(null);
-  const [showEnableLocation, setShowEnableLocation] = useState(true);
+  const {
+    requestPermission,
+    markPermissionScreenSeen,
+    markUserSkipped,
+    openSettings,
+    getCurrentPosition,
+    checkPermission,
+  } = useLocationService();
+
+  const isInitialized = useLocationStore((state) => state.isInitialized);
+  const permissionStatus = useLocationStore((state) => state.permissionStatus);
+  const canAskAgain = useLocationStore((state) => state.canAskAgain);
+  const hasSeenPermissionScreen = useLocationStore(
+    (state) => state.hasSeenPermissionScreen,
+  );
+  const userSkippedPermission = useLocationStore(
+    (state) => state.userSkippedPermission,
+  );
+  const currentLocation = useLocationStore((state) => state.currentLocation);
+  const nearestBuilding = useLocationStore((state) => state.nearestBuilding);
+  const nearestBuildingDistance = useLocationStore(
+    (state) => state.nearestBuildingDistance,
+  );
+
+  const { isRerouting } = useRerouting();
+  const currentStepIndex = useNavigationProgress(
+    (state) => state.currentStepIndex,
+  );
+  const resetNavigationProgress = useNavigationProgress(
+    (state) => state.resetProgress,
+  );
+
+  const hasLocationPermission = permissionStatus === "granted";
+  const shouldShowOSPrompt =
+    !userSkippedPermission &&
+    (canAskAgain || permissionStatus === "undetermined");
+
+  const shouldShowEnableLocation = (() => {
+    if (!isInitialized) return false;
+    if (permissionStatus === "granted") return false;
+    if (permissionStatus === "revoked") return true;
+    if (permissionStatus === "denied" && !userSkippedPermission) return true;
+    if (!hasSeenPermissionScreen) return true;
+    return false;
+  })();
 
   const [region, setRegion] = useState<Region>({
     latitude: SGW_CENTER.latitude,
@@ -122,25 +169,36 @@ export default function HomePageIndex() {
   const [freezeMarkers, setFreezeMarkers] = useState(false);
   const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [pendingDestination, setPendingDestination] = useState<{
+    latitude: number;
+    longitude: number;
+    label: string;
+  } | null>(null);
+
   const mapRef = useRef<MapView>(null);
-  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
   const navigatingRef = useRef(false);
 
+  // Re-check permission when initialized - handles return from settings
   useEffect(() => {
-    checkLocationPermission();
-  }, []);
+    if (isInitialized && permissionStatus !== "granted") {
+      checkPermission();
+    }
+  }, [isInitialized]);
 
   // ── Derive active route steps for the HUD ──────────────────────────────
+  const apiMode = TRANSPORT_MODE_API_MAP[navigationMode];
   const activeRoute =
     allOutdoorRoutes?.find(
-      (r) => r.transportMode?.toUpperCase() === navigationMode?.toUpperCase(),
+      (r) => r.transportMode?.toLowerCase() === apiMode?.toLowerCase(),
     ) ??
     allOutdoorRoutes?.[0] ??
     null;
 
-  const hudSteps = activeRoute?.steps ?? [];
-  const hudTopStep = hudSteps[0];
+  const allSteps = activeRoute?.steps ?? [];
+  const hudSteps = allSteps.slice(currentStepIndex);
+  const hudTopStep = hudSteps.length > 1 ? hudSteps[1] : hudSteps[0];
   // ───────────────────────────────────────────────────────────────────────
 
   // When navigation starts, clear UI clutter + zoom to user ──────
@@ -170,7 +228,7 @@ export default function HomePageIndex() {
   }, [params.shuttleCampus]);
 
   useEffect(() => {
-    if (!shuttleStop || showEnableLocation || !mapReady) return;
+    if (!shuttleStop || shouldShowEnableLocation || !mapReady) return;
     requestAnimationFrame(() => {
       animateToRegion({
         latitude: shuttleStop.coordinate.latitude,
@@ -179,14 +237,14 @@ export default function HomePageIndex() {
       });
     });
     scheduleFreezeMarkers();
-  }, [shuttleStop, showEnableLocation, mapReady]);
+  }, [shuttleStop, shouldShowEnableLocation, mapReady]);
 
   useEffect(() => {
     scheduleFreezeMarkers();
     return () => {
       if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
     };
-  }, [showEnableLocation]);
+  }, [shouldShowEnableLocation]);
 
   useEffect(() => {
     const style =
@@ -204,17 +262,7 @@ export default function HomePageIndex() {
     return () => {
       if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
     };
-  }, [mapReady, showEnableLocation, isConfiguring, isNavigating]);
-
-  const checkLocationPermission = async () => {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    const granted = status === "granted";
-    setHasLocationPermission(granted);
-    if (granted) {
-      setShowEnableLocation(false);
-      await startWatchingLocation();
-    }
-  };
+  }, [mapReady, shouldShowEnableLocation, isConfiguring, isNavigating]);
 
   const onPressIndoorMaps = () => {
     if (selectedBuildingId) {
@@ -227,32 +275,11 @@ export default function HomePageIndex() {
     }
   };
 
-  const stopWatchingLocation = () => {
-    locationSubRef.current?.remove();
-    locationSubRef.current = null;
-  };
-
-  const startWatchingLocation = async () => {
-    if (locationSubRef.current) return;
-    try {
-      locationSubRef.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 1000,
-          distanceInterval: 1,
-        },
-        () => {},
-      );
-    } catch (error) {
-      console.error("Error watching location:", error);
-    }
-  };
-
   const getOneFix = async (): Promise<Region> => {
-    const current = await Location.getCurrentPositionAsync({});
+    const coords = await getCurrentPosition();
     return {
-      latitude: current.coords.latitude,
-      longitude: current.coords.longitude,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
       ...CAMPUS_REGION_DELTA,
     };
   };
@@ -264,7 +291,7 @@ export default function HomePageIndex() {
   const scheduleFreezeMarkers = () => {
     if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
     setFreezeMarkers(false);
-    if (!mapReady || showEnableLocation) return;
+    if (!mapReady || shouldShowEnableLocation) return;
     freezeTimerRef.current = setTimeout(
       () => setFreezeMarkers(true),
       FREEZE_MARKERS_AFTER_MS,
@@ -274,11 +301,14 @@ export default function HomePageIndex() {
   const onPressFab = async () => {
     try {
       setEventDetails(null);
-      if (hasLocationPermission === true) {
+      if (hasLocationPermission) {
         animateToRegion(await getOneFix());
         return;
       }
-      setShowEnableLocation(true);
+      router.push({
+        pathname: "/(home-page)/enable-location",
+        params: permissionStatus === "revoked" ? { reason: "revoked" } : {},
+      });
     } catch {
       Alert.alert("Location error", "Could not center the map.");
     }
@@ -286,29 +316,28 @@ export default function HomePageIndex() {
 
   const onEnableLocation = async () => {
     try {
-      const granted = await Location.requestForegroundPermissionsAsync().then(
-        ({ status }) => status === "granted",
-      );
+      const granted = await requestPermission();
+      await markPermissionScreenSeen();
+
       if (!granted) {
         Alert.alert(
-          "Permission denied",
+          "Permission Denied",
           "You can enable location later in device settings.",
+          [
+            { text: "Continue", style: "cancel" },
+            { text: "Open Settings", onPress: openSettings },
+          ],
         );
         return;
       }
-      setHasLocationPermission(true);
-      setShowEnableLocation(false);
       animateToRegion(await getOneFix());
-      await startWatchingLocation();
     } catch {
       Alert.alert("Location error", "Could not retrieve your location.");
     }
   };
 
-  const onSkipLocation = () => {
-    setShowEnableLocation(false);
-    setHasLocationPermission(false);
-    stopWatchingLocation();
+  const onSkipLocation = async () => {
+    await markUserSkipped();
   };
 
   const onChangeCampus = (next: "SGW" | "LOYOLA") => {
@@ -358,30 +387,16 @@ export default function HomePageIndex() {
     setShowBuildingPopup(true);
   };
 
-  const onPressDirections = async () => {
-    setShowBuildingPopup(false);
-    if (!selectedBuilding) return;
+  const NEARBY_BUILDING_THRESHOLD_METERS = 50;
 
+  const proceedWithDirections = async (
+    originCoords: { latitude: number; longitude: number; label: string },
+    destCoords: { latitude: number; longitude: number; label: string },
+  ) => {
     setIsLoading(true);
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
 
     try {
-      const currentLocation = await getOneFix();
-      const label = await reverseGeocode(currentLocation).catch(
-        () => "Current Location",
-      );
-
-      const originCoords = {
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        label,
-      };
-      const destCoords = {
-        latitude: selectedBuilding.marker.latitude,
-        longitude: selectedBuilding.marker.longitude,
-        label: selectedBuilding.name,
-      };
-
       setOrigin(originCoords);
       setDestination(destCoords);
 
@@ -410,6 +425,97 @@ export default function HomePageIndex() {
     }
   };
 
+  const handleLocationPromptInside = async () => {
+    setShowLocationPrompt(false);
+    if (!pendingDestination || !nearestBuilding) return;
+
+    const originCoords = {
+      latitude: nearestBuilding.marker.latitude,
+      longitude: nearestBuilding.marker.longitude,
+      label: `${nearestBuilding.name} (Inside)`,
+    };
+
+    await proceedWithDirections(originCoords, pendingDestination);
+    setPendingDestination(null);
+  };
+
+  const handleLocationPromptOutside = async () => {
+    setShowLocationPrompt(false);
+    if (!pendingDestination || !currentLocation) return;
+
+    const label = await reverseGeocode(currentLocation).catch(
+      () => "Current Location",
+    );
+
+    const originCoords = {
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
+      label,
+    };
+
+    await proceedWithDirections(originCoords, pendingDestination);
+    setPendingDestination(null);
+  };
+
+  const handleLocationPromptClose = () => {
+    setShowLocationPrompt(false);
+    setPendingDestination(null);
+  };
+
+  const onPressDirections = async () => {
+    setShowBuildingPopup(false);
+    if (!selectedBuilding) return;
+
+    if (!hasLocationPermission) {
+      Alert.alert(
+        "Location Required",
+        "Enable location to get directions from your current position.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
+            onPress: () => {
+              if (shouldShowOSPrompt) {
+                onEnableLocation();
+              } else {
+                openSettings();
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    const destCoords = {
+      latitude: selectedBuilding.marker.latitude,
+      longitude: selectedBuilding.marker.longitude,
+      label: selectedBuilding.name,
+    };
+
+    if (
+      nearestBuilding &&
+      nearestBuildingDistance !== null &&
+      nearestBuildingDistance < NEARBY_BUILDING_THRESHOLD_METERS &&
+      nearestBuilding.id !== selectedBuilding.id
+    ) {
+      setPendingDestination(destCoords);
+      setShowLocationPrompt(true);
+      return;
+    }
+
+    const fix = await getOneFix();
+    const label = await reverseGeocode(fix).catch(() => "Current Location");
+
+    const originCoords = {
+      latitude: fix.latitude,
+      longitude: fix.longitude,
+      label,
+    };
+
+    await proceedWithDirections(originCoords, destCoords);
+  };
+
   const routeToDestination = async (
     destCoords: {
       latitude: number;
@@ -417,26 +523,38 @@ export default function HomePageIndex() {
     },
     destinationLabel = "Selected Location",
   ) => {
-    const currLocation = await getOneFix();
-    const originCoords = {
-      latitude: currLocation.latitude,
-      longitude: currLocation.longitude,
-      label: "Current Location",
-    };
     const labeledDestCoords = {
       latitude: destCoords.latitude,
       longitude: destCoords.longitude,
       label: destinationLabel,
     };
 
-    setOrigin(originCoords);
-    setDestination(labeledDestCoords);
-    const routes = await getAllOutdoorDirectionsInfo(
-      originCoords,
-      labeledDestCoords,
-    );
-    setAllOutdoorRoutes(routes);
-    setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+    if (
+      hasLocationPermission &&
+      nearestBuilding &&
+      nearestBuildingDistance !== null &&
+      nearestBuildingDistance < NEARBY_BUILDING_THRESHOLD_METERS
+    ) {
+      const destMatchesNearBuilding =
+        Math.abs(destCoords.latitude - nearestBuilding.marker.latitude) <
+          0.0005 &&
+        Math.abs(destCoords.longitude - nearestBuilding.marker.longitude) <
+          0.0005;
+      if (!destMatchesNearBuilding) {
+        setPendingDestination(labeledDestCoords);
+        setShowLocationPrompt(true);
+        return;
+      }
+    }
+
+    const currLocation = await getOneFix();
+    const originCoords = {
+      latitude: currLocation.latitude,
+      longitude: currLocation.longitude,
+      label: "Current Location",
+    };
+
+    await proceedWithDirections(originCoords, labeledDestCoords);
   };
 
   const parseLatLng = (
@@ -513,30 +631,38 @@ export default function HomePageIndex() {
     longitude,
     name,
   }: NamedCoordinate) => {
+    const destCoords = {
+      latitude,
+      longitude,
+      label: name ?? "Selected Location",
+    };
+
+    if (
+      hasLocationPermission &&
+      nearestBuilding &&
+      nearestBuildingDistance !== null &&
+      nearestBuildingDistance < NEARBY_BUILDING_THRESHOLD_METERS
+    ) {
+      const destMatchesNearBuilding =
+        Math.abs(latitude - nearestBuilding.marker.latitude) < 0.0005 &&
+        Math.abs(longitude - nearestBuilding.marker.longitude) < 0.0005;
+      if (!destMatchesNearBuilding) {
+        setPendingDestination(destCoords);
+        setShowLocationPrompt(true);
+        return;
+      }
+    }
+
     try {
-      const currentPos = await Location.getCurrentPositionAsync({});
+      const currentPos = await getCurrentPosition();
 
       const originCoords = {
-        latitude: currentPos.coords.latitude,
-        longitude: currentPos.coords.longitude,
+        latitude: currentPos.latitude,
+        longitude: currentPos.longitude,
         label: "Current Location",
       };
-      const destCoords = {
-        latitude,
-        longitude,
-        label: name ?? "Selected Location",
-      };
 
-      setOrigin(originCoords);
-      setDestination(destCoords);
-
-      const routes = await getAllOutdoorDirectionsInfo(
-        originCoords,
-        destCoords,
-      );
-      setAllOutdoorRoutes(routes);
-
-      setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
+      await proceedWithDirections(originCoords, destCoords);
 
       mapRef.current?.fitToCoordinates(
         [originCoords, { latitude, longitude }],
@@ -612,6 +738,7 @@ export default function HomePageIndex() {
     setPathDistance("0");
     setPathDuration("0");
     setAllOutdoorRoutes([]);
+    resetNavigationProgress();
     clear();
   };
 
@@ -619,19 +746,45 @@ export default function HomePageIndex() {
     router.push("/settings");
   };
 
-  if (showEnableLocation) {
+  const handleHUDSnapIndexChange = useCallback((index: number) => {
+    if (index < 0) return;
+    setToggleNavigationHUDState(index === 1 ? "minimize" : "maximize");
+  }, []);
+
+  const handleInfoSnapIndexChange = useCallback((index: number) => {
+    if (index < 0) return;
+    setToggleNavigationInfoState(index === 1 ? "minimize" : "maximize");
+  }, []);
+
+  const isRevoked = permissionStatus === "revoked";
+  const isDenied = permissionStatus === "denied";
+
+  if (!isInitialized) {
+    return (
+      <View style={[styles.root, styles.loadingContainer]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (shouldShowEnableLocation) {
     return (
       <View style={styles.root}>
         <View style={styles.enableLocationContainer}>
           <View style={styles.enableLocationIconCircle}>
-            <Text style={styles.enableLocationIcon}>📍</Text>
+            <Text style={styles.enableLocationIcon}>
+              {isRevoked ? "⚠️" : "📍"}
+            </Text>
           </View>
           <Text style={styles.enableLocationTitle}>
-            Enable Location Services
+            {isRevoked
+              ? "Location Permission Revoked"
+              : "Enable Location Services"}
           </Text>
           <Text style={styles.enableLocationSubtitle}>
-            To help you navigate Concordia's campus, we need access to your
-            location.
+            {isRevoked
+              ? "Location access was previously granted but has been revoked. Please re-enable in settings."
+              : "To help you navigate Concordia's campus, we need access to your location."}
           </Text>
           <View style={styles.enableLocationBullets}>
             <Text style={styles.enableLocationBullet}>
@@ -644,14 +797,22 @@ export default function HomePageIndex() {
               • Nearby points of interest
             </Text>
           </View>
-          <Pressable
-            style={styles.enableLocationBtn}
-            onPress={onEnableLocation}
-          >
-            <Text style={styles.enableLocationBtnText}>Enable Location</Text>
-          </Pressable>
+          {!shouldShowOSPrompt ? (
+            <Pressable style={styles.enableLocationBtn} onPress={openSettings}>
+              <Text style={styles.enableLocationBtnText}>Open Settings</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={styles.enableLocationBtn}
+              onPress={onEnableLocation}
+            >
+              <Text style={styles.enableLocationBtnText}>Enable Location</Text>
+            </Pressable>
+          )}
           <Pressable style={styles.enableLocationSkip} onPress={onSkipLocation}>
-            <Text style={styles.enableLocationSkipText}>Skip for now</Text>
+            <Text style={styles.enableLocationSkipText}>
+              {isRevoked ? "Continue without location" : "Skip for now"}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -736,14 +897,14 @@ export default function HomePageIndex() {
       <View
         style={[
           styles.upcomingEventWrapper,
-          (showEnableLocation ||
+          (shouldShowEnableLocation ||
             isConfiguring ||
             isNavigating ||
             isCancellingNavigation) &&
             styles.overlayHidden,
         ]}
         pointerEvents={
-          !showEnableLocation &&
+          !shouldShowEnableLocation &&
           !(isConfiguring || isNavigating || isCancellingNavigation)
             ? "auto"
             : "none"
@@ -801,6 +962,16 @@ export default function HomePageIndex() {
         }}
       />
 
+      {nearestBuilding && (
+        <LocationPromptModal
+          visible={showLocationPrompt}
+          building={nearestBuilding}
+          onSelectInside={handleLocationPromptInside}
+          onSelectOutside={handleLocationPromptOutside}
+          onClose={handleLocationPromptClose}
+        />
+      )}
+
       <View style={styles.searchWrapper}>
         <SearchBar
           placeholder="Search"
@@ -856,15 +1027,15 @@ export default function HomePageIndex() {
       </View>
       {isNavigating && (
         <>
+          {isRerouting && (
+            <View style={styles.reroutingBanner}>
+              <Text style={styles.reroutingText}>Recalculating route...</Text>
+            </View>
+          )}
           <NavigationDirectionHUDBottom
             visible={isNavigating}
             steps={hudSteps}
-            onSnapIndexChange={(index) => {
-              if (index < 0) return;
-              setToggleNavigationHUDState(
-                index === 1 ? "minimize" : "maximize",
-              );
-            }}
+            onSnapIndexChange={handleHUDSnapIndexChange}
           />
           <NavigationInfoBottom
             visible={isNavigating}
@@ -872,12 +1043,7 @@ export default function HomePageIndex() {
               navigatingRef.current = false;
             }}
             onPressAction={onToggleNavigationInfoState}
-            onSnapIndexChange={(index) => {
-              if (index < 0) return;
-              setToggleNavigationInfoState(
-                index === 1 ? "minimize" : "maximize",
-              );
-            }}
+            onSnapIndexChange={handleInfoSnapIndexChange}
           />
         </>
       )}
@@ -945,5 +1111,35 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 90,
     alignItems: "center",
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#667",
+  },
+  reroutingBanner: {
+    position: "absolute",
+    top: 120,
+    left: 16,
+    right: 16,
+    backgroundColor: BURGUNDY,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+    zIndex: 100,
+  },
+  reroutingText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

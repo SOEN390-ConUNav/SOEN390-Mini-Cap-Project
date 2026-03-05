@@ -14,6 +14,14 @@ jest.mock("../components/BottomDrawer", () => {
   return ({ children }: any) => <View>{children}</View>;
 });
 
+jest.mock("../hooks/useNavigationProgress", () => {
+  const store = { distanceToNextStep: "" };
+  return {
+    __esModule: true,
+    default: (selector: (s: typeof store) => any) => selector(store),
+  };
+});
+
 describe("NavigationDirectionHUDBottom", () => {
   const steps = [
     {
@@ -30,6 +38,13 @@ describe("NavigationDirectionHUDBottom", () => {
       maneuverType: "KEEP_RIGHT",
       polyline: "",
     },
+    {
+      instruction: "Turn right onto Sherbrooke Street",
+      distance: "150 m",
+      duration: "3 min",
+      maneuverType: "TURN_RIGHT",
+      polyline: "",
+    },
   ] as any;
 
   it("returns null when there are no steps", () => {
@@ -39,22 +54,37 @@ describe("NavigationDirectionHUDBottom", () => {
     expect(queryByText("Hide steps")).toBeNull();
   });
 
-  it("renders primary step and expanded list by default", () => {
+  it("shows upcoming maneuver as primary card with current step distance", () => {
     const { getByText } = render(
       <NavigationDirectionHUDBottom visible steps={steps} />,
     );
-    expect(getByText("Turn left onto Maisonneuve Street")).toBeTruthy();
-    expect(getByText("Hide steps")).toBeTruthy();
     expect(getByText("Continue on Guy Street")).toBeTruthy();
+    expect(getByText("20 m")).toBeTruthy();
   });
 
-  it("toggles remaining steps visibility", () => {
+  it("renders later steps in the expanded list", () => {
+    const { getByText } = render(
+      <NavigationDirectionHUDBottom visible steps={steps} />,
+    );
+    expect(getByText("Hide steps")).toBeTruthy();
+    expect(getByText("Turn right onto Sherbrooke Street")).toBeTruthy();
+  });
+
+  it("toggles later steps visibility", () => {
     const { getByText, queryByText } = render(
       <NavigationDirectionHUDBottom visible steps={steps} />,
     );
 
     fireEvent.press(getByText("Hide steps"));
-    expect(queryByText("Continue on Guy Street")).toBeNull();
+    expect(queryByText("Turn right onto Sherbrooke Street")).toBeNull();
     expect(getByText("1 more step")).toBeTruthy();
+  });
+
+  it("falls back to current step instruction on last step", () => {
+    const lastStep = [steps[0]] as any;
+    const { getByText } = render(
+      <NavigationDirectionHUDBottom visible steps={lastStep} />,
+    );
+    expect(getByText("Turn left onto Maisonneuve Street")).toBeTruthy();
   });
 });

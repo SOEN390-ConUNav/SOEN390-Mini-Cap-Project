@@ -67,6 +67,7 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.hprof
+android/
 
 # Keystore files (DO NOT COMMIT)
 *.jks

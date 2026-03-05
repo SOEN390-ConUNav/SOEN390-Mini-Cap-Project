@@ -21,14 +21,15 @@ export default function RouteCard({
   onBack,
   onSwap,
 }: RouteCardProps) {
-  const { isLoading, setIsLoading } = useNavigationInfo();
+  const isLoading = useNavigationInfo((s) => s.isLoading);
+  const setIsLoading = useNavigationInfo((s) => s.setIsLoading);
 
   const originDragProgress = useSharedValue(0);
   const destDragProgress = useSharedValue(0);
 
   return (
     <View style={styles.card}>
-      {/* Always rendered — user can cancel even while route is calculating */}
+      {/* Always rendered - user can cancel even while route is calculating */}
       <CircleIconButton
         icon="arrow-back"
         onPress={() => {
@@ -41,7 +42,7 @@ export default function RouteCard({
         {isLoading ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={BURGUNDY} />
-            <Text style={styles.loadingText}>Calculating route…</Text>
+            <Text style={styles.loadingText}>Calculating route...</Text>
           </View>
         ) : (
           <>

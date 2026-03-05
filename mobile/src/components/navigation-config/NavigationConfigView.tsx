@@ -23,8 +23,9 @@ export default function NavigationConfigView({
   onClose,
   onGo,
 }: NavigationConfigViewProps) {
-  const { navigationMode, setNavigationMode } = useNavigationConfig();
-  const { isLoading } = useNavigationInfo();
+  const navigationMode = useNavigationConfig((s) => s.navigationMode);
+  const setNavigationMode = useNavigationConfig((s) => s.setNavigationMode);
+  const isLoading = useNavigationInfo((s) => s.isLoading);
   const getDurationForMode = (mode: string) => {
     const route = durations.find(
       (d) => d.transportMode?.toLowerCase() === mode.toLowerCase(),
