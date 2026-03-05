@@ -258,6 +258,7 @@ export default function SearchPanel({
             <View style={styles.nearbyHeaderContainer}>
               <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
               <TouchableOpacity
+                testID="distance-filter-button"
                 onPress={() => setDistanceFilterVisible(true)}
                 style={styles.filterIconButton}
               >
@@ -425,6 +426,7 @@ export default function SearchPanel({
                       <View style={styles.detailSectionContent}>
                         <Text style={styles.detailLabel}>Opening Hours</Text>
                         <TouchableOpacity
+                          testID="opening-hours-toggle"
                           onPress={() => setShowHours(!showHours)}
                           style={styles.hoursHeader}
                         >
