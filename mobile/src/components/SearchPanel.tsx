@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
+import { getOpenStatusText, calculateDistance } from "../utils/location";
 
 const BURGUNDY = "#800020";
 
@@ -50,26 +51,6 @@ async function getUserLocation() {
   };
 }
 
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371000; // Earth's radius in meters
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distance in meters
-}
-
-
 export default function SearchPanel({
   visible,
   onClose,
@@ -92,6 +73,11 @@ export default function SearchPanel({
   const [customDistance, setCustomDistance] = useState<string>("5");
   const [selectedLocationDetail, setSelectedLocationDetail] = useState<any>(null);
   const [locationDetailVisible, setLocationDetailVisible] = useState(false);
+  const [showHours, setShowHours] = useState(false);
+  const todayIndexJS = new Date().getDay(); 
+  // Convert to Google format (Monday first)
+  const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
+  const statusText = getOpenStatusText(selectedLocationDetail?.openingHours)
 
   useEffect(() => {
     if (visible) {
@@ -431,17 +417,75 @@ export default function SearchPanel({
                       </View>
                     )}
 
-                    {selectedLocationDetail.openingHours && (
-                      <View style={styles.detailSection}>
-                        <Ionicons name="time" size={18} color={BURGUNDY} />
-                        <View style={styles.detailSectionContent}>
-                          <Text style={styles.detailLabel}>Opening Hours</Text>
-                          <Text style={styles.detailValue}>
-                            {selectedLocationDetail.openingHours}
-                          </Text>
-                        </View>
+                 
+
+                    <View style={styles.detailSection}>
+                      <Ionicons name="time" size={18} color={BURGUNDY} />
+
+                      <View style={styles.detailSectionContent}>
+                        <Text style={styles.detailLabel}>Opening Hours</Text>
+                        <TouchableOpacity
+                          onPress={() => setShowHours(!showHours)}
+                          style={styles.hoursHeader}
+                        >
+                             {selectedLocationDetail.openingHours?.openNow !== undefined && (
+                                <View style={styles.openStatusContainer}>
+                                  <View
+                                    style={[
+                                      styles.statusDot,
+                                      {
+                                        backgroundColor: selectedLocationDetail.openingHours.openNow
+                                          ? "#22c55e"
+                                          : "#ef4444",
+                                      },
+                                    ]}
+                                  />
+
+                                  <Text
+                                    style={[
+                                      styles.openStatusText,
+                                      {
+                                        color: selectedLocationDetail.openingHours.openNow
+                                          ? "#22c55e"
+                                          : "#ef4444",
+                                      },
+                                    ]}
+                                  >
+                                    {selectedLocationDetail.openingHours.openNow
+                                      ? "Open"
+                                      : "Closed"}
+                                  </Text>
+
+                                  {statusText !== "" && (
+                                    <Text style={styles.closingText}>
+                                      {"  ·  " + statusText}
+                                    </Text>
+                                  )}
+                                </View>
+                              )}
+                          <Ionicons
+                            name={showHours ? "chevron-up" : "chevron-down"}
+                            size={16}
+                            color="#777"
+                          />
+                        </TouchableOpacity>
+
+                        {showHours &&
+                          selectedLocationDetail.openingHours.weekdayDescriptions?.map(
+                            (day: string, index: number) => (
+                              <Text
+                                key={index}
+                                style={[
+                                  styles.hoursRow,
+                                  index === todayIndex && styles.todayHoursRow,
+                                ]}
+                              >
+                                {day}
+                              </Text>
+                            )
+                          )}
                       </View>
-                    )}
+                    </View>
 
                     {selectedLocationDetail.phoneNumber && (
                       <View style={styles.detailSection}>
@@ -922,4 +966,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  openStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  openStatusText: {
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  hoursHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  hoursRow: {
+    fontSize: 14,
+    color: "#444",
+    marginTop: 4,
+  },
+  todayHoursRow: {
+  fontWeight: "700",
+  color: BURGUNDY,
+},
+closingText: {
+  fontSize: 14,
+  color: "#555",
+  fontWeight: "500",
+},
 });

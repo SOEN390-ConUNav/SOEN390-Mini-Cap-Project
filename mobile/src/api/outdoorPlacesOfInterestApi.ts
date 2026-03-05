@@ -47,7 +47,7 @@ export async function getNearbyPlaces(
       address: p.formattedAddress ?? "",
       location: p.location,
       rating: p.rating,
-      openingHours: p.currentOpeningHours?.weekdayDescriptions ?? "N/A",
+      openingHours: p.currentOpeningHours ?? "N/A",
       phoneNumber: p.nationalPhoneNumber ?? "N/A",
     }));
   } catch {
