@@ -2,6 +2,7 @@ package com.soen390.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.soen390.backend.controller.IndoorDirectionsController;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -31,8 +32,10 @@ public class PathfindingService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Map<String, List<Waypoint>> WAYPOINTS = new HashMap<>();
     private static final Map<String, BuildingConfig> CONFIGS = new HashMap<>();
+    private static final Map<String, Map<String, Waypoint>> ROOM_COORDINATES = new HashMap<>();
+    private static final Map<String, List<IndoorDirectionsController.PoiResponse>> POI_CACHE = new HashMap<>();
+    private final Map<String, Graph<Waypoint, DefaultWeightedEdge>> graphsNoStairs = new HashMap<>();
 
-   
     private static final String[] FLOOR_PLAN_IDS = {
         "Hall-8", "Hall-9", "Hall-2", "Hall-1",
         "VL-1", "VL-2", "VE-1","VE-2",
@@ -57,6 +60,36 @@ public class PathfindingService {
                 return;
             }
             JsonNode root = MAPPER.readTree(is);
+
+
+            JsonNode roomsNode = root.get("rooms");
+            if (roomsNode != null && roomsNode.isObject()) {
+                Map<String, Waypoint> roomMap = new HashMap<>();
+                roomsNode.fields().forEachRemaining(entry -> {
+                    roomMap.put(entry.getKey(), new Waypoint(
+                            entry.getValue().get("x").asDouble(),
+                            entry.getValue().get("y").asDouble(),
+                            entry.getKey()
+                    ));
+                });
+                ROOM_COORDINATES.put(buildingId, roomMap);
+            }
+
+
+            JsonNode poisNode = root.get("pois"); // Assuming your JSON has a "pois" key
+            if (poisNode != null && poisNode.isArray()) {
+                List<IndoorDirectionsController.PoiResponse> pois = new ArrayList<>();
+                for (JsonNode p : poisNode) {
+                    pois.add(new IndoorDirectionsController.PoiResponse(
+                            p.get("x").asDouble(),
+                            p.get("y").asDouble(),
+                            p.get("id").asText(),
+                            p.get("displayName").asText(),
+                            p.get("type").asText()
+                    ));
+                }
+                POI_CACHE.put(buildingId, pois);
+            }
 
             // Load waypoints
             JsonNode waypointsNode = root.get("waypoints");
@@ -121,7 +154,9 @@ public class PathfindingService {
 
     public PathfindingService() {
         for (String id : WAYPOINTS.keySet()) {
-            graphs.put(id, buildGraph(id));
+            Graph<Waypoint, DefaultWeightedEdge> g = buildGraph(id);
+            graphs.put(id, g);
+            graphsNoStairs.put(id, buildNoStairsGraph(g)); // <-- THIS is the missing “implementation”
         }
     }
 
@@ -149,12 +184,15 @@ public class PathfindingService {
         return input.replaceAll("[\\r\\n\\t]", "_");
     }
 
-    public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end) {
+    public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end, boolean avoidStairs) {
         if (start == null || end == null) return Collections.emptyList();
 
-        Graph<Waypoint, DefaultWeightedEdge> graph = graphs.get(currentBuildingId);
+        Graph<Waypoint, DefaultWeightedEdge> graph =
+                avoidStairs ? graphsNoStairs.get(currentBuildingId) : graphs.get(currentBuildingId);
+
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
-            log.error("Graph missing or vertices not found for {}", sanitize(currentBuildingId));
+            log.error("Graph missing or vertices not found for {} (avoidStairs={})",
+                    sanitize(currentBuildingId), avoidStairs);
             return Collections.emptyList();
         }
 
@@ -162,7 +200,8 @@ public class PathfindingService {
                 new DijkstraShortestPath<>(graph).getPath(start, end);
 
         if (path == null) {
-            log.error("No path found between waypoints: {} -> {}", sanitize(start.id), sanitize(end.id));
+            log.error("No path found between waypoints: {} -> {} (avoidStairs={})",
+                    sanitize(start.id), sanitize(end.id), avoidStairs);
             return Collections.emptyList();
         }
 
@@ -387,7 +426,19 @@ public class PathfindingService {
             this.y = y;
             this.id = id;
         }
-        
+
+        public Waypoint getRoomCoordinate(String buildingId, String roomId) {
+            return ROOM_COORDINATES.getOrDefault(buildingId, Collections.emptyMap()).get(roomId);
+        }
+
+        public Map<String, Waypoint> getRoomCoordinateMap(String buildingId) {
+            return ROOM_COORDINATES.getOrDefault(buildingId, Collections.emptyMap());
+        }
+
+        public List<IndoorDirectionsController.PoiResponse> getPoisForBuilding(String buildingId) {
+            return POI_CACHE.getOrDefault(buildingId, Collections.emptyList());
+        }
+
         public double distanceTo(Waypoint other) {
             return distanceTo(other.x, other.y);
         }
@@ -413,4 +464,47 @@ public class PathfindingService {
             return id + "(" + x + ", " + y + ")";
         }
     }
+
+
+    private String norm(String s) {
+        if (s == null) return "";
+        return s.trim().toLowerCase().replaceAll("\\s+", "");
+    }
+
+    private String typeBucket(IndoorDirectionsController.PoiResponse p) {
+        String t = (p == null || p.type == null) ? "" : p.type.toLowerCase();
+        if (t.contains("elevator")) return "elevator";
+        if (t.contains("stairs")) return "stairs";
+        return "";
+    }
+
+    private String poiKey(IndoorDirectionsController.PoiResponse p) {
+        return typeBucket(p) + "|" + norm(p.displayName);
+    }
+
+    private boolean isStairsWaypoint(Waypoint wp) {
+        return wp != null && wp.id != null && wp.id.toLowerCase().contains("stairs");
+    }
+
+    private Graph<Waypoint, DefaultWeightedEdge> buildNoStairsGraph(Graph<Waypoint, DefaultWeightedEdge> original) {
+        SimpleWeightedGraph<Waypoint, DefaultWeightedEdge> copy =
+                new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+
+        for (Waypoint v : original.vertexSet()) {
+            if (!isStairsWaypoint(v)) copy.addVertex(v);
+        }
+
+        for (DefaultWeightedEdge e : original.edgeSet()) {
+            Waypoint s = original.getEdgeSource(e);
+            Waypoint t = original.getEdgeTarget(e);
+
+            if (copy.containsVertex(s) && copy.containsVertex(t)) {
+                DefaultWeightedEdge ne = copy.addEdge(s, t);
+                if (ne != null) copy.setEdgeWeight(ne, original.getEdgeWeight(e));
+            }
+        }
+
+        return copy;
+    }
+
 }
