@@ -1,4 +1,4 @@
-import { calculateDistance, getOpenStatusText } from "../location";
+import { calculateDistance, getOpenStatusText } from "../utils/location";
 
 describe("calculateDistance", () => {
   it("returns 0 for identical coordinates", () => {
