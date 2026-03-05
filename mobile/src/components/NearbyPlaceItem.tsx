@@ -5,11 +5,11 @@ import { calculateDistance } from "../utils/location";
 
 const BURGUNDY = "#800020";
 
-type Props = {
+type Props = Readonly<{
   item: any;
   userLocation: { latitude: number; longitude: number } | null;
   onSelect: (locationDetail: any) => void;
-};
+}>;
 
 export default function NearbyPlaceItem({ item, userLocation, onSelect }: Props) {
 
