@@ -10,11 +10,13 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
+import useLocationStore from "../hooks/useLocationStore";
+import useLocationService from "../hooks/useLocationService";
 
 const BURGUNDY = "#800020";
 
@@ -39,17 +41,6 @@ type SearchPanelProps = {
   }) => void;
 };
 
-async function getUserLocation() {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== "granted") throw new Error("Location denied");
-
-  const location = await Location.getCurrentPositionAsync({});
-  return {
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-  };
-}
-
 export default function SearchPanel({
   visible,
   onClose,
@@ -64,6 +55,20 @@ export default function SearchPanel({
   const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
 
+  const permissionStatus = useLocationStore((state) => state.permissionStatus);
+  const canAskAgain = useLocationStore((state) => state.canAskAgain);
+  const currentLocation = useLocationStore((state) => state.currentLocation);
+  const userSkippedPermission = useLocationStore(
+    (state) => state.userSkippedPermission,
+  );
+  const { getCurrentPosition, openSettings, requestPermission } =
+    useLocationService();
+
+  const hasLocationPermission = permissionStatus === "granted";
+  const shouldShowOSPrompt =
+    !userSkippedPermission &&
+    (canAskAgain || permissionStatus === "undetermined");
+
   useEffect(() => {
     if (visible) {
       loadSearchHistory();
@@ -72,8 +77,10 @@ export default function SearchPanel({
 
   useEffect(() => {
     setNearby([]);
-    fetchNearbyPlaces(activeFilter);
-  }, [activeFilter]);
+    if (hasLocationPermission) {
+      fetchNearbyPlaces(activeFilter);
+    }
+  }, [activeFilter, hasLocationPermission]);
 
   async function fetchNearbyPlaces(placeType: string) {
     if (cacheRef.current[placeType]) {
@@ -83,11 +90,34 @@ export default function SearchPanel({
 
     setLoading(true);
     try {
-      const { latitude, longitude } = await getUserLocation();
-      const results = await getNearbyPlaces(latitude, longitude, placeType);
+      let coords = currentLocation;
+      coords ??= await getCurrentPosition();
+      const results = await getNearbyPlaces(
+        coords.latitude,
+        coords.longitude,
+        placeType,
+      );
+      cacheRef.current[placeType] = results;
       setNearby(results);
     } catch (e) {
       console.error(e);
+      Alert.alert(
+        "Location Required",
+        "Enable location to see nearby places.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
+            onPress: () => {
+              if (shouldShowOSPrompt) {
+                void requestPermission();
+                return;
+              }
+              void openSettings();
+            },
+          },
+        ],
+      );
     } finally {
       setLoading(false);
     }
@@ -232,41 +262,77 @@ export default function SearchPanel({
           <>
             <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
             <View style={{ flex: 1 }}>
-              <FlatList
-                data={nearby}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <View style={styles.poiItem}>
-                    <View style={styles.poiTextContainer}>
-                      <Text
-                        style={styles.placeName}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {item.name}
-                      </Text>
+              {hasLocationPermission ? (
+                <FlatList
+                  data={nearby}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <View style={styles.poiItem}>
+                      <View style={styles.poiTextContainer}>
+                        <Text
+                          style={styles.placeName}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.name}
+                        </Text>
 
-                      <Text
-                        style={styles.address}
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
+                        <Text
+                          style={styles.address}
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                        >
+                          {item.address}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.directionsButton}
+                        onPress={() => {
+                          onSelectLocation({
+                            ...item.location,
+                            name: item.name,
+                          });
+                          onClose();
+                        }}
                       >
-                        {item.address}
-                      </Text>
+                        <Ionicons name="navigate" size={18} color="#fff" />
+                      </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                      style={styles.directionsButton}
-                      onPress={() => {
-                        onSelectLocation({ ...item.location, name: item.name });
-                        onClose();
-                      }}
-                    >
-                      <Ionicons name="navigate" size={18} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
+                  )}
+                  ListEmptyComponent={
+                    loading ? null : (
+                      <Text style={styles.emptyText}>
+                        No nearby {activeFilter} found
+                      </Text>
+                    )
+                  }
+                />
+              ) : (
+                <View style={styles.locationErrorContainer}>
+                  <Ionicons name="location-outline" size={48} color="#999" />
+                  <Text style={styles.locationErrorText}>
+                    Location permission required
+                  </Text>
+                  <Text style={styles.locationErrorSubtext}>
+                    Enable location to see nearby places
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.enableLocationButton}
+                    onPress={() => {
+                      if (shouldShowOSPrompt) {
+                        void requestPermission();
+                        return;
+                      }
+                      void openSettings();
+                    }}
+                  >
+                    <Text style={styles.enableLocationButtonText}>
+                      {shouldShowOSPrompt ? "Enable Location" : "Open Settings"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {loading && (
                 <View style={styles.loadingOverlay}>
@@ -453,5 +519,39 @@ const styles = StyleSheet.create({
   recentSearchText: {
     marginLeft: 8,
     color: "#333",
+  },
+  locationErrorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  locationErrorText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+    marginTop: 12,
+  },
+  locationErrorSubtext: {
+    fontSize: 14,
+    color: "#999",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  enableLocationButton: {
+    marginTop: 16,
+    backgroundColor: BURGUNDY,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  enableLocationButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#999",
+    marginTop: 20,
   },
 });

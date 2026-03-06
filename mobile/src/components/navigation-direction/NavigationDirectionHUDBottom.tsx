@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomDrawer from "../BottomDrawer";
 import { Step } from "../../api/outdoorDirectionsApi";
 import { getManeuverIcon } from "./navigationDirectionUtils";
+import useNavigationProgress from "../../hooks/useNavigationProgress";
 
 const BURGUNDY = "#800020";
 const BURGUNDY_DARK = "#5a0016";
@@ -69,12 +70,25 @@ export default function NavigationDirectionHUDBottom({
   onSnapIndexChange,
 }: NavigationDirectionHudProps) {
   const [expanded, setExpanded] = useState(true);
+  const dynamicDistance = useNavigationProgress((s) => s.distanceToNextStep);
 
   if (!steps || steps.length === 0) return null;
 
-  const [nextStep, ...remainingSteps] = steps;
-  const remainingStepsSuffix = remainingSteps.length > 1 ? "s" : "";
-  const remainingStepsLabel = `${remainingSteps.length} more step${remainingStepsSuffix}`;
+  const currentStep = steps[0];
+  const upcomingManeuver = steps.length > 1 ? steps[1] : null;
+  const laterSteps = steps.slice(2);
+
+  const distanceToDisplay = dynamicDistance || currentStep.distance;
+
+  const primaryIcon = upcomingManeuver
+    ? getManeuverIcon(upcomingManeuver.maneuverType)
+    : "flag";
+  const primaryInstruction = upcomingManeuver
+    ? upcomingManeuver.instruction
+    : currentStep.instruction;
+
+  const laterStepsSuffix = laterSteps.length > 1 ? "s" : "";
+  const laterStepsLabel = `${laterSteps.length} more step${laterStepsSuffix}`;
 
   return (
     <BottomDrawer
@@ -91,30 +105,26 @@ export default function NavigationDirectionHUDBottom({
       onClose={onClose}
       onSnapIndexChange={onSnapIndexChange}
     >
-      {/* Primary next-step card */}
+      {/* Upcoming maneuver card — shows the NEXT action, like Google Maps */}
       <View style={styles.primaryCard}>
         <View style={styles.primaryIconWrap}>
-          <Ionicons
-            name={getManeuverIcon(nextStep.maneuverType)}
-            size={36}
-            color="#fff"
-          />
+          <Ionicons name={primaryIcon} size={36} color="#fff" />
         </View>
         <View style={styles.primaryText}>
           <Text style={styles.primaryInstruction} numberOfLines={2}>
-            {nextStep.instruction}
+            {primaryInstruction}
           </Text>
-          <Text style={styles.primaryDistance}>{nextStep.distance}</Text>
+          <Text style={styles.primaryDistance}>{distanceToDisplay}</Text>
         </View>
       </View>
 
-      {remainingSteps.length > 0 && (
+      {laterSteps.length > 0 && (
         <Pressable
           onPress={() => setExpanded((v) => !v)}
           style={styles.expandToggle}
         >
           <Text style={styles.expandLabel}>
-            {expanded ? "Hide steps" : remainingStepsLabel}
+            {expanded ? "Hide steps" : laterStepsLabel}
           </Text>
           <Ionicons
             name={expanded ? "chevron-up" : "chevron-down"}
@@ -124,13 +134,13 @@ export default function NavigationDirectionHUDBottom({
         </Pressable>
       )}
 
-      {expanded && (
+      {expanded && laterSteps.length > 0 && (
         <ScrollView
           style={styles.stepList}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
-          {remainingSteps.map((step) => (
+          {laterSteps.map((step) => (
             <StepRow
               key={
                 step.polyline ||

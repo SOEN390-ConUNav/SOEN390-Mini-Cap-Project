@@ -58,6 +58,8 @@ const mockedUseNavigationInfo = useNavigationInfo as unknown as jest.Mock;
 const mockedUseNavigationState = useNavigationState as unknown as jest.Mock;
 
 const mockSetNavigationMode = jest.fn();
+let navigationConfigState: any;
+let navigationInfoState: any;
 
 const mockDurations: OutdoorDirectionResponse[] = [
   {
@@ -86,11 +88,17 @@ const mockDurations: OutdoorDirectionResponse[] = [
 describe("NavigationConfigView", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedUseNavigationConfig.mockReturnValue({
+    navigationConfigState = {
       navigationMode: "WALK",
       setNavigationMode: mockSetNavigationMode,
-    });
-    mockedUseNavigationInfo.mockReturnValue({ isLoading: false });
+    };
+    navigationInfoState = { isLoading: false };
+    mockedUseNavigationConfig.mockImplementation((selector: any) =>
+      selector ? selector(navigationConfigState) : navigationConfigState,
+    );
+    mockedUseNavigationInfo.mockImplementation((selector: any) =>
+      selector ? selector(navigationInfoState) : navigationInfoState,
+    );
     mockedUseNavigationState.mockReturnValue({
       setNavigationState: jest.fn(),
     });
@@ -141,10 +149,10 @@ describe("NavigationConfigView", () => {
   });
 
   it("passes selected duration to NavigationPathRow", () => {
-    mockedUseNavigationConfig.mockReturnValue({
+    navigationConfigState = {
       navigationMode: "BUS",
       setNavigationMode: mockSetNavigationMode,
-    });
+    };
 
     const { getByText } = render(
       <NavigationConfigView
@@ -158,10 +166,10 @@ describe("NavigationConfigView", () => {
   });
 
   it("falls back to walking duration when mode is unknown", () => {
-    mockedUseNavigationConfig.mockReturnValue({
+    navigationConfigState = {
       navigationMode: "UNKNOWN_MODE",
       setNavigationMode: mockSetNavigationMode,
-    });
+    };
 
     const { getByText } = render(
       <NavigationConfigView
@@ -193,7 +201,7 @@ describe("NavigationConfigView", () => {
   });
 
   it("renders loading state", () => {
-    mockedUseNavigationInfo.mockReturnValue({ isLoading: true });
+    navigationInfoState = { isLoading: true };
     const { getByText } = render(
       <NavigationConfigView
         durations={mockDurations}
