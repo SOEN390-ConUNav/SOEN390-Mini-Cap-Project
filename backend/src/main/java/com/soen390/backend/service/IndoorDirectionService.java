@@ -391,9 +391,13 @@ public class IndoorDirectionService {
     }
 
     private int parseFloorNumber(String floor) {
-        try { return Integer.parseInt(floor.replaceAll("[^0-9-]", "")); } catch (Exception e) { return 0; }
+        try {
+            String formattedFloor = floor.toUpperCase().replace("S", "-");
+            return Integer.parseInt(formattedFloor.replaceAll("[^0-9-]", ""));
+        } catch (Exception e) {
+            return 0;
+        }
     }
-
 
 
 

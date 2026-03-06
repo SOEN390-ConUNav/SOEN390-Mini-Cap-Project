@@ -47,5 +47,21 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
-  }
+  },
+  "pois": [
+    {
+      "id": "VL2-Elevator",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 619.57007,
+      "y": 335.51114
+    },
+    {
+      "id": "VL2-Stairs",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 340.87073,
+      "y": 452.35046
+    }
+  ]
 }

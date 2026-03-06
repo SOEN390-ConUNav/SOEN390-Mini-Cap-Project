@@ -102,7 +102,7 @@
     "searchRadius": 400.0,
     "alignThreshold": 6.0,
     "maxNeighbors": 4,
-    "strictAlignment": true
+    "strictAlignment": false
   },
   "pois": [
   {
