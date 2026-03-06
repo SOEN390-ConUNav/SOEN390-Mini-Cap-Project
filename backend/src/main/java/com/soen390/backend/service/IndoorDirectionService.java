@@ -107,16 +107,43 @@ public class IndoorDirectionService {
         IndoorDirectionsController.PoiResponse bestStart = null;
         IndoorDirectionsController.PoiResponse bestEnd = null;
         double minDistance = Double.MAX_VALUE;
+        boolean foundStairs = false;
 
-        for (var s : startConnectors) {
-            for (var e : endConnectors) {
-                if (!poiKey(s).isEmpty() && poiKey(s).equals(poiKey(e))) {
-                    double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
-                    double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
-                    if (d1 + d2 < minDistance) {
-                        minDistance = d1 + d2;
-                        bestStart = s;
-                        bestEnd = e;
+        // PRIORITY 1: Force Stairs (if the user didn't click avoid stairs)
+        if (!avoidStairs) {
+            for (var s : startConnectors) {
+                for (var e : endConnectors) {
+                    if (s.type != null && e.type != null &&
+                            s.type.toLowerCase().contains("stairs") && e.type.toLowerCase().contains("stairs")) {
+
+                        double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
+                        double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
+                        if (d1 + d2 < minDistance) {
+                            minDistance = d1 + d2;
+                            bestStart = s;
+                            bestEnd = e;
+                            foundStairs = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // PRIORITY 2: Fallback to Elevators (if avoidStairs is true, OR if one floor was missing stairs)
+        if (!foundStairs) {
+            minDistance = Double.MAX_VALUE; // Reset distance tracker
+            for (var s : startConnectors) {
+                for (var e : endConnectors) {
+                    if (s.type != null && e.type != null &&
+                            s.type.toLowerCase().contains("elevator") && e.type.toLowerCase().contains("elevator")) {
+
+                        double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
+                        double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
+                        if (d1 + d2 < minDistance) {
+                            minDistance = d1 + d2;
+                            bestStart = s;
+                            bestEnd = e;
+                        }
                     }
                 }
             }
@@ -125,21 +152,13 @@ public class IndoorDirectionService {
         if (bestStart == null || bestEnd == null) return new ArrayList<>();
 
         List<IndoorDirectionResponse.RoutePoint> leg1 = buildRoute(
-                startPlanId,
-                new FloorPlanData.Point(origin.x, origin.y),
-                new FloorPlanData.Point(bestStart.x, bestStart.y),
-                originRoomId,
-                bestStart.id,
-                avoidStairs
+                startPlanId, new FloorPlanData.Point(origin.x, origin.y), new FloorPlanData.Point(bestStart.x, bestStart.y),
+                originRoomId, bestStart.id, avoidStairs
         );
 
         List<IndoorDirectionResponse.RoutePoint> leg2 = buildRoute(
-                endPlanId,
-                new FloorPlanData.Point(bestEnd.x, bestEnd.y),
-                new FloorPlanData.Point(dest.x, dest.y),
-                bestEnd.id,
-                destinationRoomId,
-                avoidStairs
+                endPlanId, new FloorPlanData.Point(bestEnd.x, bestEnd.y), new FloorPlanData.Point(dest.x, dest.y),
+                bestEnd.id, destinationRoomId, avoidStairs
         );
 
         List<IndoorDirectionResponse.RoutePoint> fullRoute = new ArrayList<>(leg1);
@@ -160,21 +179,23 @@ public class IndoorDirectionService {
     ) {
         if (all == null || all.isEmpty()) return Collections.emptyList();
 
-        String preferred = avoidStairs ? "elevator" : "stairs";
-        String fallback  = avoidStairs ? "stairs"   : "elevator";
-
-        List<IndoorDirectionsController.PoiResponse> preferredList = new ArrayList<>();
-        List<IndoorDirectionsController.PoiResponse> fallbackList  = new ArrayList<>();
+        List<IndoorDirectionsController.PoiResponse> valid = new ArrayList<>();
 
         for (IndoorDirectionsController.PoiResponse p : all) {
             String type = (p == null || p.type == null) ? "" : p.type.toLowerCase();
 
-            if (type.contains(preferred)) preferredList.add(p);
-            if (type.contains(fallback))  fallbackList.add(p);
+            // Elevators are always allowed
+            if (type.contains("elevator")) {
+                valid.add(p);
+            }
+            // Stairs are only allowed if avoidStairs is false
+            else if (!avoidStairs && type.contains("stairs")) {
+                valid.add(p);
+            }
         }
-
-        return !preferredList.isEmpty() ? preferredList : fallbackList;
+        return valid;
     }
+
 
     private List<IndoorDirectionResponse.RoutePoint> calculateRoute(
             String buildingId, String originRoomId,
@@ -374,21 +395,7 @@ public class IndoorDirectionService {
     }
 
 
-    private String norm(String s) {
-        if (s == null) return "";
-        return s.trim().toLowerCase().replaceAll("\\s+", "");
-    }
 
-    private String typeBucket(IndoorDirectionsController.PoiResponse p) {
-        String t = (p == null || p.type == null) ? "" : p.type.toLowerCase();
-        if (t.contains("elevator")) return "elevator";
-        if (t.contains("stairs")) return "stairs";
-        return "";
-    }
-
-    private String poiKey(IndoorDirectionsController.PoiResponse p) {
-        return typeBucket(p) + "|" + norm(p.displayName);
-    }
 
     private PathfindingService.Waypoint resolvePoint(String planId, String id) {
         if (id == null) return null;

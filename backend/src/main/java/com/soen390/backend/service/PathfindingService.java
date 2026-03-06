@@ -466,22 +466,6 @@ public class PathfindingService {
     }
 
 
-    private String norm(String s) {
-        if (s == null) return "";
-        return s.trim().toLowerCase().replaceAll("\\s+", "");
-    }
-
-    private String typeBucket(IndoorDirectionsController.PoiResponse p) {
-        String t = (p == null || p.type == null) ? "" : p.type.toLowerCase();
-        if (t.contains("elevator")) return "elevator";
-        if (t.contains("stairs")) return "stairs";
-        return "";
-    }
-
-    private String poiKey(IndoorDirectionsController.PoiResponse p) {
-        return typeBucket(p) + "|" + norm(p.displayName);
-    }
-
     private boolean isStairsWaypoint(Waypoint wp) {
         return wp != null && wp.id != null && wp.id.toLowerCase().contains("stairs");
     }
