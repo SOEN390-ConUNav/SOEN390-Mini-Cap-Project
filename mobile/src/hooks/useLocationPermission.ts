@@ -79,8 +79,11 @@ export default function useLocationPermission() {
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status, canAskAgain } =
+        await Location.requestForegroundPermissionsAsync();
       const granted = status === "granted";
+      setLastPermissionCheck(Date.now());
+      setCanAskAgain(canAskAgain);
 
       if (granted) {
         await AsyncStorage.setItem(PREVIOUS_PERMISSION_KEY, "granted");
@@ -98,7 +101,12 @@ export default function useLocationPermission() {
       console.error("Error requesting location permission:", error);
       return false;
     }
-  }, [setPermissionStatus, setUserSkippedPermission]);
+  }, [
+    setCanAskAgain,
+    setLastPermissionCheck,
+    setPermissionStatus,
+    setUserSkippedPermission,
+  ]);
 
   const markPermissionScreenSeen = useCallback(async () => {
     await AsyncStorage.setItem(PERMISSION_SCREEN_KEY, "true");

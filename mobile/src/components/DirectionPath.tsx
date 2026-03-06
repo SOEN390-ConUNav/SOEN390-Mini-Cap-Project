@@ -223,7 +223,8 @@ function updateRemainingPathMetrics(params: {
   } = params;
 
   const remainingPolyline = sumPolylineDistance(allCoords.slice(bestFlatIdx));
-  const destCoord = allCoords[allCoords.length - 1];
+  const destCoord = allCoords.at(-1);
+  if (!destCoord) return;
   const directToDest = haversineDistance(currentLocation, destCoord);
   const remainingMeters = Math.min(remainingPolyline, directToDest);
 
