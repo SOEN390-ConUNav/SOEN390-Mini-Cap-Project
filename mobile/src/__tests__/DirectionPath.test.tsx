@@ -1,5 +1,5 @@
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import DirectionPath from "../components/DirectionPath";
 import {
   inferStyleFromInstruction,
@@ -86,6 +86,7 @@ let navInfoState: any;
 describe("DirectionPath", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useRealTimers();
     configState = {
       navigationMode: "WALK",
       allOutdoorRoutes: [],
@@ -436,6 +437,134 @@ describe("DirectionPath", () => {
     );
 
     expect(getByTestId("Ionicons")).toBeTruthy();
+  });
+
+  it("updates progress/path metrics while navigating and trims rendered path", async () => {
+    configState = {
+      navigationMode: "WALK",
+      allOutdoorRoutes: [
+        {
+          transportMode: "walking",
+          steps: [
+            { polyline: "stepA", instruction: "Head north" },
+            { polyline: "stepB", instruction: "Turn right" },
+          ],
+        },
+      ],
+    };
+    navState = { isNavigating: true };
+    locationState = {
+      currentLocation: { latitude: 45.4971, longitude: -73.5791 },
+      currentSpeed: 1.6,
+    };
+
+    (polyline.decode as jest.Mock).mockImplementation((encoded: string) => {
+      if (encoded === "stepA") {
+        return [
+          [45.497, -73.579],
+          [45.4972, -73.5792],
+        ];
+      }
+      if (encoded === "stepB") {
+        return [
+          [45.4975, -73.5794],
+          [45.498, -73.58],
+        ];
+      }
+      return [];
+    });
+
+    const { getAllByTestId, rerender } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    expect(getAllByTestId("Polyline")).toHaveLength(2);
+
+    locationState = {
+      currentLocation: { latitude: 45.4975, longitude: -73.5794 },
+      currentSpeed: 1.8,
+    };
+
+    await act(async () => {
+      rerender(<DirectionPath destination={mockDestination} />);
+    });
+
+    expect(progressState.setDistanceToNextStep).toHaveBeenCalled();
+    expect(progressState.setCurrentStepIndex).toHaveBeenCalled();
+    expect(navInfoState.setPathDistance).toHaveBeenCalled();
+    expect(navInfoState.setPathDuration).toHaveBeenCalled();
+
+    const polylines = getAllByTestId("Polyline");
+    expect(polylines[0].props.coordinates).toEqual([
+      { latitude: 45.4975, longitude: -73.5794 },
+      { latitude: 45.498, longitude: -73.58 },
+    ]);
+  });
+
+  it("formats long remaining duration in hours when distance is large", async () => {
+    configState = {
+      navigationMode: "WALK",
+      allOutdoorRoutes: [
+        {
+          transportMode: "walking",
+          steps: [{ polyline: "longStep", instruction: "Keep going" }],
+        },
+      ],
+    };
+    navState = { isNavigating: true };
+    locationState = {
+      currentLocation: { latitude: 45.0, longitude: -73.0 },
+      currentSpeed: 1,
+    };
+
+    (polyline.decode as jest.Mock).mockImplementation((encoded: string) => {
+      if (encoded === "longStep") {
+        return [
+          [45.0, -73.0],
+          [46.0, -73.0],
+        ];
+      }
+      return [];
+    });
+
+    const { rerender } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    locationState = {
+      currentLocation: { latitude: 45.0001, longitude: -73.0 },
+      currentSpeed: 1,
+    };
+
+    await act(async () => {
+      rerender(<DirectionPath destination={mockDestination} />);
+    });
+
+    const lastCallArg =
+      navInfoState.setPathDuration.mock.calls[
+        navInfoState.setPathDuration.mock.calls.length - 1
+      ][0];
+    expect(lastCallArg).toContain("hour");
+  });
+
+  it("toggles marker tracksViewChanges off after timer", () => {
+    jest.useFakeTimers();
+    configState = {
+      navigationMode: "WALK",
+      allOutdoorRoutes: [],
+    };
+
+    const { getByTestId } = render(
+      <DirectionPath destination={mockDestination} />,
+    );
+
+    expect(getByTestId("Marker").props.tracksViewChanges).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(600);
+    });
+
+    expect(getByTestId("Marker").props.tracksViewChanges).toBe(false);
   });
 });
 
