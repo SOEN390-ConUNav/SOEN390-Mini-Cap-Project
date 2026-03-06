@@ -54,7 +54,6 @@ export default function SearchPanel({
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
-  const [locationError, setLocationError] = useState<string | null>(null);
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
   const canAskAgain = useLocationStore((state) => state.canAskAgain);
@@ -73,7 +72,6 @@ export default function SearchPanel({
   useEffect(() => {
     if (visible) {
       loadSearchHistory();
-      setLocationError(null);
     }
   }, [visible]);
 
@@ -81,8 +79,6 @@ export default function SearchPanel({
     setNearby([]);
     if (hasLocationPermission) {
       fetchNearbyPlaces(activeFilter);
-    } else {
-      setLocationError("Location permission required for nearby places");
     }
   }, [activeFilter, hasLocationPermission]);
 
@@ -93,12 +89,9 @@ export default function SearchPanel({
     }
 
     setLoading(true);
-    setLocationError(null);
     try {
       let coords = currentLocation;
-      if (!coords) {
-        coords = await getCurrentPosition();
-      }
+      coords ??= await getCurrentPosition();
       const results = await getNearbyPlaces(
         coords.latitude,
         coords.longitude,
@@ -108,7 +101,6 @@ export default function SearchPanel({
       setNearby(results);
     } catch (e) {
       console.error(e);
-      setLocationError("Unable to get your location");
       Alert.alert(
         "Location Required",
         "Enable location to see nearby places.",
@@ -116,7 +108,13 @@ export default function SearchPanel({
           { text: "Cancel", style: "cancel" },
           {
             text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
-            onPress: shouldShowOSPrompt ? requestPermission : openSettings,
+            onPress: () => {
+              if (shouldShowOSPrompt) {
+                void requestPermission();
+                return;
+              }
+              void openSettings();
+            },
           },
         ],
       );
@@ -264,27 +262,7 @@ export default function SearchPanel({
           <>
             <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
             <View style={{ flex: 1 }}>
-              {!hasLocationPermission ? (
-                <View style={styles.locationErrorContainer}>
-                  <Ionicons name="location-outline" size={48} color="#999" />
-                  <Text style={styles.locationErrorText}>
-                    Location permission required
-                  </Text>
-                  <Text style={styles.locationErrorSubtext}>
-                    Enable location to see nearby places
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.enableLocationButton}
-                    onPress={
-                      shouldShowOSPrompt ? requestPermission : openSettings
-                    }
-                  >
-                    <Text style={styles.enableLocationButtonText}>
-                      {shouldShowOSPrompt ? "Enable Location" : "Open Settings"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
+              {hasLocationPermission ? (
                 <FlatList
                   data={nearby}
                   keyExtractor={(item) => item.id}
@@ -323,13 +301,37 @@ export default function SearchPanel({
                     </View>
                   )}
                   ListEmptyComponent={
-                    !loading ? (
+                    loading ? null : (
                       <Text style={styles.emptyText}>
                         No nearby {activeFilter} found
                       </Text>
-                    ) : null
+                    )
                   }
                 />
+              ) : (
+                <View style={styles.locationErrorContainer}>
+                  <Ionicons name="location-outline" size={48} color="#999" />
+                  <Text style={styles.locationErrorText}>
+                    Location permission required
+                  </Text>
+                  <Text style={styles.locationErrorSubtext}>
+                    Enable location to see nearby places
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.enableLocationButton}
+                    onPress={() => {
+                      if (shouldShowOSPrompt) {
+                        void requestPermission();
+                        return;
+                      }
+                      void openSettings();
+                    }}
+                  >
+                    <Text style={styles.enableLocationButtonText}>
+                      {shouldShowOSPrompt ? "Enable Location" : "Open Settings"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {loading && (

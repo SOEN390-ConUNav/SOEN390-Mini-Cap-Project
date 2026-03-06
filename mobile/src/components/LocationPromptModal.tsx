@@ -19,7 +19,7 @@ export default function LocationPromptModal({
   onSelectInside,
   onSelectOutside,
   onClose,
-}: LocationPromptModalProps) {
+}: Readonly<LocationPromptModalProps>) {
   return (
     <Modal
       visible={visible}

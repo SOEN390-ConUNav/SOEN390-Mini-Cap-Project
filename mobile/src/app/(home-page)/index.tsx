@@ -34,6 +34,7 @@ import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
 import { NamedCoordinate, TRANSPORT_MODE_API_MAP } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
+import { haversineDistance } from "../../utils/locationUtils";
 import NavigationInfoBottom from "../../components/navigation-info/NavigationInfoBottom";
 import NavigationDirectionHUDBottom from "../../components/navigation-direction/NavigationDirectionHUDBottom";
 import NavigationCancelBottom from "../../components/navigation-cancel/NavigationCancelBottom";
@@ -284,6 +285,60 @@ export default function HomePageIndex() {
     };
   };
 
+  const getCampusForCoordinate = (coords: {
+    latitude: number;
+    longitude: number;
+  }): "SGW" | "LOYOLA" => {
+    const distToSGW = haversineDistance(coords, SGW_CENTER);
+    const distToLOYOLA = haversineDistance(coords, LOYOLA_CENTER);
+    return distToSGW <= distToLOYOLA ? "SGW" : "LOYOLA";
+  };
+
+  const getCampusFallbackOrigin = (targetCampus: "SGW" | "LOYOLA") => {
+    const shuttle = SHUTTLE_STOPS[targetCampus];
+    return {
+      latitude: shuttle.latitude,
+      longitude: shuttle.longitude,
+      label: `${targetCampus} Shuttle Stop`,
+    };
+  };
+
+  const getDirectionsOrigin = async (destinationCoords?: {
+    latitude: number;
+    longitude: number;
+  }): Promise<{
+    latitude: number;
+    longitude: number;
+    label: string;
+  }> => {
+    if (hasLocationPermission) {
+      try {
+        const fix = await getOneFix();
+        const label = await reverseGeocode(fix).catch(() => "Current Location");
+        return {
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          label,
+        };
+      } catch {
+        // Fall back below when a GPS fix is temporarily unavailable.
+      }
+    }
+
+    if (currentLocation) {
+      return {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        label: "Current Location",
+      };
+    }
+
+    const targetCampus = destinationCoords
+      ? getCampusForCoordinate(destinationCoords)
+      : campus;
+    return getCampusFallbackOrigin(targetCampus);
+  };
+
   const animateToRegion = (r: Region) => {
     mapRef.current?.animateToRegion(r, 650);
   };
@@ -325,7 +380,7 @@ export default function HomePageIndex() {
           "You can enable location later in device settings.",
           [
             { text: "Continue", style: "cancel" },
-            { text: "Open Settings", onPress: openSettings },
+            { text: "Open Settings", onPress: () => void openSettings() },
           ],
         );
         return;
@@ -466,53 +521,16 @@ export default function HomePageIndex() {
     setShowBuildingPopup(false);
     if (!selectedBuilding) return;
 
-    if (!hasLocationPermission) {
-      Alert.alert(
-        "Location Required",
-        "Enable location to get directions from your current position.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
-            onPress: () => {
-              if (shouldShowOSPrompt) {
-                onEnableLocation();
-              } else {
-                openSettings();
-              }
-            },
-          },
-        ],
-      );
-      return;
-    }
-
     const destCoords = {
       latitude: selectedBuilding.marker.latitude,
       longitude: selectedBuilding.marker.longitude,
       label: selectedBuilding.name,
     };
 
-    if (
-      nearestBuilding &&
-      nearestBuildingDistance !== null &&
-      nearestBuildingDistance < NEARBY_BUILDING_THRESHOLD_METERS &&
-      nearestBuilding.id !== selectedBuilding.id
-    ) {
-      setPendingDestination(destCoords);
-      setShowLocationPrompt(true);
+    if (shouldPromptForSelectedBuilding(selectedBuilding.id, destCoords))
       return;
-    }
 
-    const fix = await getOneFix();
-    const label = await reverseGeocode(fix).catch(() => "Current Location");
-
-    const originCoords = {
-      latitude: fix.latitude,
-      longitude: fix.longitude,
-      label,
-    };
-
+    const originCoords = await getDirectionsOrigin(destCoords);
     await proceedWithDirections(originCoords, destCoords);
   };
 
@@ -522,6 +540,7 @@ export default function HomePageIndex() {
       longitude: number;
     },
     destinationLabel = "Selected Location",
+    destinationBuildingId?: string,
   ) => {
     const labeledDestCoords = {
       latitude: destCoords.latitude,
@@ -530,39 +549,77 @@ export default function HomePageIndex() {
     };
 
     if (
-      hasLocationPermission &&
-      nearestBuilding &&
-      nearestBuildingDistance !== null &&
-      nearestBuildingDistance < NEARBY_BUILDING_THRESHOLD_METERS
+      destinationBuildingId
+        ? shouldPromptForSelectedBuilding(
+            destinationBuildingId,
+            labeledDestCoords,
+          )
+        : shouldPromptForNearbyBuilding(destCoords, labeledDestCoords)
     ) {
-      const destMatchesNearBuilding =
-        Math.abs(destCoords.latitude - nearestBuilding.marker.latitude) <
-          0.0005 &&
-        Math.abs(destCoords.longitude - nearestBuilding.marker.longitude) <
-          0.0005;
-      if (!destMatchesNearBuilding) {
-        setPendingDestination(labeledDestCoords);
-        setShowLocationPrompt(true);
-        return;
-      }
+      return;
     }
 
-    const currLocation = await getOneFix();
-    const originCoords = {
-      latitude: currLocation.latitude,
-      longitude: currLocation.longitude,
-      label: "Current Location",
-    };
+    const originCoords = await getDirectionsOrigin(destCoords);
 
     await proceedWithDirections(originCoords, labeledDestCoords);
   };
 
+  function shouldPromptForNearbyBuilding(
+    destCoords: { latitude: number; longitude: number },
+    labeledDestCoords: {
+      latitude: number;
+      longitude: number;
+      label: string;
+    },
+  ): boolean {
+    if (
+      !hasLocationPermission ||
+      !nearestBuilding ||
+      nearestBuildingDistance === null ||
+      nearestBuildingDistance >= NEARBY_BUILDING_THRESHOLD_METERS
+    ) {
+      return false;
+    }
+
+    const destMatchesNearBuilding =
+      Math.abs(destCoords.latitude - nearestBuilding.marker.latitude) <
+        0.0005 &&
+      Math.abs(destCoords.longitude - nearestBuilding.marker.longitude) <
+        0.0005;
+
+    if (destMatchesNearBuilding) {
+      return false;
+    }
+
+    setPendingDestination(labeledDestCoords);
+    setShowLocationPrompt(true);
+    return true;
+  }
+
+  function shouldPromptForSelectedBuilding(
+    selectedBuildingId: string,
+    destCoords: { latitude: number; longitude: number; label: string },
+  ): boolean {
+    if (
+      !nearestBuilding ||
+      nearestBuildingDistance === null ||
+      nearestBuildingDistance >= NEARBY_BUILDING_THRESHOLD_METERS ||
+      nearestBuilding.id === selectedBuildingId
+    ) {
+      return false;
+    }
+
+    setPendingDestination(destCoords);
+    setShowLocationPrompt(true);
+    return true;
+  }
+
   const parseLatLng = (
     value: string,
   ): { latitude: number; longitude: number } | null => {
-    const match = value.match(
+    const match = new RegExp(
       /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/,
-    );
+    ).exec(value);
     if (!match) return null;
     const latitude = Number(match[1]);
     const longitude = Number(match[2]);
@@ -583,6 +640,7 @@ export default function HomePageIndex() {
         await routeToDestination(
           localBuildingMatch.marker,
           localBuildingMatch.name,
+          localBuildingMatch.id,
         );
         return;
       }
@@ -637,30 +695,12 @@ export default function HomePageIndex() {
       label: name ?? "Selected Location",
     };
 
-    if (
-      hasLocationPermission &&
-      nearestBuilding &&
-      nearestBuildingDistance !== null &&
-      nearestBuildingDistance < NEARBY_BUILDING_THRESHOLD_METERS
-    ) {
-      const destMatchesNearBuilding =
-        Math.abs(latitude - nearestBuilding.marker.latitude) < 0.0005 &&
-        Math.abs(longitude - nearestBuilding.marker.longitude) < 0.0005;
-      if (!destMatchesNearBuilding) {
-        setPendingDestination(destCoords);
-        setShowLocationPrompt(true);
-        return;
-      }
+    if (shouldPromptForNearbyBuilding({ latitude, longitude }, destCoords)) {
+      return;
     }
 
     try {
-      const currentPos = await getCurrentPosition();
-
-      const originCoords = {
-        latitude: currentPos.latitude,
-        longitude: currentPos.longitude,
-        label: "Current Location",
-      };
+      const originCoords = await getDirectionsOrigin({ latitude, longitude });
 
       await proceedWithDirections(originCoords, destCoords);
 
@@ -757,7 +797,6 @@ export default function HomePageIndex() {
   }, []);
 
   const isRevoked = permissionStatus === "revoked";
-  const isDenied = permissionStatus === "denied";
 
   if (!isInitialized) {
     return (
@@ -797,19 +836,25 @@ export default function HomePageIndex() {
               • Nearby points of interest
             </Text>
           </View>
-          {!shouldShowOSPrompt ? (
-            <Pressable style={styles.enableLocationBtn} onPress={openSettings}>
-              <Text style={styles.enableLocationBtnText}>Open Settings</Text>
+          {shouldShowOSPrompt ? (
+            <Pressable
+              style={styles.enableLocationBtn}
+              onPress={() => void onEnableLocation()}
+            >
+              <Text style={styles.enableLocationBtnText}>Enable Location</Text>
             </Pressable>
           ) : (
             <Pressable
               style={styles.enableLocationBtn}
-              onPress={onEnableLocation}
+              onPress={() => void openSettings()}
             >
-              <Text style={styles.enableLocationBtnText}>Enable Location</Text>
+              <Text style={styles.enableLocationBtnText}>Open Settings</Text>
             </Pressable>
           )}
-          <Pressable style={styles.enableLocationSkip} onPress={onSkipLocation}>
+          <Pressable
+            style={styles.enableLocationSkip}
+            onPress={() => void onSkipLocation()}
+          >
             <Text style={styles.enableLocationSkipText}>
               {isRevoked ? "Continue without location" : "Skip for now"}
             </Text>
@@ -1014,7 +1059,9 @@ export default function HomePageIndex() {
         onClose={() => handleCloseNavConfig()}
         onGo={() => handleGoNavConfig()}
       />
-      {!isCancellingNavigation && <FloatingActionButton onPress={onPressFab} />}
+      {!isCancellingNavigation && (
+        <FloatingActionButton onPress={() => void onPressFab()} />
+      )}
 
       <View
         style={[

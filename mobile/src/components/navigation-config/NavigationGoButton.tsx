@@ -11,7 +11,7 @@ interface Props {
 export default function NavigationGoButton({
   onPress,
   disabled = false,
-}: Props) {
+}: Readonly<Props>) {
   return (
     <Pressable
       style={({ pressed }) => [

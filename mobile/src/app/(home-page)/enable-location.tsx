@@ -28,34 +28,44 @@ export default function EnableLocation() {
     (canAskAgain || permissionStatus === "undetermined");
 
   const onEnableLocation = async () => {
-    if (!shouldShowOSPrompt) {
-      Alert.alert(
-        "Permission Required",
-        "Location permission was previously denied. Please enable it in your device settings.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Open Settings", onPress: openSettings },
-        ],
-      );
+    if (shouldShowOSPrompt) {
+      const granted = await requestPermission();
+      await markPermissionScreenSeen();
+
+      if (!granted) {
+        Alert.alert(
+          "Permission Denied",
+          "You can enable location later in device settings.",
+          [
+            { text: "Continue", onPress: () => router.replace("/(home-page)") },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                void openSettings();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      router.replace("/(home-page)");
       return;
     }
 
-    const granted = await requestPermission();
-    await markPermissionScreenSeen();
-
-    if (!granted) {
-      Alert.alert(
-        "Permission Denied",
-        "You can enable location later in device settings.",
-        [
-          { text: "Continue", onPress: () => router.replace("/(home-page)") },
-          { text: "Open Settings", onPress: openSettings },
-        ],
-      );
-      return;
-    }
-
-    router.replace("/(home-page)");
+    Alert.alert(
+      "Permission Required",
+      "Location permission was previously denied. Please enable it in your device settings.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Open Settings",
+          onPress: () => {
+            void openSettings();
+          },
+        },
+      ],
+    );
   };
 
   const onSkipLocation = async () => {
@@ -104,17 +114,32 @@ export default function EnableLocation() {
         />
       </View>
 
-      {!shouldShowOSPrompt ? (
-        <Pressable style={styles.enableBtn} onPress={openSettings}>
-          <Text style={styles.enableText}>Open Settings</Text>
+      {shouldShowOSPrompt ? (
+        <Pressable
+          style={styles.enableBtn}
+          onPress={() => {
+            void onEnableLocation();
+          }}
+        >
+          <Text style={styles.enableText}>Enable Location</Text>
         </Pressable>
       ) : (
-        <Pressable style={styles.enableBtn} onPress={onEnableLocation}>
-          <Text style={styles.enableText}>Enable Location</Text>
+        <Pressable
+          style={styles.enableBtn}
+          onPress={() => {
+            void openSettings();
+          }}
+        >
+          <Text style={styles.enableText}>Open Settings</Text>
         </Pressable>
       )}
 
-      <Pressable style={styles.skipBtn} onPress={onSkipLocation}>
+      <Pressable
+        style={styles.skipBtn}
+        onPress={() => {
+          void onSkipLocation();
+        }}
+      >
         <Text style={styles.skipText}>
           {isRevoked ? "Continue without location" : "Skip for now"}
         </Text>
@@ -123,7 +148,7 @@ export default function EnableLocation() {
   );
 }
 
-function Bullet({ title, desc }: { title: string; desc: string }) {
+function Bullet({ title, desc }: Readonly<{ title: string; desc: string }>) {
   return (
     <View style={styles.bulletRow}>
       <View style={styles.dot} />

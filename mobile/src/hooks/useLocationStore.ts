@@ -58,54 +58,60 @@ export interface LocationState {
   setLastPermissionCheck: (timestamp: number) => void;
 }
 
-const useLocationStore = create<LocationState>((set) => ({
-  isInitialized: false,
-  setIsInitialized: (initialized) => set({ isInitialized: initialized }),
+const setter =
+  <T extends object>(set: (partial: Partial<T>) => void) =>
+  <K extends keyof T>(key: K) =>
+  (value: T[K]) =>
+    set({ [key]: value } as unknown as Partial<T>);
 
-  permissionStatus: "undetermined",
-  setPermissionStatus: (status) => set({ permissionStatus: status }),
+const useLocationStore = create<LocationState>((set) => {
+  const s = setter<LocationState>(set);
 
-  locationServicesEnabled: true,
-  setLocationServicesEnabled: (enabled) =>
-    set({ locationServicesEnabled: enabled }),
+  return {
+    isInitialized: false,
+    setIsInitialized: s("isInitialized"),
 
-  canAskAgain: true,
-  setCanAskAgain: (canAsk) => set({ canAskAgain: canAsk }),
+    permissionStatus: "undetermined",
+    setPermissionStatus: s("permissionStatus"),
 
-  hasSeenPermissionScreen: false,
-  setHasSeenPermissionScreen: (seen) => set({ hasSeenPermissionScreen: seen }),
+    locationServicesEnabled: true,
+    setLocationServicesEnabled: s("locationServicesEnabled"),
 
-  userSkippedPermission: false,
-  setUserSkippedPermission: (skipped) =>
-    set({ userSkippedPermission: skipped }),
+    canAskAgain: true,
+    setCanAskAgain: s("canAskAgain"),
 
-  currentLocation: null,
-  setCurrentLocation: (location) => set({ currentLocation: location }),
+    hasSeenPermissionScreen: false,
+    setHasSeenPermissionScreen: s("hasSeenPermissionScreen"),
 
-  currentSpeed: 0,
-  setCurrentSpeed: (speed) => set({ currentSpeed: speed }),
+    userSkippedPermission: false,
+    setUserSkippedPermission: s("userSkippedPermission"),
 
-  currentHeading: null,
-  setCurrentHeading: (heading) => set({ currentHeading: heading }),
+    currentLocation: null,
+    setCurrentLocation: s("currentLocation"),
 
-  movementMode: "idle",
-  setMovementMode: (mode) => set({ movementMode: mode }),
+    currentSpeed: 0,
+    setCurrentSpeed: s("currentSpeed"),
 
-  nearestBuilding: null,
-  nearestBuildingDistance: null,
-  setNearestBuilding: (building, distance) =>
-    set({ nearestBuilding: building, nearestBuildingDistance: distance }),
+    currentHeading: null,
+    setCurrentHeading: s("currentHeading"),
 
-  isWatchingLocation: false,
-  setIsWatchingLocation: (watching) => set({ isWatchingLocation: watching }),
+    movementMode: "idle",
+    setMovementMode: s("movementMode"),
 
-  isAppInBackground: false,
-  setIsAppInBackground: (inBackground) =>
-    set({ isAppInBackground: inBackground }),
+    nearestBuilding: null,
+    nearestBuildingDistance: null,
+    setNearestBuilding: (building, distance) =>
+      set({ nearestBuilding: building, nearestBuildingDistance: distance }),
 
-  lastPermissionCheck: 0,
-  setLastPermissionCheck: (timestamp) =>
-    set({ lastPermissionCheck: timestamp }),
-}));
+    isWatchingLocation: false,
+    setIsWatchingLocation: s("isWatchingLocation"),
+
+    isAppInBackground: false,
+    setIsAppInBackground: s("isAppInBackground"),
+
+    lastPermissionCheck: 0,
+    setLastPermissionCheck: s("lastPermissionCheck"),
+  };
+});
 
 export default useLocationStore;

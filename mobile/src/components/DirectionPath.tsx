@@ -49,6 +49,7 @@ interface ProgressIndex {
   segmentIndex: number;
   pointIndex: number;
 }
+type MutableRef<T> = { current: T };
 
 function flattenSegments(segments: RouteSegment[]): Coordinate[] {
   return segments.flatMap((seg) => seg.coordinates);
@@ -127,6 +128,131 @@ function trimSegmentsFromProgress(
   }
 
   return trimmed;
+}
+
+function updateProgressFromLocation(params: {
+  currentLocation: Coordinate;
+  fullRouteSegments: RouteSegment[];
+  progressRef: MutableRef<ProgressIndex>;
+  setProgress: (value: ProgressIndex) => void;
+  lastStepIndexRef: MutableRef<number>;
+  setCurrentStepIndex: (index: number) => void;
+  lastStepDistanceRef: MutableRef<string>;
+  setDistanceToNextStep: (value: string) => void;
+}): { allCoords: Coordinate[]; bestFlatIdx: number } | null {
+  const {
+    currentLocation,
+    fullRouteSegments,
+    progressRef,
+    setProgress,
+    lastStepIndexRef,
+    setCurrentStepIndex,
+    lastStepDistanceRef,
+    setDistanceToNextStep,
+  } = params;
+
+  const allCoords = flattenSegments(fullRouteSegments);
+  if (!allCoords.length) return null;
+
+  const currentFlatIdx = toFlatIndex(fullRouteSegments, progressRef.current);
+  const result = findClosestInWindow(
+    currentLocation,
+    allCoords,
+    currentFlatIdx,
+    SEARCH_WINDOW_POINTS,
+  );
+
+  if (!result) return null;
+
+  const isOnRoute = result.distance <= ON_ROUTE_THRESHOLD_METERS;
+  const isMovingForward = result.flatIndex > currentFlatIdx;
+  const isAtStart = currentFlatIdx === 0 && result.flatIndex >= 0;
+
+  if (isOnRoute && (isMovingForward || isAtStart)) {
+    const newProgress = fromFlatIndex(fullRouteSegments, result.flatIndex);
+
+    if (
+      newProgress.segmentIndex !== progressRef.current.segmentIndex ||
+      newProgress.pointIndex !== progressRef.current.pointIndex
+    ) {
+      progressRef.current = newProgress;
+      setProgress(newProgress);
+
+      if (newProgress.segmentIndex !== lastStepIndexRef.current) {
+        lastStepIndexRef.current = newProgress.segmentIndex;
+        setCurrentStepIndex(newProgress.segmentIndex);
+      }
+
+      const currentSegCoords =
+        fullRouteSegments[newProgress.segmentIndex].coordinates;
+      const remainingSegCoords = currentSegCoords.slice(newProgress.pointIndex);
+      const remainingSegMeters = sumPolylineDistance(remainingSegCoords);
+      const stepDistStr = formatDistance(remainingSegMeters);
+      if (stepDistStr !== lastStepDistanceRef.current) {
+        lastStepDistanceRef.current = stepDistStr;
+        setDistanceToNextStep(stepDistStr);
+      }
+    }
+  }
+
+  return {
+    allCoords,
+    bestFlatIdx: Math.max(result.flatIndex, currentFlatIdx),
+  };
+}
+
+function updateRemainingPathMetrics(params: {
+  currentLocation: Coordinate;
+  allCoords: Coordinate[];
+  bestFlatIdx: number;
+  currentSpeed: number;
+  lastDistanceUpdateRef: MutableRef<number>;
+  lastDistanceMetersRef: MutableRef<number>;
+  setPathDistance: (distance: string) => void;
+  setPathDuration: (duration: string) => void;
+}): void {
+  const {
+    currentLocation,
+    allCoords,
+    bestFlatIdx,
+    currentSpeed,
+    lastDistanceUpdateRef,
+    lastDistanceMetersRef,
+    setPathDistance,
+    setPathDuration,
+  } = params;
+
+  const remainingPolyline = sumPolylineDistance(allCoords.slice(bestFlatIdx));
+  const destCoord = allCoords[allCoords.length - 1];
+  const directToDest = haversineDistance(currentLocation, destCoord);
+  const remainingMeters = Math.min(remainingPolyline, directToDest);
+
+  const now = Date.now();
+  const timeSinceLast = now - lastDistanceUpdateRef.current;
+  const delta = Math.abs(remainingMeters - lastDistanceMetersRef.current);
+
+  const THROTTLE_MS = 3000;
+  const MIN_DELTA_METERS = 5;
+
+  if (timeSinceLast < THROTTLE_MS && delta < MIN_DELTA_METERS) {
+    return;
+  }
+
+  lastDistanceUpdateRef.current = now;
+  lastDistanceMetersRef.current = remainingMeters;
+  setPathDistance(formatDistance(remainingMeters));
+
+  const speed = currentSpeed > 0.5 ? currentSpeed : 1.4;
+  const remainingSeconds = remainingMeters / speed;
+  const remainingMinutes = Math.max(1, Math.ceil(remainingSeconds / 60));
+  if (remainingMinutes >= 60) {
+    const hours = Math.floor(remainingMinutes / 60);
+    const mins = remainingMinutes % 60;
+    setPathDuration(`${hours} hour${hours > 1 ? "s" : ""} ${mins} mins`);
+    return;
+  }
+
+  setPathDuration(`${remainingMinutes} mins`);
 }
 
 export default function DirectionPath({ destination }: DirectionPathProps) {
@@ -216,83 +342,29 @@ export default function DirectionPath({ destination }: DirectionPathProps) {
   useEffect(() => {
     if (!isNavigating || !currentLocation || !fullRouteSegments.length) return;
 
-    const allCoords = flattenSegments(fullRouteSegments);
-    if (!allCoords.length) return;
-
-    const currentFlatIdx = toFlatIndex(fullRouteSegments, progressRef.current);
-    const result = findClosestInWindow(
+    const progressUpdate = updateProgressFromLocation({
       currentLocation,
-      allCoords,
-      currentFlatIdx,
-      SEARCH_WINDOW_POINTS,
-    );
+      fullRouteSegments,
+      progressRef,
+      setProgress,
+      lastStepIndexRef,
+      setCurrentStepIndex,
+      lastStepDistanceRef,
+      setDistanceToNextStep,
+    });
 
-    if (!result) return;
+    if (!progressUpdate) return;
 
-    const isOnRoute = result.distance <= ON_ROUTE_THRESHOLD_METERS;
-    const isMovingForward = result.flatIndex > currentFlatIdx;
-    const isAtStart = currentFlatIdx === 0 && result.flatIndex >= 0;
-
-    // Advance polyline progress only when moving forward on the route
-    if (isOnRoute && (isMovingForward || isAtStart)) {
-      const newProgress = fromFlatIndex(fullRouteSegments, result.flatIndex);
-
-      if (
-        newProgress.segmentIndex !== progressRef.current.segmentIndex ||
-        newProgress.pointIndex !== progressRef.current.pointIndex
-      ) {
-        progressRef.current = newProgress;
-        setProgress(newProgress);
-
-        if (newProgress.segmentIndex !== lastStepIndexRef.current) {
-          lastStepIndexRef.current = newProgress.segmentIndex;
-          setCurrentStepIndex(newProgress.segmentIndex);
-        }
-
-        const currentSegCoords =
-          fullRouteSegments[newProgress.segmentIndex].coordinates;
-        const remainingSegCoords = currentSegCoords.slice(
-          newProgress.pointIndex,
-        );
-        const remainingSegMeters = sumPolylineDistance(remainingSegCoords);
-        const stepDistStr = formatDistance(remainingSegMeters);
-        if (stepDistStr !== lastStepDistanceRef.current) {
-          lastStepDistanceRef.current = stepDistStr;
-          setDistanceToNextStep(stepDistStr);
-        }
-      }
-    }
-
-    // Always update total remaining distance + ETA (throttled, independent of progress)
-    const bestIdx = Math.max(result.flatIndex, currentFlatIdx);
-    const remainingPolyline = sumPolylineDistance(allCoords.slice(bestIdx));
-    const destCoord = allCoords[allCoords.length - 1];
-    const directToDest = haversineDistance(currentLocation, destCoord);
-    const remainingMeters = Math.min(remainingPolyline, directToDest);
-
-    const now = Date.now();
-    const timeSinceLast = now - lastDistanceUpdateRef.current;
-    const delta = Math.abs(remainingMeters - lastDistanceMetersRef.current);
-
-    const THROTTLE_MS = 3000;
-    const MIN_DELTA_METERS = 5;
-
-    if (timeSinceLast >= THROTTLE_MS || delta >= MIN_DELTA_METERS) {
-      lastDistanceUpdateRef.current = now;
-      lastDistanceMetersRef.current = remainingMeters;
-      setPathDistance(formatDistance(remainingMeters));
-
-      const speed = currentSpeed > 0.5 ? currentSpeed : 1.4;
-      const remainingSeconds = remainingMeters / speed;
-      const remainingMinutes = Math.max(1, Math.ceil(remainingSeconds / 60));
-      if (remainingMinutes >= 60) {
-        const hours = Math.floor(remainingMinutes / 60);
-        const mins = remainingMinutes % 60;
-        setPathDuration(`${hours} hour${hours > 1 ? "s" : ""} ${mins} mins`);
-      } else {
-        setPathDuration(`${remainingMinutes} mins`);
-      }
-    }
+    updateRemainingPathMetrics({
+      currentLocation,
+      allCoords: progressUpdate.allCoords,
+      bestFlatIdx: progressUpdate.bestFlatIdx,
+      currentSpeed,
+      lastDistanceUpdateRef,
+      lastDistanceMetersRef,
+      setPathDistance,
+      setPathDuration,
+    });
   }, [
     currentLocation,
     isNavigating,

@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { Building, BUILDINGS, LatLng } from "../data/buildings";
+import { Building, BUILDINGS } from "../data/buildings";
 import { Coordinate } from "../type";
 import { MovementMode } from "../hooks/useLocationStore";
 
@@ -52,13 +52,29 @@ export function findNearestBuildingOnCampus(
   userLocation: Coordinate,
   campus: "SGW" | "LOYOLA",
 ): NearestBuildingResult | null {
-  const sgwBuildingIds = ["FB", "EV", "LB", "H", "CL", "MB", "LS", "ER"];
-  const loyolaBuildingIds = ["VL", "HU", "SP", "AD", "CC", "SC", "HB", "VE"];
+  const sgwBuildingIds = new Set([
+    "FB",
+    "EV",
+    "LB",
+    "H",
+    "CL",
+    "MB",
+    "LS",
+    "ER",
+  ]);
+  const loyolaBuildingIds = new Set([
+    "VL",
+    "HU",
+    "SP",
+    "AD",
+    "CC",
+    "SC",
+    "HB",
+    "VE",
+  ]);
 
   const campusBuildings = BUILDINGS.filter((b) =>
-    campus === "SGW"
-      ? sgwBuildingIds.includes(b.id)
-      : loyolaBuildingIds.includes(b.id),
+    campus === "SGW" ? sgwBuildingIds.has(b.id) : loyolaBuildingIds.has(b.id),
   );
 
   return findNearestBuilding(userLocation, campusBuildings);
@@ -81,50 +97,60 @@ export interface LocationWatcherConfig {
   distanceInterval: number;
 }
 
+export interface WatcherStrategy {
+  getConfig(): LocationWatcherConfig;
+}
+
+class StaticWatcherStrategy implements WatcherStrategy {
+  constructor(private readonly config: LocationWatcherConfig) {}
+
+  getConfig(): LocationWatcherConfig {
+    return this.config;
+  }
+}
+
+const watcherStrategies: Record<MovementMode | "navigating", WatcherStrategy> =
+  {
+    navigating: new StaticWatcherStrategy({
+      accuracy: Location.Accuracy.BestForNavigation,
+      timeInterval: 1000,
+      distanceInterval: 3,
+    }),
+    idle: new StaticWatcherStrategy({
+      accuracy: Location.Accuracy.Low,
+      timeInterval: 15000,
+      distanceInterval: 25,
+    }),
+    walking: new StaticWatcherStrategy({
+      accuracy: Location.Accuracy.High,
+      timeInterval: 3000,
+      distanceInterval: 5,
+    }),
+    biking: new StaticWatcherStrategy({
+      accuracy: Location.Accuracy.High,
+      timeInterval: 2000,
+      distanceInterval: 10,
+    }),
+    transit: new StaticWatcherStrategy({
+      accuracy: Location.Accuracy.Balanced,
+      timeInterval: 5000,
+      distanceInterval: 50,
+    }),
+  };
+
+export function getWatcherStrategy(
+  mode: MovementMode,
+  isNavigating: boolean,
+): WatcherStrategy {
+  if (isNavigating) return watcherStrategies.navigating;
+  return watcherStrategies[mode] ?? watcherStrategies.idle;
+}
+
 export function getWatcherConfigForMode(
   mode: MovementMode,
   isNavigating: boolean,
 ): LocationWatcherConfig {
-  if (isNavigating) {
-    return {
-      accuracy: Location.Accuracy.BestForNavigation,
-      timeInterval: 1000,
-      distanceInterval: 3,
-    };
-  }
-
-  switch (mode) {
-    case "idle":
-      return {
-        accuracy: Location.Accuracy.Low,
-        timeInterval: 15000,
-        distanceInterval: 25,
-      };
-    case "walking":
-      return {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 3000,
-        distanceInterval: 5,
-      };
-    case "biking":
-      return {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 2000,
-        distanceInterval: 10,
-      };
-    case "transit":
-      return {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 5000,
-        distanceInterval: 50,
-      };
-    default:
-      return {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 3000,
-        distanceInterval: 5,
-      };
-  }
+  return getWatcherStrategy(mode, isNavigating).getConfig();
 }
 
 export function getDistanceToPolyline(
