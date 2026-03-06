@@ -154,7 +154,9 @@ public class PathfindingService {
 
         Graph<Waypoint, DefaultWeightedEdge> graph = graphs.get(currentBuildingId);
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
-            log.error("Graph missing or vertices not found for {}", sanitize(currentBuildingId));
+            if (log.isErrorEnabled()) {
+                log.error("Graph missing or vertices not found for {}", sanitize(currentBuildingId));
+            }
             return Collections.emptyList();
         }
 
@@ -162,7 +164,9 @@ public class PathfindingService {
                 new DijkstraShortestPath<>(graph).getPath(start, end);
 
         if (path == null) {
-            log.error("No path found between waypoints: {} -> {}", sanitize(start.id), sanitize(end.id));
+            if (log.isErrorEnabled()) {
+                log.error("No path found between waypoints: {} -> {}", sanitize(start.id), sanitize(end.id));
+            }
             return Collections.emptyList();
         }
 
@@ -267,11 +271,12 @@ public class PathfindingService {
         int added = 0;
         for (Candidate c : candidates) {
             if (added >= limit) break;
-            if (graph.containsEdge(wp, c.target)) continue;
-            DefaultWeightedEdge edge = graph.addEdge(wp, c.target);
-            if (edge != null) {
-                graph.setEdgeWeight(edge, c.dist);
-                added++;
+            if (!graph.containsEdge(wp, c.target)) {
+                DefaultWeightedEdge edge = graph.addEdge(wp, c.target);
+                if (edge != null) {
+                    graph.setEdgeWeight(edge, c.dist);
+                    added++;
+                }
             }
         }
     }

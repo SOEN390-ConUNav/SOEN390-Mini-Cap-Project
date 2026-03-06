@@ -1,9 +1,17 @@
-import React from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 
 interface RoomListModalProps {
   visible: boolean;
-  selectingFor: 'start' | 'end' | null;
+  selectingFor: "start" | "end" | null;
   searchQuery: string;
   filteredRooms: string[];
   onSearchChange: (query: string) => void;
@@ -11,10 +19,10 @@ interface RoomListModalProps {
   onClose: () => void;
 }
 
-function getModalTitle(selectingFor: 'start' | 'end' | null): string {
-  if (selectingFor === 'start') return 'Select Start Room';
-  if (selectingFor === 'end') return 'Select End Room';
-  return 'All Rooms';
+function getModalTitle(selectingFor: "start" | "end" | null): string {
+  if (selectingFor === "start") return "Select Start Room";
+  if (selectingFor === "end") return "Select End Room";
+  return "All Rooms";
 }
 
 export default function RoomListModal({
@@ -25,7 +33,7 @@ export default function RoomListModal({
   onSearchChange,
   onSelectRoom,
   onClose,
-}: RoomListModalProps) {
+}: Readonly<RoomListModalProps>) {
   const modalTitle = getModalTitle(selectingFor);
 
   return (
@@ -37,9 +45,7 @@ export default function RoomListModal({
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            {modalTitle}
-          </Text>
+          <Text style={styles.modalTitle}>{modalTitle}</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Search rooms..."
@@ -80,30 +86,30 @@ export default function RoomListModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
-    color: '#212121',
+    color: "#212121",
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   roomList: {
     maxHeight: 400,
@@ -111,28 +117,28 @@ const styles = StyleSheet.create({
   roomItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
   },
   roomText: {
     fontSize: 16,
-    color: '#212121',
+    color: "#212121",
   },
   noResults: {
-    textAlign: 'center',
+    textAlign: "center",
     padding: 20,
-    color: '#757575',
+    color: "#757575",
     fontSize: 16,
   },
   closeButton: {
     marginTop: 16,
     padding: 14,
-    backgroundColor: '#8B1538',
+    backgroundColor: "#8B1538",
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

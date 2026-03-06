@@ -29,7 +29,7 @@ export default function UpcomingEventButton({
   onMainButtonPress,
   onOpenEventDetails,
   onRequestDirections,
-}: {
+}: Readonly<{
   onMainButtonPress?: () => void;
   onRequestDirections?: (locationText: string) => void;
   onOpenEventDetails?: (payload: {
@@ -41,7 +41,7 @@ export default function UpcomingEventButton({
     onChangeCalendar: () => void;
     onLogout: () => void;
   }) => void;
-}) {
+}>) {
   const googleWebClientId = (Constants.expoConfig?.extra as any)
     ?.GOOGLE_WEB_CLIENT_ID as string | undefined;
   const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
@@ -129,10 +129,9 @@ export default function UpcomingEventButton({
       }
 
       const state = await stateRes.json();
-      const selected =
-        state?.selectedCalendar && state.selectedCalendar.id
-          ? state.selectedCalendar
-          : null;
+      const selected = state?.selectedCalendar?.id
+        ? state.selectedCalendar
+        : null;
       setSelectedCalendar(selected);
       const detailsTextFromBackend =
         typeof state?.nextEventDetailsText === "string"

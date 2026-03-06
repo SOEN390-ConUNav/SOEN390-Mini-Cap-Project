@@ -27,8 +27,8 @@ import java.util.regex.Pattern;
 @Service
 public class GoogleCalendarService {
 
-  private static final Pattern ROOM_PATTERN = Pattern.compile("\\bRm\\.?\\s*([A-Za-z0-9.\\-]+)\\b", Pattern.CASE_INSENSITIVE);
-  private static final Pattern CLASSROOM_PATTERN = Pattern.compile("Classroom:\\s*([A-Za-z0-9.\\-]+)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern ROOM_PATTERN = Pattern.compile("\\bRm\\.?\\s*([-A-Za-z0-9.]+)\\b", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CLASSROOM_PATTERN = Pattern.compile("Classroom:\\s*([-A-Za-z0-9.]+)", Pattern.CASE_INSENSITIVE);
   private final RestTemplate restTemplate;
   private final GoogleSessionService sessionService;
 
@@ -269,31 +269,39 @@ public class GoogleCalendarService {
 
     Matcher rmMatch = ROOM_PATTERN.matcher(location);
     if (rmMatch.find()) {
-      String room = rmMatch.group(1) != null ? rmMatch.group(1).trim() : "(missing)";
-      String buildingLine = location.replace(rmMatch.group(0), "").trim();
-      String campus = "(no campus)";
-      String building = buildingLine;
-
-      int splitIdx = buildingLine.indexOf(" - ");
-      if (splitIdx >= 0) {
-        campus = buildingLine.substring(0, splitIdx).trim();
-        building = buildingLine.substring(splitIdx + 3).trim();
-      }
-
-      if (campus.isEmpty()) campus = "(no campus)";
-      if (building.isEmpty()) building = "(no building)";
-      if (room.isEmpty()) room = "(missing)";
-      return new LocationParts(campus, building, room);
+      return parseFromRoomPattern(location, rmMatch);
     }
 
     Matcher classroomMatch = CLASSROOM_PATTERN.matcher(location);
     if (classroomMatch.find()) {
-      String room = classroomMatch.group(1) != null ? classroomMatch.group(1).trim() : "(missing)";
-      if (room.isEmpty()) room = "(missing)";
-      return new LocationParts("(no campus)", "(no building)", room);
+      return parseFromClassroomPattern(classroomMatch);
     }
 
     return new LocationParts("(no campus)", location, "(missing)");
+  }
+
+  private LocationParts parseFromRoomPattern(String location, Matcher rmMatch) {
+    String room = rmMatch.group(1) != null ? rmMatch.group(1).trim() : "(missing)";
+    String buildingLine = location.replace(rmMatch.group(0), "").trim();
+    String campus = "(no campus)";
+    String building = buildingLine;
+
+    int splitIdx = buildingLine.indexOf(" - ");
+    if (splitIdx >= 0) {
+      campus = buildingLine.substring(0, splitIdx).trim();
+      building = buildingLine.substring(splitIdx + 3).trim();
+    }
+
+    if (campus.isEmpty()) campus = "(no campus)";
+    if (building.isEmpty()) building = "(no building)";
+    if (room.isEmpty()) room = "(missing)";
+    return new LocationParts(campus, building, room);
+  }
+
+  private LocationParts parseFromClassroomPattern(Matcher classroomMatch) {
+    String room = classroomMatch.group(1) != null ? classroomMatch.group(1).trim() : "(missing)";
+    if (room.isEmpty()) room = "(missing)";
+    return new LocationParts("(no campus)", "(no building)", room);
   }
 
   private String formatWhen(GoogleEventDto event, String timeZone) {

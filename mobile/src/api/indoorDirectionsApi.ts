@@ -1,4 +1,4 @@
-import { IndoorDirectionResponse, RoutePoint } from "../types/indoorDirections";
+import { IndoorDirectionResponse } from "../types/indoorDirections";
 import { API_BASE_URL } from "../const";
 
 /**

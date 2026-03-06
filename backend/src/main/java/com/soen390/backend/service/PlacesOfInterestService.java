@@ -1,6 +1,7 @@
 package com.soen390.backend.service;
 
 import com.soen390.backend.enums.PlaceType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -15,6 +16,7 @@ public class PlacesOfInterestService {
 
     private RestClient restClient;
 
+    @Autowired
     public PlacesOfInterestService() {
         this.restClient = RestClient.create();
     }
