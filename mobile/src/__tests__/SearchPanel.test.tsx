@@ -2,6 +2,7 @@ import React from "react";
 import { Alert } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import SearchPanel from "../components/SearchPanel";
+import cacheService from "../services/cacheService";
 
 jest.mock("../api", () => ({
   searchLocations: jest.fn(),
@@ -52,6 +53,7 @@ describe("SearchPanel", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    cacheService.clearMemoryNamespace("nearby_places");
 
     storeState = {
       permissionStatus: "granted",
@@ -60,7 +62,9 @@ describe("SearchPanel", () => {
       currentLocation: { latitude: 45.5, longitude: -73.6 },
     };
 
-    mockUseLocationStore.mockImplementation((selector) => selector(storeState));
+    mockUseLocationStore.mockImplementation((selector) =>
+      selector(storeState as any),
+    );
 
     mockUseLocationService.mockReturnValue({
       getCurrentPosition,

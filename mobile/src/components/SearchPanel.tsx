@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import useLocationStore from "../hooks/useLocationStore";
 import useLocationService from "../hooks/useLocationService";
+import cacheService from "../services/cacheService";
 
 const BURGUNDY = "#800020";
 
@@ -52,7 +53,6 @@ export default function SearchPanel({
   const [activeFilter, setActiveFilter] = useState<string>("restaurant");
   const [nearby, setNearby] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
@@ -83,8 +83,9 @@ export default function SearchPanel({
   }, [activeFilter, hasLocationPermission]);
 
   async function fetchNearbyPlaces(placeType: string) {
-    if (cacheRef.current[placeType]) {
-      setNearby(cacheRef.current[placeType]);
+    const cached = cacheService.getMemory<any[]>("nearby_places", placeType);
+    if (cached) {
+      setNearby(cached);
       return;
     }
 
@@ -97,7 +98,7 @@ export default function SearchPanel({
         coords.longitude,
         placeType,
       );
-      cacheRef.current[placeType] = results;
+      cacheService.setMemory("nearby_places", placeType, results);
       setNearby(results);
     } catch (e) {
       console.error(e);
@@ -210,9 +211,9 @@ export default function SearchPanel({
           <>
             <Text style={styles.sectionTitle}>Recent Searches</Text>
 
-            {recentSearches.map((item, index) => (
+            {recentSearches.map((item) => (
               <TouchableOpacity
-                key={index.toString()}
+                key={`${item.timestamp}-${item.query}`}
                 onPress={() => {
                   setQuery(item.query);
                   handleSearch();
