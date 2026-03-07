@@ -28,8 +28,8 @@ import java.util.regex.Pattern;
 @Service
 public class GoogleCalendarService {
 
-  private static final Pattern ROOM_PATTERN = Pattern.compile("\\bRm\\.?\\s*([-A-Za-z0-9.]+)\\b", Pattern.CASE_INSENSITIVE);
-  private static final Pattern CLASSROOM_PATTERN = Pattern.compile("Classroom:\\s*([-A-Za-z0-9.]+)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern ROOM_PATTERN = Pattern.compile("\\bRm\\.?\\s*([-A-Z0-9.]+)\\b", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CLASSROOM_PATTERN = Pattern.compile("Classroom:\\s*([-A-Z0-9.]+)", Pattern.CASE_INSENSITIVE);
   private static final String NO_CAMPUS = "(no campus)";
   private static final String NO_BUILDING = "(no building)";
   private static final String MISSING = "(missing)";
