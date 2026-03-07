@@ -23,13 +23,24 @@ import {
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 
+interface CalendarItem {
+  id: string;
+  summary?: string;
+  primary?: boolean;
+}
+
+interface EventItem {
+  summary?: string;
+  location?: string;
+}
+
 const BURGUNDY = "#800020";
 
 export default function UpcomingEventButton({
   onMainButtonPress,
   onOpenEventDetails,
   onRequestDirections,
-}: {
+}: Readonly<{
   onMainButtonPress?: () => void;
   onRequestDirections?: (locationText: string) => void;
   onOpenEventDetails?: (payload: {
@@ -41,14 +52,17 @@ export default function UpcomingEventButton({
     onChangeCalendar: () => void;
     onLogout: () => void;
   }) => void;
-}) {
-  const googleWebClientId = (Constants.expoConfig?.extra as any)
-    ?.GOOGLE_WEB_CLIENT_ID as string | undefined;
-  const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
-  const [calendars, setCalendars] = useState<any[]>([]);
+}>) {
+  const googleWebClientId = (
+    Constants.expoConfig?.extra as Record<string, unknown>
+  )?.GOOGLE_WEB_CLIENT_ID as string | undefined;
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(
+    null,
+  );
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
-  const [nextEvent, setNextEvent] = useState<any | null>(null);
+  const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
 
@@ -116,7 +130,7 @@ export default function UpcomingEventButton({
           stateRes.status === 403)
       ) {
         if (!allowReauth) {
-          await clearLocalGoogleState();
+          clearLocalGoogleState();
           return null;
         }
 
@@ -129,10 +143,9 @@ export default function UpcomingEventButton({
       }
 
       const state = await stateRes.json();
-      const selected =
-        state?.selectedCalendar && state.selectedCalendar.id
-          ? state.selectedCalendar
-          : null;
+      const selected = state?.selectedCalendar?.id
+        ? state.selectedCalendar
+        : null;
       setSelectedCalendar(selected);
       const detailsTextFromBackend =
         typeof state?.nextEventDetailsText === "string"
@@ -272,7 +285,7 @@ export default function UpcomingEventButton({
       try {
         await requestGoogleLogout();
       } catch {}
-      await clearLocalGoogleState();
+      clearLocalGoogleState();
       try {
         await GoogleSignin.revokeAccess();
       } catch {}

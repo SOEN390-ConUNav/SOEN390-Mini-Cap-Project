@@ -65,14 +65,14 @@ public class OutdoorPlacesOfInterestControllerTest {
     void getPlacesShouldReturn200AndJson() throws Exception {
         String jsonResponse = getJsonResponse();
 
-        when(placesOfInterestService.getNearbyPlaces(1, 1000, 37.7749, -122.4194, PlaceType.restaurant)).thenReturn(jsonResponse);
+        when(placesOfInterestService.getNearbyPlaces(1, 1000, 37.7749, -122.4194, PlaceType.RESTAURANT)).thenReturn(jsonResponse);
 
         mockMvc.perform(post("/api/places/outdoor")
                         .param("maxResultCount", "1")
                         .param("radius", "1000")
                         .param("latitude", "37.7749")
                         .param("longitude", "-122.4194")
-                        .param("placeType", PlaceType.restaurant.toString()))
+                        .param("placeType", PlaceType.RESTAURANT.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.places").isArray())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));

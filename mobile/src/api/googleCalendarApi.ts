@@ -14,7 +14,7 @@ function requireApiBaseUrl(): string {
 
 function googleFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`${requireApiBaseUrl()}${path}`, {
-    ...(init ?? {}),
+    ...init,
     credentials: "include",
   });
 }

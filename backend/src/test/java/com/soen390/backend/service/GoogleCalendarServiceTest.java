@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
@@ -83,7 +84,7 @@ public class GoogleCalendarServiceTest {
                 eq("https://www.googleapis.com/calendar/v3/users/me/calendarList"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
@@ -113,7 +114,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
@@ -138,7 +139,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
@@ -167,7 +168,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
@@ -181,7 +182,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -197,7 +198,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(new HashMap<>(), HttpStatus.FORBIDDEN);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -227,7 +228,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
@@ -245,7 +246,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleCalendarDto> calendars = googleCalendarService.listCalendars("valid-session");
@@ -273,7 +274,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("valid-session", "calendar-id", 7, "America/Montreal");
@@ -305,7 +306,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("valid-session", "calendar-id", 7, "America/Montreal");
@@ -333,7 +334,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("valid-session", "calendar-id", 7, "America/Montreal");
@@ -351,7 +352,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("valid-session", "calendar-id", 7, "America/Montreal");
@@ -365,7 +366,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("valid-session", "calendar-id", 7, "America/Montreal");
@@ -377,7 +378,7 @@ public class GoogleCalendarServiceTest {
     void testImportEventsHttpExceptionThrowsRuntimeException() {
         when(sessionService.require("valid-session")).thenReturn(validSession);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "Not Found",
                         "{\"error\":{\"message\":\"Calendar not found\"}}".getBytes(), null));
 
@@ -406,7 +407,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("valid-session", "calendar-id", 7, "America/Montreal");
@@ -432,7 +433,7 @@ public class GoogleCalendarServiceTest {
 
         ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(responseEntity);
 
         List<GoogleEventDto> events = googleCalendarService.importEvents("session-no-expiry", "calendar-id", 7, "America/Montreal");

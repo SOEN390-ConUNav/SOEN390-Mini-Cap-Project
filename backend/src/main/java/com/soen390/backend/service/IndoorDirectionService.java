@@ -12,6 +12,7 @@ import java.util.*;
 @Service
 public class IndoorDirectionService {
 
+    private static final String PLACEHOLDER_DASH = "—";
     private static final String KEYWORD_STAIRS = "stairs";
     private static final String PREFIX_HALL = "Hall-";
     private static final String MSG_STAIRS_UP = "You will need to go up the stairs to reach the main floor.";
@@ -52,8 +53,8 @@ public class IndoorDirectionService {
                 buildingId, origin, destination,
                 originFloor != null ? originFloor : "1");
 
-        String distance = calculateDistance();
-        String duration = calculateDuration();
+        String distance = PLACEHOLDER_DASH;
+        String duration = PLACEHOLDER_DASH;
        
 
         IndoorDirectionResponse.BuildingInfo buildingInfo = new IndoorDirectionResponse.BuildingInfo(
@@ -355,14 +356,6 @@ public class IndoorDirectionService {
         routePoints.add(new IndoorDirectionResponse.RoutePoint(
                 destPoint.getX(), destPoint.getY(), destId));
         return routePoints;
-    }
-
-    private String calculateDistance() {
-        return "—";
-    }
-
-    private String calculateDuration() {
-        return "—";
     }
 
     private int parseFloorNumber(String floor) {

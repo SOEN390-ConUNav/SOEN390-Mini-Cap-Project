@@ -48,8 +48,8 @@ export default function BuildingPopup({
       }
       renderBody={() => (
         <>
-          {(addressLines ?? []).map((line, idx) => (
-            <Text key={idx} style={styles.address}>
+          {(addressLines ?? []).map((line) => (
+            <Text key={line} style={styles.address}>
               {line}
             </Text>
           ))}
