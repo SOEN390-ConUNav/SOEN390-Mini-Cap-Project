@@ -11,19 +11,21 @@ type Props = Readonly<{
   onSelect: (locationDetail: any) => void;
 }>;
 
-export default function NearbyPlaceItem({ item, userLocation, onSelect }: Props) {
-
-  const distance =
-    userLocation
-      ? Math.round(
-          calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            item.location.latitude,
-            item.location.longitude
-          )
-        )
-      : 0;
+export default function NearbyPlaceItem({
+  item,
+  userLocation,
+  onSelect,
+}: Props) {
+  const distance = userLocation
+    ? Math.round(
+        calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          item.location.latitude,
+          item.location.longitude,
+        ),
+      )
+    : 0;
 
   const distanceKm = (distance / 1000).toFixed(1);
 

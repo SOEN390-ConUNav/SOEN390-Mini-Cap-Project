@@ -15,7 +15,7 @@ describe("calculateDistance", () => {
       montreal.lat,
       montreal.lon,
       toronto.lat,
-      toronto.lon
+      toronto.lon,
     );
 
     // Expect around 504,000 meters ± 10km
@@ -57,7 +57,7 @@ describe("getOpenStatusText", () => {
       openNow: true,
       periods: [
         {
-          open: { day: 0, hour: 9, minute: 0 },   // Monday
+          open: { day: 0, hour: 9, minute: 0 }, // Monday
           close: { day: 0, hour: 18, minute: 0 },
         },
       ],

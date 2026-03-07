@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,8 +19,10 @@ import { useDistanceFilter } from "../hooks/useDistanceFilter";
 import NearbyPlaceItem from "./NearbyPlaceItem";
 import useLocationStore from "../hooks/useLocationStore";
 import useLocationService from "../hooks/useLocationService";
+import cacheService from "../services/cacheService";
 
 const BURGUNDY = "#800020";
+const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
 
 const PLACE_TYPES = [
   { label: "Restaurants", value: "restaurant" },
@@ -54,25 +56,30 @@ export default function SearchPanel({
   const [activeFilter, setActiveFilter] = useState<string>("restaurant");
   const [nearby, setNearby] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
-  const {distance, location, hours} = useDistanceFilter();
-  const todayIndexJS = new Date().getDay(); 
+  const { distance, location, hours } = useDistanceFilter();
+  const todayIndexJS = new Date().getDay();
   // Convert to Google format (Monday first)
   const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
-  const statusText = getOpenStatusText(location.selectedLocationDetail?.openingHours)
-  
+  const statusText = getOpenStatusText(
+    location.selectedLocationDetail?.openingHours,
+  );
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
   const currentLocation = useLocationStore((state) => state.currentLocation);
 
-  const { getCurrentPosition } =
-    useLocationService();
+  const { getCurrentPosition } = useLocationService();
 
   const hasLocationPermission = permissionStatus === "granted";
+  const locationCacheKeyPart = currentLocation
+    ? `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}`
+    : "no-location";
 
   useEffect(() => {
     if (visible) {
+      setQuery("");
+      setSearchResults([]);
+      setSearching(false);
       loadSearchHistory();
     }
   }, [visible]);
@@ -82,17 +89,26 @@ export default function SearchPanel({
     if (hasLocationPermission) {
       fetchNearbyPlaces(activeFilter);
     }
-  }, [activeFilter, hasLocationPermission]);
+  }, [activeFilter, hasLocationPermission, locationCacheKeyPart]);
 
   async function fetchNearbyPlaces(placeType: string) {
+    if (!hasLocationPermission) {
+      setNearby([]);
+      return;
+    }
+
     try {
       let coords = currentLocation;
       coords ??= await getCurrentPosition();
+      if (!coords) {
+        setNearby([]);
+        return;
+      }
 
-      const cacheKey = `${placeType}-${coords.latitude}-${coords.longitude}`;
-
-      if (cacheRef.current[cacheKey]) {
-        setNearby(cacheRef.current[cacheKey]);
+      const cacheKey = `${placeType}-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
+      const cached = cacheService.getMemory<any[]>("nearby_places", cacheKey);
+      if (cached) {
+        setNearby(cached);
         return;
       }
 
@@ -103,11 +119,15 @@ export default function SearchPanel({
         coords.longitude,
         placeType,
       );
-
-      cacheRef.current[cacheKey] = results;
+      cacheService.setMemory("nearby_places", cacheKey, results);
       setNearby(results);
     } catch (e) {
-      console.error(e);
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
     } finally {
       setLoading(false);
     }
@@ -124,7 +144,10 @@ export default function SearchPanel({
     const queryToUse = String(
       ((): string => {
         if (typeof searchQuery === "string") return searchQuery;
-        if (searchQuery && typeof (searchQuery as any).nativeEvent?.text === "string") {
+        if (
+          searchQuery &&
+          typeof (searchQuery as any).nativeEvent?.text === "string"
+        ) {
           return (searchQuery as any).nativeEvent.text;
         }
         return query;
@@ -142,17 +165,25 @@ export default function SearchPanel({
       loadSearchHistory();
 
       let coords = currentLocation;
-      coords ??= await getCurrentPosition();
+      if (!coords && hasLocationPermission) {
+        coords = await getCurrentPosition();
+      }
+      coords ??= FALLBACK_COORDS;
 
       const results = await searchLocations(
         queryToUse,
         coords.latitude,
-        coords.longitude
+        coords.longitude,
       );
 
       setSearchResults(results);
     } catch (e) {
-      console.error(e);
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
     } finally {
       setSearching(false);
     }
@@ -186,35 +217,35 @@ export default function SearchPanel({
         </View>
 
         {/* Filters */}
-         {query.length === 0 && (
-            <View style={styles.filtersWrapper}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filters}
-              >
-                {PLACE_TYPES.map((item) => (
-                  <TouchableOpacity
-                    key={item.value}
-                    onPress={() => setActiveFilter(item.value)}
+        {query.length === 0 && (
+          <View style={styles.filtersWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filters}
+            >
+              {PLACE_TYPES.map((item) => (
+                <TouchableOpacity
+                  key={item.value}
+                  onPress={() => setActiveFilter(item.value)}
+                  style={[
+                    styles.filterChip,
+                    activeFilter === item.value && styles.activeChip,
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.filterChip,
-                      activeFilter === item.value && styles.activeChip,
+                      styles.filterText,
+                      activeFilter === item.value && styles.activeText,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.filterText,
-                        activeFilter === item.value && styles.activeText,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Recents */}
         {recentSearches.length > 0 && query.length === 0 && (
@@ -223,7 +254,7 @@ export default function SearchPanel({
 
             {recentSearches.map((item, index) => (
               <TouchableOpacity
-                key={index.toString()}
+                key={`${item.timestamp ?? "no-ts"}-${item.query}-${index}`}
                 onPress={() => handleSearch(item.query)}
                 style={styles.recentSearchItem}
               >
@@ -257,7 +288,11 @@ export default function SearchPanel({
                       <Text style={styles.placeName}>{item.name}</Text>
                       <Text style={styles.address}>{item.address}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={BURGUNDY}/>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color={BURGUNDY}
+                    />
                   </TouchableOpacity>
                 )}
               />
@@ -293,7 +328,9 @@ export default function SearchPanel({
               />
               <View style={styles.filterModal}>
                 <View style={styles.filterModalHeader}>
-                  <Text style={styles.filterModalTitle}>Filter by Distance</Text>
+                  <Text style={styles.filterModalTitle}>
+                    Filter by Distance
+                  </Text>
                   <Pressable
                     testID="close-filter-button"
                     onPress={() => distance.setDistanceFilterVisible(false)}
@@ -354,15 +391,21 @@ export default function SearchPanel({
                   </View>
                   <TouchableOpacity
                     onPress={() => {
-                      const distanceInMeters = Number.parseFloat(distance.customDistance) * 1000;
-                      if (!Number.isNaN(distanceInMeters) && distanceInMeters > 0) {
+                      const distanceInMeters =
+                        Number.parseFloat(distance.customDistance) * 1000;
+                      if (
+                        !Number.isNaN(distanceInMeters) &&
+                        distanceInMeters > 0
+                      ) {
                         distance.setMaxDistance(distanceInMeters);
                         distance.setDistanceFilterVisible(false);
                       }
                     }}
                     style={styles.applyCustomButton}
                   >
-                    <Text style={styles.applyCustomButtonText}>Apply Custom Distance</Text>
+                    <Text style={styles.applyCustomButtonText}>
+                      Apply Custom Distance
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -429,13 +472,12 @@ export default function SearchPanel({
                         <View style={styles.detailSectionContent}>
                           <Text style={styles.detailLabel}>Rating</Text>
                           <Text style={styles.detailValue}>
-                            {location.selectedLocationDetail.rating.toFixed(1)} / 5.0
+                            {location.selectedLocationDetail.rating.toFixed(1)}{" "}
+                            / 5.0
                           </Text>
                         </View>
                       </View>
                     )}
-
-                 
 
                     <View style={styles.detailSection}>
                       <Ionicons name="time" size={18} color={BURGUNDY} />
@@ -447,43 +489,50 @@ export default function SearchPanel({
                           onPress={() => hours.setShowHours(!hours.showHours)}
                           style={styles.hoursHeader}
                         >
-                             {location.selectedLocationDetail.openingHours?.openNow !== undefined && (
-                                <View style={styles.openStatusContainer}>
-                                  <View
-                                    style={[
-                                      styles.statusDot,
-                                      {
-                                        backgroundColor: location.selectedLocationDetail.openingHours.openNow
-                                          ? "#22c55e"
-                                          : "#ef4444",
-                                      },
-                                    ]}
-                                  />
+                          {location.selectedLocationDetail.openingHours
+                            ?.openNow !== undefined && (
+                            <View style={styles.openStatusContainer}>
+                              <View
+                                style={[
+                                  styles.statusDot,
+                                  {
+                                    backgroundColor: location
+                                      .selectedLocationDetail.openingHours
+                                      .openNow
+                                      ? "#22c55e"
+                                      : "#ef4444",
+                                  },
+                                ]}
+                              />
 
-                                  <Text
-                                    style={[
-                                      styles.openStatusText,
-                                      {
-                                        color: location.selectedLocationDetail.openingHours.openNow
-                                          ? "#22c55e"
-                                          : "#ef4444",
-                                      },
-                                    ]}
-                                  >
-                                    {location.selectedLocationDetail.openingHours.openNow
-                                      ? "Open"
-                                      : "Closed"}
-                                  </Text>
+                              <Text
+                                style={[
+                                  styles.openStatusText,
+                                  {
+                                    color: location.selectedLocationDetail
+                                      .openingHours.openNow
+                                      ? "#22c55e"
+                                      : "#ef4444",
+                                  },
+                                ]}
+                              >
+                                {location.selectedLocationDetail.openingHours
+                                  .openNow
+                                  ? "Open"
+                                  : "Closed"}
+                              </Text>
 
-                                  {statusText !== "" && (
-                                    <Text style={styles.closingText}>
-                                      {"  ·  " + statusText}
-                                    </Text>
-                                  )}
-                                </View>
+                              {statusText !== "" && (
+                                <Text style={styles.closingText}>
+                                  {"  ·  " + statusText}
+                                </Text>
                               )}
+                            </View>
+                          )}
                           <Ionicons
-                            name={hours.showHours ? "chevron-up" : "chevron-down"}
+                            name={
+                              hours.showHours ? "chevron-up" : "chevron-down"
+                            }
                             size={16}
                             color="#777"
                           />
@@ -501,7 +550,7 @@ export default function SearchPanel({
                               >
                                 {day}
                               </Text>
-                            )
+                            ),
                           )}
                       </View>
                     </View>
@@ -517,7 +566,6 @@ export default function SearchPanel({
                         </View>
                       </View>
                     )}
-                          
 
                     <TouchableOpacity
                       style={styles.detailNavigateButton}
@@ -549,22 +597,22 @@ export default function SearchPanel({
                     currentLocation.latitude,
                     currentLocation.longitude,
                     item.location.latitude,
-                    item.location.longitude
+                    item.location.longitude,
                   );
                   return distanceValue <= distance.maxDistance;
                 })}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <NearbyPlaceItem
-                      item={item}
-                      userLocation={currentLocation}
-                      onSelect={(locationDetail) => {
-                        location.setSelectedLocationDetail(locationDetail);
-                        location.setLocationDetailVisible(true);
-                      }}
-                    />
-                  )}
-                />
+                    item={item}
+                    userLocation={currentLocation}
+                    onSelect={(locationDetail) => {
+                      location.setSelectedLocationDetail(locationDetail);
+                      location.setLocationDetailVisible(true);
+                    }}
+                  />
+                )}
+              />
 
               {loading && (
                 <View style={styles.loadingOverlay}>
@@ -971,14 +1019,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   todayHoursRow: {
-  fontWeight: "700",
-  color: BURGUNDY,
-},
-closingText: {
-  fontSize: 14,
-  color: "#555",
-  fontWeight: "500",
-},
+    fontWeight: "700",
+    color: BURGUNDY,
+  },
+  closingText: {
+    fontSize: 14,
+    color: "#555",
+    fontWeight: "500",
+  },
   locationErrorContainer: {
     flex: 1,
     justifyContent: "center",

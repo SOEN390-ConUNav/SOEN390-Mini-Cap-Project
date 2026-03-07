@@ -1,12 +1,12 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getShuttleSchedule,
-  getShuttleVersion,
   ShuttleScheduleResponse,
 } from "../api/shuttleScheduleApi";
 import type { CampusKey } from "../data/ShuttleSchedule";
+import cacheService from "./cacheService";
 
-const CACHE_KEY = "shuttle_schedule_cache";
+const CACHE_NAMESPACE = "shuttle_schedule";
+const CACHE_KEY = "cache";
 const CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 export type DeparturesByDay = {
@@ -14,29 +14,20 @@ export type DeparturesByDay = {
   friday: Record<CampusKey, string[]>;
 };
 
-interface CachedSchedule {
-  data: ShuttleScheduleResponse;
-  fetchedAt: number;
-}
-
-async function getCachedSchedule(): Promise<CachedSchedule | null> {
-  const raw = await AsyncStorage.getItem(CACHE_KEY);
-  if (!raw) return null;
-  return JSON.parse(raw) as CachedSchedule;
+async function getCachedSchedule(): Promise<ShuttleScheduleResponse | null> {
+  return cacheService.getPersistent<ShuttleScheduleResponse>(
+    CACHE_NAMESPACE,
+    CACHE_KEY,
+  );
 }
 
 async function setCachedSchedule(data: ShuttleScheduleResponse): Promise<void> {
-  const entry: CachedSchedule = { data, fetchedAt: Date.now() };
-  await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(entry));
-}
-
-async function refreshCacheTimestamp(cached: CachedSchedule): Promise<void> {
-  cached.fetchedAt = Date.now();
-  await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
-}
-
-function isFresh(cached: CachedSchedule): boolean {
-  return Date.now() - cached.fetchedAt < CACHE_MAX_AGE_MS;
+  await cacheService.setPersistent(
+    CACHE_NAMESPACE,
+    CACHE_KEY,
+    data,
+    CACHE_MAX_AGE_MS,
+  );
 }
 
 function toDeparturesByDay(response: ShuttleScheduleResponse): DeparturesByDay {
@@ -58,30 +49,14 @@ function toDeparturesByDay(response: ShuttleScheduleResponse): DeparturesByDay {
 export async function getSchedule(): Promise<DeparturesByDay> {
   const cached = await getCachedSchedule();
 
-  // 1. Cache is fresh → return it
-  if (cached && isFresh(cached)) {
-    console.log("[SHUTTLE CACHE] HIT — serving fresh cache");
-    return toDeparturesByDay(cached.data);
-  }
-
-  // 2. Cache is stale → check version
+  // 1. Cache hit -> return it
   if (cached) {
-    console.log("[SHUTTLE CACHE] STALE — checking remote version…");
-    try {
-      const remoteVersion = await getShuttleVersion();
-      if (remoteVersion === cached.data.version) {
-        console.log("[SHUTTLE CACHE] Version unchanged — refreshing timestamp");
-        await refreshCacheTimestamp(cached);
-        return toDeparturesByDay(cached.data);
-      }
-      console.log("[SHUTTLE CACHE] Version changed — will do full fetch");
-    } catch {
-      console.log("[SHUTTLE CACHE] Version check failed — will do full fetch");
-    }
+    console.log("[SHUTTLE CACHE] HIT - serving cached schedule");
+    return toDeparturesByDay(cached);
   }
 
-  // 3. No cache or version changed → full fetch
-  console.log("[SHUTTLE CACHE] MISS — fetching full schedule from API");
+  // 2. Cache miss/expired -> full fetch
+  console.log("[SHUTTLE CACHE] MISS - fetching full schedule from API");
   const fresh = await getShuttleSchedule();
   await setCachedSchedule(fresh);
   console.log("[SHUTTLE CACHE] Stored new schedule in cache");

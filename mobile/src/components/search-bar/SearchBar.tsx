@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { StyleSheet, View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import RouteCard from "./RouteCard";
@@ -34,6 +34,15 @@ export default function SearchBar({
   navigationHUDToggleState,
   navigationHUDStep,
 }: SearchBarProps) {
+  const lastPressTsRef = useRef(0);
+
+  const handlePress = () => {
+    const now = Date.now();
+    if (now - lastPressTsRef.current < 400) return;
+    lastPressTsRef.current = now;
+    onPress();
+  };
+
   if (isConfiguring) {
     return (
       <RouteCard
@@ -60,7 +69,7 @@ export default function SearchBar({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       style={({ pressed }) => [styles.container, pressed && { opacity: 0.85 }]}
     >
       <Ionicons name="search" size={18} color="#555" />

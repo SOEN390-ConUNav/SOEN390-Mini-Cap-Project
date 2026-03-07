@@ -1,6 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import cacheService from "../services/cacheService";
 
-const KEY = "SEARCH_HISTORY";
+const CACHE_NAMESPACE = "search_history";
+const KEY = "items";
 const MAX_HISTORY = 10;
 
 export type SearchHistoryItem = {
@@ -9,8 +10,11 @@ export type SearchHistoryItem = {
 };
 
 export async function getSearchHistory(): Promise<SearchHistoryItem[]> {
-  const json = await AsyncStorage.getItem(KEY);
-  return json ? JSON.parse(json) : [];
+  const history = await cacheService.getPersistentRaw<SearchHistoryItem[]>(
+    CACHE_NAMESPACE,
+    KEY,
+  );
+  return history ?? [];
 }
 
 export async function addSearchHistory(query: string) {
@@ -20,10 +24,10 @@ export async function addSearchHistory(query: string) {
   const filtered = history.filter((item) => item.query !== query);
 
   // Add new entry
-  const newHistory = [
-    { query, timestamp: Date.now() },
-    ...filtered,
-  ].slice(0, MAX_HISTORY);
+  const newHistory = [{ query, timestamp: Date.now() }, ...filtered].slice(
+    0,
+    MAX_HISTORY,
+  );
 
-  await AsyncStorage.setItem(KEY, JSON.stringify(newHistory));
+  await cacheService.setPersistentRaw(CACHE_NAMESPACE, KEY, newHistory);
 }

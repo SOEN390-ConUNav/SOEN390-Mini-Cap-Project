@@ -2,7 +2,7 @@ export function calculateDistance(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -26,7 +26,7 @@ export function getOpenStatusText(openingHours: any): string {
   const today = todayJS === 0 ? 6 : todayJS - 1;
 
   const todayPeriod = openingHours.periods.find(
-    (p: any) => p.open.day === today
+    (p: any) => p.open.day === today,
   );
 
   if (!todayPeriod) return "";
@@ -44,14 +44,14 @@ export function getOpenStatusText(openingHours: any): string {
   if (openingHours.openNow && todayPeriod.close) {
     return `Closes at ${formatTime(
       todayPeriod.close.hour,
-      todayPeriod.close.minute
+      todayPeriod.close.minute,
     )}`;
   }
 
   if (!openingHours.openNow && todayPeriod.open) {
     return `Opens at ${formatTime(
       todayPeriod.open.hour,
-      todayPeriod.open.minute
+      todayPeriod.open.minute,
     )}`;
   }
 
