@@ -23,9 +23,9 @@
     "MB-1-119": { "x": 753, "y": 874 },
     "MB-1-120": { "x": 750, "y": 806 },
     "MB-1-Bathroom-1": { "x": 488.07877, "y": 750.56995 },
-    "Stairs-Up-1": { "x": 353.55951, "y": 819.02002 },
-    "Elevator-1": { "x": 686.5, "y": 812 },
-    "Emergency-Exit-1": { "x": 245.82504, "y": 191.06499 }
+    "MB-Stairs-Main": { "x": 353.55951, "y": 819.02002 },
+    "MB-Elevator-Main": { "x": 686.5, "y": 812 },
+    "MB1-Emergency-Exit-1": { "x": 245.82504, "y": 191.06499 }
   },
   "waypoints": [
     { "id": "MB-1-AllowedPath_1", "x": 239.27765, "y": 157.13756 },
@@ -68,19 +68,26 @@
     "strictAlignment": false
   },
   "pois": [
-  {
-    "id": "MB-Elevator-1",
-    "displayName": "Elevator",
-    "type": "elevator",
-    "x": 686.5,
-    "y": 812
-  },
-  {
-    "id": "MB-Stairs-1",
-    "displayName": "Stairs",
-    "type": "stairs",
-    "x": 353.55951,
-    "y": 819.02002
-  }
-]
+    {
+      "id": "MB-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 686.5,
+      "y": 812
+    },
+    {
+      "id": "MB-Stairs-Main",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 353.55951,
+      "y": 819.02002
+    },
+    {
+      "id": "MB1-Emergency-Exit-1",
+      "displayName": "Main Exit",
+      "type": "exit",
+      "x": 245.82504,
+      "y": 191.06499
+    }
+  ]
 }

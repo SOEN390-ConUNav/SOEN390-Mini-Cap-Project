@@ -123,10 +123,10 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
-  }, 
+  },
   "pois": [
   {
-    "id": "H8-Elevator",
+    "id": "Hall-Elevator-Main",
     "displayName": "Elevator",
     "type": "elevator",
     "x": 364.2746,

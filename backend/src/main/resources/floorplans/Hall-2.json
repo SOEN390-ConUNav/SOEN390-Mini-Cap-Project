@@ -19,21 +19,21 @@
     "H2-290.1": { "x": 102.05747, "y": 751.85455 },
     "H2-224":  { "x": 543.05811, "y": 769.64441 },
     "H2-224-1": { "x": 548.67596, "y": 879.19232 },
-    "Maisonneuve-Entrance": { "x": 429.76495, "y": 1264.0145 },
-    "Bishop-Entrance": { "x": 1099.2245, "y": 1196.6005 },
-    "McKay-Exit": { "x": 39.324898, "y": 625.45312 },
-    "Elevator-1": { "x": 823.01392, "y": 989.67657 },
+    "H2-Maisonneuve-Entrance": { "x": 429.76495, "y": 1264.0145 },
+    "H2-Bishop-Entrance": { "x": 1099.2245, "y": 1196.6005 },
+    "H2-McKay-Exit": { "x": 39.324898, "y": 625.45312 },
+    "Hall-Elevator-Main": { "x": 823.01392, "y": 989.67657 },
     "Emergency-Stairs": { "x": 1050.5365, "y": 973.75934 },
-    "Stairs-Up-1": { "x": 664.77802, "y": 691.93091 },
-    "Stairs-Down-1": { "x": 632.9436, "y": 948.47906 },
-    "Stairs-Underground": { "x": 1071.1353, "y": 1087.0525 },
-    "Tabling-Area": { "x": 782.75269, "y": 853.91205 },
-    "Stand":   { "x": 809.90564, "y": 682.56787 },
-    "Sitting-Area": { "x": 955.0332, "y": 793.9884 },
-    "Couch-Area": { "x": 1094.543, "y": 687.24939 },
-    "Bathroom-1": { "x": 386.69482, "y": 480.32553 },
-    "Bathroom-2": { "x": 437.2554, "y": 474.70767 },
-    "Bathroom-3": { "x": 551.48486, "y": 387.63113 }
+    "Hall-Stairs-Main": { "x": 664.77802, "y": 691.93091 },
+    "H2-Stairs-Down-1": { "x": 632.9436, "y": 948.47906 },
+    "H2-Stairs-Underground": { "x": 1071.1353, "y": 1087.0525 },
+    "H2-Tabling-Area": { "x": 782.75269, "y": 853.91205 },
+    "H2-Stand":   { "x": 809.90564, "y": 682.56787 },
+    "H2-Sitting-Area": { "x": 955.0332, "y": 793.9884 },
+    "H2-Couch-Area": { "x": 1094.543, "y": 687.24939 },
+    "H2-Bathroom-1": { "x": 386.69482, "y": 480.32553 },
+    "H2-Bathroom-2": { "x": 437.2554, "y": 474.70767 },
+    "H2-Bathroom-3": { "x": 551.48486, "y": 387.63113 }
   },
   "waypoints": [
     { "id": "AllowedPath2", "x": 431.63757, "y": 1239.6705 },
@@ -104,33 +104,33 @@
     "strictAlignment": false
   },
   "pois": [
-  {
-    "id": "Elevator-1",
-    "displayName": "Elevator",
-    "type": "elevator",
-    "x": 823.01392,
-    "y": 989.67657
-  },
-  {
-    "id": "Emergency-Stairs",
-    "displayName": "Stairs",
-    "type": "stairs",
-    "x": 1050.5365,
-    "y": 973.75934
-  },
-  {
-    "id": "Stairs-Up-1",
-    "displayName": "Stairs",
-    "type": "stairs",
-    "x": 664.77802,
-    "y": 691.93091
-  },
-  {
-    "id": "Stairs-Down-1",
-    "displayName": "Stairs",
-    "type": "stairs",
-    "x": 632.9436,
-    "y": 948.47906
-  }
-]
+    {
+      "id": "Hall-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 823.01392,
+      "y": 989.67657
+    },
+    {
+      "id": "Emergency-Stairs",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 1050.5365,
+      "y": 973.75934
+    },
+    {
+      "id": "Hall-Stairs-Main",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 664.77802,
+      "y": 691.93091
+    },
+    {
+      "id": "H2-Stairs-Down-1",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 632.9436,
+      "y": 948.47906
+    }
+  ]
 }

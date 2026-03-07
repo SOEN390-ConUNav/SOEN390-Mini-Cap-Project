@@ -19,23 +19,23 @@
     "LB-518":   { "x": 418.85074, "y": 435.29321 },
     "LB-505-515-1": { "x": 273.46454, "y": 577.21783 },
     "LB-505-515-2": { "x": 358.27316, "y": 255.29126 },
-    "Bathroom-Men-1":   { "x": 838.04492, "y": 323.46967 },
-    "Bathroom-Men-2":   { "x": 317.59964, "y": 681.93054 },
-    "Bathroom-Women-1": { "x": 315.00345, "y": 709.62317 },
-    "Elevator-1":       { "x": 414.52377, "y": 673.27661 },
-    "Stairs-Down-1":    { "x": 548.25366, "y": 224.00079 },
-    "Stairs-Down-2":    { "x": 552.1214, "y": 815.20123 },
-    "Emergency-Exit-1": { "x": 946.91241, "y": 293.70734 },
-    "Emergency-Exit-2": { "x": 937.51379, "y": 744.8418 },
-    "Emergency-Exit-3": { "x": 235.38719, "y": 623.94916 },
-    "WaterFountain-1":  { "x": 832.56238, "y": 350.09915 },
-    "WaterFountain-2":  { "x": 831.77917, "y": 669.65271 },
-    "WaterFountain-3":  { "x": 301.15714, "y": 655.10333 },
-    "Computer-Station-1": { "x": 621.87634, "y": 752.67401 },
-    "Printer-1":        { "x": 859.19183, "y": 364.98032 },
-    "Shelve-27":        { "x": 429.23547, "y": 347.88843 },
-    "Shelve-28":        { "x": 713.513, "y": 753.45721 },
-    "Shelve-29":        { "x": 718.99554, "y": 693.14929 }
+    "LB5-Bathroom-Men-1":   { "x": 838.04492, "y": 323.46967 },
+    "LB5-Bathroom-Men-2":   { "x": 317.59964, "y": 681.93054 },
+    "LB5-Bathroom-Women-1": { "x": 315.00345, "y": 709.62317 },
+    "LB-Elevator-Main":       { "x": 414.52377, "y": 673.27661 },
+    "LB-Stairs-Main":    { "x": 548.25366, "y": 224.00079 },
+    "LB5-Stairs-Down-2":    { "x": 552.1214, "y": 815.20123 },
+    "LB5-Emergency-Exit-1": { "x": 946.91241, "y": 293.70734 },
+    "LB5-Emergency-Exit-2": { "x": 937.51379, "y": 744.8418 },
+    "LB5-Emergency-Exit-3": { "x": 235.38719, "y": 623.94916 },
+    "LB5-WaterFountain-1":  { "x": 832.56238, "y": 350.09915 },
+    "LB5-WaterFountain-2":  { "x": 831.77917, "y": 669.65271 },
+    "LB5-WaterFountain-3":  { "x": 301.15714, "y": 655.10333 },
+    "LB5-Computer-Station-1": { "x": 621.87634, "y": 752.67401 },
+    "LB5-Printer-1":        { "x": 859.19183, "y": 364.98032 },
+    "LB5-Shelve-27":        { "x": 429.23547, "y": 347.88843 },
+    "LB5-Shelve-28":        { "x": 713.513, "y": 753.45721 },
+    "LB5-Shelve-29":        { "x": 718.99554, "y": 693.14929 }
   },
   "waypoints": [
     { "id": "LB5-AllowedPath1", "x": 552.953, "y": 254.54636 },
@@ -82,29 +82,22 @@
     "searchRadius": 400.0,
     "alignThreshold": 6.0,
     "maxNeighbors": 4,
-    "strictAlignment": true
+    "strictAlignment": false
   },
   "pois": [
-  {
-    "id": "LB-Elevator-5",
-    "displayName": "Elevator",
-    "type": "elevator",
-    "x": 414.52377,
-    "y": 673.27661
-  },
-  {
-    "id": "LB-Stairs-Top-5",
-    "displayName": "Stairs",
-    "type": "stairs",
-    "x": 548.25366,
-    "y": 224.00079
-  },
-  {
-    "id": "LB-Stairs-Bottom-5",
-    "displayName": "Stairs",
-    "type": "stairs",
-    "x": 552.1214,
-    "y": 815.20123
-  }
-]
+    {
+      "id": "LB-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 414.52377,
+      "y": 673.27661
+    },
+    {
+      "id": "LB-Stairs-Main",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 548.25366,
+      "y": 224.00079
+    }
+  ]
 }

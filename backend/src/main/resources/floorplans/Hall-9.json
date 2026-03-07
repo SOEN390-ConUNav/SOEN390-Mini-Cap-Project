@@ -72,11 +72,11 @@
     "H9-964":  { "x": 299.22025, "y": 438.94730 },
     "H9-992":  { "x": 430.42730, "y": 377.26291 },
     "H9-998":  { "x": 286.61077, "y": 372.49178 },
-    "Bathroom-Men": { "x": 642.31134, "y": 262.66810 },
-    "Bathroom-Women": { "x": 349.65829, "y": 267.86686 },
-    "Elevator": { "x": 362.26783, "y": 369.42458 },
-    "Emergency-Exit-985": { "x": 717.05772, "y": 679.65243 },
-    "Emergency-Exit-975": { "x": 304.39802, "y": 695.86185 }
+    "H9-Bathroom-Men": { "x": 642.31134, "y": 262.66810 },
+    "H9-Bathroom-Women": { "x": 349.65829, "y": 267.86686 },
+    "Hall-Elevator-Main": { "x": 362.26783, "y": 369.42458 },
+    "H9-Emergency-Exit-985": { "x": 717.05772, "y": 679.65243 },
+    "H9-Emergency-Exit-975": { "x": 304.39802, "y": 695.86185 }
   },
   "waypoints": [
     { "id": "Allowed-path1", "x": 166.06937, "y": 230.79725 },
@@ -143,12 +143,12 @@
     "strictAlignment": false
   },
   "pois": [
-  {
-    "id": "H9-Elevator",
-    "displayName": "Elevator",
-    "type": "elevator",
-    "x": 362.26783,
-    "y": 369.42458
-  }
-]
+    {
+      "id": "Hall-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 362.26783,
+      "y": 369.42458
+    }
+  ]
 }

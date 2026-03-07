@@ -18,7 +18,9 @@
     "VL-214": { "x": 778.21429, "y": 737.48132 },
     "VL-215": { "x": 756.77588, "y": 783.57391 },
     "VL-216": { "x": 802.86847, "y": 687.10107 },
-    "VL-217": { "x": 798.58081, "y": 717.11487 }
+    "VL-217": { "x": 798.58081, "y": 717.11487 },
+    "VL-Elevator-Main": { "x": 619.57007, "y": 335.51114 },
+    "VL-Stairs-Main": { "x": 340.87073, "y": 452.35046 }
   },
   "waypoints": [
     { "id": "VL2-AllowedPath1", "x": 616.35431, "y": 203.6649 },
@@ -47,5 +49,21 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
-  }
+  },
+  "pois": [
+    {
+      "id": "VL-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 619.57007,
+      "y": 335.51114
+    },
+    {
+      "id": "VL-Stairs-Main",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 340.87073,
+      "y": 452.35046
+    }
+  ]
 }
