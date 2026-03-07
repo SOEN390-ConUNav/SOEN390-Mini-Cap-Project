@@ -22,6 +22,7 @@ import useLocationService from "../hooks/useLocationService";
 import cacheService from "../services/cacheService";
 
 const BURGUNDY = "#800020";
+const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
 
 const PLACE_TYPES = [
   { label: "Restaurants", value: "restaurant" },
@@ -70,9 +71,15 @@ export default function SearchPanel({
   const { getCurrentPosition } = useLocationService();
 
   const hasLocationPermission = permissionStatus === "granted";
+  const locationCacheKeyPart = currentLocation
+    ? `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}`
+    : "no-location";
 
   useEffect(() => {
     if (visible) {
+      setQuery("");
+      setSearchResults([]);
+      setSearching(false);
       loadSearchHistory();
     }
   }, [visible]);
@@ -82,17 +89,28 @@ export default function SearchPanel({
     if (hasLocationPermission) {
       fetchNearbyPlaces(activeFilter);
     }
-  }, [activeFilter, hasLocationPermission]);
+  }, [activeFilter, hasLocationPermission, locationCacheKeyPart]);
 
   async function fetchNearbyPlaces(placeType: string) {
-    const cached = cacheService.getMemory<any[]>("nearby_places", placeType);
-    if (cached) {
-      setNearby(cached);
+    if (!hasLocationPermission) {
+      setNearby([]);
       return;
     }
+
     try {
       let coords = currentLocation;
-      coords ??= await getCurrentPosition();
+      if (!coords) coords = await getCurrentPosition();
+      if (!coords) {
+        setNearby([]);
+        return;
+      }
+
+      const cacheKey = `${placeType}-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
+      const cached = cacheService.getMemory<any[]>("nearby_places", cacheKey);
+      if (cached) {
+        setNearby(cached);
+        return;
+      }
 
       setLoading(true);
 
@@ -101,10 +119,15 @@ export default function SearchPanel({
         coords.longitude,
         placeType,
       );
-      cacheService.setMemory("nearby_places", placeType, results);
+      cacheService.setMemory("nearby_places", cacheKey, results);
       setNearby(results);
     } catch (e) {
-      console.error(e);
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
     } finally {
       setLoading(false);
     }
@@ -142,7 +165,10 @@ export default function SearchPanel({
       loadSearchHistory();
 
       let coords = currentLocation;
-      coords ??= await getCurrentPosition();
+      if (!coords && hasLocationPermission) {
+        coords = await getCurrentPosition();
+      }
+      coords ??= FALLBACK_COORDS;
 
       const results = await searchLocations(
         queryToUse,
@@ -152,7 +178,12 @@ export default function SearchPanel({
 
       setSearchResults(results);
     } catch (e) {
-      console.error(e);
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
     } finally {
       setSearching(false);
     }

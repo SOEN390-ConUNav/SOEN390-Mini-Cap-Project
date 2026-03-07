@@ -95,6 +95,11 @@ describe("cacheService", () => {
     await cacheService.setPersistentRaw("cache-service-test", "raw1", {
       b: 2,
     });
+    expect(setItemSpy).toHaveBeenCalledWith(
+      "cache-service-test:raw1",
+      JSON.stringify({ value: { b: 2 }, expiresAt: null }),
+    );
+
     const raw = await cacheService.getPersistentRaw<{ b: number }>(
       "cache-service-test",
       "raw1",
@@ -104,6 +109,23 @@ describe("cacheService", () => {
     expect(
       cacheService.getMemory<{ b: number }>("cache-service-test", "raw1"),
     ).toEqual({ b: 2 });
+  });
+
+  it("reads legacy raw persistent values without envelope", async () => {
+    await AsyncStorage.setItem(
+      "cache-service-test:legacy-raw",
+      JSON.stringify({ z: 9 }),
+    );
+
+    const raw = await cacheService.getPersistentRaw<{ z: number }>(
+      "cache-service-test",
+      "legacy-raw",
+    );
+
+    expect(raw).toEqual({ z: 9 });
+    expect(
+      cacheService.getMemory<{ z: number }>("cache-service-test", "legacy-raw"),
+    ).toEqual({ z: 9 });
   });
 
   it("sets persistent values without TTL as non-expiring envelopes", async () => {

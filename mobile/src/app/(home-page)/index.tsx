@@ -1020,7 +1020,11 @@ export default function HomePageIndex() {
       <View style={styles.searchWrapper}>
         <SearchBar
           placeholder="Search"
-          onPress={() => setNavigationState(NAVIGATION_STATE.SEARCHING)}
+          onPress={() => {
+            if (!isSearching) {
+              setNavigationState(NAVIGATION_STATE.SEARCHING);
+            }
+          }}
           isConfiguring={isConfiguring}
           isNavigating={isNavigating}
           isCancellingNavigation={isCancellingNavigation}

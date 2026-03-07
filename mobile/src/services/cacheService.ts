@@ -88,9 +88,20 @@ class CacheService {
     const raw = await AsyncStorage.getItem(cacheKey);
     if (!raw) return null;
 
-    const parsed = JSON.parse(raw) as T;
-    this.memory.set(cacheKey, { value: parsed, expiresAt: null });
-    return parsed;
+    const parsed = JSON.parse(raw) as unknown;
+    const maybeEnvelope = parsed as Partial<CacheEnvelope<T>>;
+
+    // Backward compatible with legacy raw values that were stored without envelope.
+    const envelope: CacheEnvelope<T> =
+      maybeEnvelope &&
+      typeof maybeEnvelope === "object" &&
+      "value" in maybeEnvelope &&
+      "expiresAt" in maybeEnvelope
+        ? (maybeEnvelope as CacheEnvelope<T>)
+        : { value: parsed as T, expiresAt: null };
+
+    this.memory.set(cacheKey, envelope as CacheEnvelope<unknown>);
+    return envelope.value;
   }
 
   async setPersistentRaw<T>(
@@ -99,8 +110,9 @@ class CacheService {
     value: T,
   ): Promise<void> {
     const cacheKey = this.makeKey(namespace, key);
-    this.memory.set(cacheKey, { value, expiresAt: null });
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(value));
+    const envelope: CacheEnvelope<T> = { value, expiresAt: null };
+    this.memory.set(cacheKey, envelope as CacheEnvelope<unknown>);
+    await AsyncStorage.setItem(cacheKey, JSON.stringify(envelope));
   }
 }
 
