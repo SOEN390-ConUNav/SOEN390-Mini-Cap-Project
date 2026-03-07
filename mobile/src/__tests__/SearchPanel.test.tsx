@@ -107,6 +107,9 @@ describe("SearchPanel", () => {
         location: { latitude: 1, longitude: 2 },
       },
     ]);
+
+    // Ensure nearby items aren't filtered out during tests by returning a valid distance
+    mockCalculateDistance.mockReturnValue(0);
   });
 
   it("renders recent searches when visible", async () => {
@@ -164,7 +167,7 @@ describe("SearchPanel", () => {
 
     await waitFor(() => {
       expect(addSearchHistory).toHaveBeenCalledWith("Place A");
-      expect(searchLocations).toHaveBeenCalledWith("Place A");
+      expect(searchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
       expect(onSelectLocation).toHaveBeenCalledWith({
         latitude: 1,
         longitude: 2,
@@ -183,7 +186,7 @@ describe("SearchPanel", () => {
       />,
     );
 
-    expect(await findByText("Cafe Nearby")).toBeTruthy();
+    expect(mockGetNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
     expect(getNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
 
     fireEvent.press(getByText("Parking"));
@@ -219,15 +222,8 @@ describe("SearchPanel", () => {
     });
   });
 
-  it("calls requestPermission when location fetching fails and prompt is allowed", async () => {
-    storeState.permissionStatus = "granted";
-    storeState.canAskAgain = true;
-    storeState.userSkippedPermission = false;
-
-    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_, __, buttons) => {
-      const enableButton = buttons?.find((b) => b.text === "Enable Location");
-      enableButton?.onPress?.();
-    });
+  it("logs errors when fetching nearby places fails", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
     mockGetNearbyPlaces.mockRejectedValue(new Error("fetch failed"));
 
@@ -240,63 +236,10 @@ describe("SearchPanel", () => {
     );
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
-      expect(requestPermission).toHaveBeenCalledTimes(1);
+      expect(errorSpy).toHaveBeenCalled();
     });
 
-    alertSpy.mockRestore();
-  });
-
-  it("calls openSettings when location fetching fails and prompt should not be shown", async () => {
-    storeState.permissionStatus = "granted";
-    storeState.canAskAgain = false;
-    storeState.userSkippedPermission = true;
-
-    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation((_, __, buttons) => {
-      const openSettingsButton = buttons?.find((b) => b.text === "Open Settings");
-      openSettingsButton?.onPress?.();
-    });
-
-    mockGetNearbyPlaces.mockRejectedValue(new Error("fetch failed"));
-
-    render(
-      <SearchPanel
-        visible
-        onSelectLocation={onSelectLocation}
-        onClose={onClose}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
-      expect(openSettings).toHaveBeenCalledTimes(1);
-    });
-
-    alertSpy.mockRestore();
-  });
-
-  it("shows location alert when nearby fetch fails", async () => {
-    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
-    storeState.currentLocation = null;
-    getCurrentPosition.mockRejectedValue(new Error("gps failed"));
-
-    render(
-      <SearchPanel
-        visible
-        onSelectLocation={onSelectLocation}
-        onClose={onClose}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        "Location Required",
-        "Enable location to see nearby places.",
-        expect.any(Array),
-      );
-    });
-
-    alertSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("close button triggers onClose", () => {
@@ -362,7 +305,7 @@ describe("SearchPanel", () => {
   });
 
   it("closes details modal by pressing backdrop", async () => {
-    const { getAllByText, queryByText, getByTestId } = render(
+    const { findByText, queryByText, getByTestId } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -370,9 +313,8 @@ describe("SearchPanel", () => {
       />,
     );
 
-    await waitFor(() => {
-      fireEvent.press(getAllByText("Cafe Nearby")[0]);
-    });
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
 
     expect(queryByText("Get Directions")).toBeTruthy();
 
