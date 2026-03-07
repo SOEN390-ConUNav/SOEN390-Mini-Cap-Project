@@ -10,7 +10,6 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getNearbyPlaces, searchLocations } from "../api";
@@ -74,9 +73,6 @@ export default function SearchPanel({
     useLocationService();
 
   const hasLocationPermission = permissionStatus === "granted";
-  const shouldShowOSPrompt =
-    !userSkippedPermission &&
-    (canAskAgain || permissionStatus === "undetermined");
 
   useEffect(() => {
     if (visible) {

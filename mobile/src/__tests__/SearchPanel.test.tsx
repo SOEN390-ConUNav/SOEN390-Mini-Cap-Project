@@ -326,4 +326,79 @@ describe("SearchPanel", () => {
       expect(queryByText("Get Directions")).toBeFalsy();
     });
   });
+
+  it("selects Get Directions and closes modal", async () => {
+    const { findByText, queryByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    const directionsButton = await findByText("Get Directions");
+    fireEvent.press(directionsButton);
+
+    await waitFor(() => {
+      expect(onSelectLocation).toHaveBeenCalledWith({
+        latitude: 45.5001,
+        longitude: -73.6001,
+        name: "Cafe Nearby",
+      });
+      expect(onClose).toHaveBeenCalled();
+      expect(queryByText("Get Directions")).toBeFalsy();
+    });
+  });
+
+  it("toggles opening hours in the details modal", async () => {
+    // Provide opening hours data so the toggle is visible
+    mockGetNearbyPlaces.mockResolvedValueOnce([
+      {
+        id: "n1",
+        name: "Cafe Nearby",
+        address: "123 Main St",
+        location: { latitude: 45.5001, longitude: -73.6001 },
+        distanceKm: 0.1,
+        openingHours: {
+          openNow: true,
+          weekdayDescriptions: ["Mon: 9am - 5pm"],
+        },
+      },
+    ]);
+
+    const { findByText, queryByText, getByTestId } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    // The toggle should appear and show opening hours when pressed
+    fireEvent.press(getByTestId("opening-hours-toggle"));
+
+    await waitFor(() => {
+      expect(queryByText("Mon: 9am - 5pm")).toBeTruthy();
+    });
+  });
+
+  it("does not call getCurrentPosition when store has location", async () => {
+    render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getCurrentPosition).not.toHaveBeenCalled();
+    });
+  });
 });
