@@ -1,5 +1,5 @@
 package com.soen390.backend.enums;
 
 public enum PlaceType {
-    parking, library, park, bank, food_store, gym, subway_station, restaurant
+    PARKING, LIBRARY, PARK, BANK, FOOD_STORE, GYM, SUBWAY_STATION, RESTAURANT
 }

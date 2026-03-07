@@ -23,6 +23,17 @@ import {
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 
+interface CalendarItem {
+  id: string;
+  summary?: string;
+  primary?: boolean;
+}
+
+interface EventItem {
+  summary?: string;
+  location?: string;
+}
+
 const BURGUNDY = "#800020";
 
 export default function UpcomingEventButton({
@@ -42,13 +53,16 @@ export default function UpcomingEventButton({
     onLogout: () => void;
   }) => void;
 }>) {
-  const googleWebClientId = (Constants.expoConfig?.extra as any)
-    ?.GOOGLE_WEB_CLIENT_ID as string | undefined;
-  const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
-  const [calendars, setCalendars] = useState<any[]>([]);
+  const googleWebClientId = (
+    Constants.expoConfig?.extra as Record<string, unknown>
+  )?.GOOGLE_WEB_CLIENT_ID as string | undefined;
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(
+    null,
+  );
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
-  const [nextEvent, setNextEvent] = useState<any | null>(null);
+  const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
 
@@ -116,7 +130,7 @@ export default function UpcomingEventButton({
           stateRes.status === 403)
       ) {
         if (!allowReauth) {
-          await clearLocalGoogleState();
+          clearLocalGoogleState();
           return null;
         }
 
@@ -271,7 +285,7 @@ export default function UpcomingEventButton({
       try {
         await requestGoogleLogout();
       } catch {}
-      await clearLocalGoogleState();
+      clearLocalGoogleState();
       try {
         await GoogleSignin.revokeAccess();
       } catch {}

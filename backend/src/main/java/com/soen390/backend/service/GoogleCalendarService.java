@@ -3,6 +3,7 @@ package com.soen390.backend.service;
 import com.soen390.backend.object.GoogleCalendarDto;
 import com.soen390.backend.object.GoogleTokenSession;
 import com.soen390.backend.object.GoogleEventDto;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -29,6 +30,10 @@ public class GoogleCalendarService {
 
   private static final Pattern ROOM_PATTERN = Pattern.compile("\\bRm\\.?\\s*([-A-Za-z0-9.]+)\\b", Pattern.CASE_INSENSITIVE);
   private static final Pattern CLASSROOM_PATTERN = Pattern.compile("Classroom:\\s*([-A-Za-z0-9.]+)", Pattern.CASE_INSENSITIVE);
+  private static final String NO_CAMPUS = "(no campus)";
+  private static final String NO_BUILDING = "(no building)";
+  private static final String MISSING = "(missing)";
+  private static final String NO_NAME = "(no name)";
   private final RestTemplate restTemplate;
   private final GoogleSessionService sessionService;
 
@@ -42,7 +47,7 @@ public class GoogleCalendarService {
 
     // MVP: if expired, force re-login (we’ll add refresh next step)
     if (session.getExpiresAt() != null && Instant.now().isAfter(session.getExpiresAt())) {
-      throw new RuntimeException("Session expired. Please sign in again.");
+      throw new IllegalStateException("Session expired. Please sign in again.");
     }
 
     HttpHeaders headers = new HttpHeaders();
@@ -50,15 +55,15 @@ public class GoogleCalendarService {
 
     String url = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
 
-    ResponseEntity<Map> res = restTemplate.exchange(
+    ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
         url,
         HttpMethod.GET,
         new HttpEntity<>(headers),
-        Map.class
+        new ParameterizedTypeReference<Map<String, Object>>() {}
     );
 
     if (!res.getStatusCode().is2xxSuccessful() || res.getBody() == null) {
-      throw new RuntimeException("Failed to fetch calendar list from Google.");
+      throw new IllegalStateException("Failed to fetch calendar list from Google.");
     }
 
     Object itemsObj = res.getBody().get("items");
@@ -75,7 +80,7 @@ public class GoogleCalendarService {
       if (id != null) {
         out.add(new GoogleCalendarDto(
             id,
-            summary != null ? summary : "(no name)",
+            summary != null ? summary : NO_NAME,
             primary != null && primary
         ));
       }
@@ -108,11 +113,11 @@ public class GoogleCalendarService {
       headers.setBearerAuth(session.getAccessToken());
 
       try {
-        ResponseEntity<Map> res = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
             url,
             HttpMethod.GET,
             new HttpEntity<>(headers),
-            Map.class
+            new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         Object itemsObj = (res.getBody() != null) ? res.getBody().get("items") : null;
@@ -154,7 +159,7 @@ public class GoogleCalendarService {
 
       } catch (HttpStatusCodeException e) {
         // This is the key: expose what Google actually said
-        throw new RuntimeException(
+        throw new IllegalStateException(
             "Google Events API error (" + e.getStatusCode() + "): " + e.getResponseBodyAsString(),
             e
         );
@@ -177,12 +182,12 @@ public class GoogleCalendarService {
   public void setSelectedCalendar(String sessionId, GoogleCalendarDto selectedCalendar) {
     GoogleTokenSession session = sessionService.require(sessionId);
     if (selectedCalendar == null || selectedCalendar.getId() == null || selectedCalendar.getId().isBlank()) {
-      throw new RuntimeException("calendar.id is required.");
+      throw new IllegalArgumentException("calendar.id is required.");
     }
 
     session.setSelectedCalendarId(selectedCalendar.getId());
     session.setSelectedCalendarSummary(
-        selectedCalendar.getSummary() != null ? selectedCalendar.getSummary() : "(no name)"
+        selectedCalendar.getSummary() != null ? selectedCalendar.getSummary() : NO_NAME
     );
     session.setSelectedCalendarPrimary(selectedCalendar.isPrimary());
     sessionService.put(sessionId, session);
@@ -196,7 +201,7 @@ public class GoogleCalendarService {
     GoogleTokenSession session = sessionService.require(sessionId);
 
     if (session.getExpiresAt() != null && Instant.now().isAfter(session.getExpiresAt())) {
-      throw new RuntimeException("Session expired. Please sign in again.");
+      throw new IllegalStateException("Session expired. Please sign in again.");
     }
 
     GoogleCalendarDto selectedCalendar = null;
@@ -206,7 +211,7 @@ public class GoogleCalendarService {
     if (calendarSelected) {
       selectedCalendar = new GoogleCalendarDto(
           session.getSelectedCalendarId(),
-          session.getSelectedCalendarSummary() != null ? session.getSelectedCalendarSummary() : "(no name)",
+          session.getSelectedCalendarSummary() != null ? session.getSelectedCalendarSummary() : NO_NAME,
           session.isSelectedCalendarPrimary()
       );
       nextEvent = getNextEvent(sessionId, selectedCalendar.getId(), days, timeZone);
@@ -264,7 +269,7 @@ public class GoogleCalendarService {
   private LocationParts parseBuildingAndRoom(String locationRaw) {
     String location = locationRaw != null ? locationRaw.trim() : "";
     if (location.isEmpty()) {
-      return new LocationParts("(no campus)", "(no building)", "(missing)");
+      return new LocationParts(NO_CAMPUS, NO_BUILDING, MISSING);
     }
 
     Matcher rmMatch = ROOM_PATTERN.matcher(location);
@@ -277,13 +282,13 @@ public class GoogleCalendarService {
       return parseFromClassroomPattern(classroomMatch);
     }
 
-    return new LocationParts("(no campus)", location, "(missing)");
+    return new LocationParts(NO_CAMPUS, location, MISSING);
   }
 
   private LocationParts parseFromRoomPattern(String location, Matcher rmMatch) {
-    String room = rmMatch.group(1) != null ? rmMatch.group(1).trim() : "(missing)";
+    String room = rmMatch.group(1) != null ? rmMatch.group(1).trim() : MISSING;
     String buildingLine = location.replace(rmMatch.group(0), "").trim();
-    String campus = "(no campus)";
+    String campus = NO_CAMPUS;
     String building = buildingLine;
 
     int splitIdx = buildingLine.indexOf(" - ");
@@ -292,16 +297,16 @@ public class GoogleCalendarService {
       building = buildingLine.substring(splitIdx + 3).trim();
     }
 
-    if (campus.isEmpty()) campus = "(no campus)";
-    if (building.isEmpty()) building = "(no building)";
-    if (room.isEmpty()) room = "(missing)";
+    if (campus.isEmpty()) campus = NO_CAMPUS;
+    if (building.isEmpty()) building = NO_BUILDING;
+    if (room.isEmpty()) room = MISSING;
     return new LocationParts(campus, building, room);
   }
 
   private LocationParts parseFromClassroomPattern(Matcher classroomMatch) {
-    String room = classroomMatch.group(1) != null ? classroomMatch.group(1).trim() : "(missing)";
-    if (room.isEmpty()) room = "(missing)";
-    return new LocationParts("(no campus)", "(no building)", room);
+    String room = classroomMatch.group(1) != null ? classroomMatch.group(1).trim() : MISSING;
+    if (room.isEmpty()) room = MISSING;
+    return new LocationParts(NO_CAMPUS, NO_BUILDING, room);
   }
 
   private String formatWhen(GoogleEventDto event, String timeZone) {

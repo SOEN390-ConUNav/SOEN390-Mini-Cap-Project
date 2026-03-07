@@ -35,7 +35,7 @@ class PlacesOfInterestServiceTest {
                 .andExpect(method(org.springframework.http.HttpMethod.POST))
                 .andRespond(withSuccess(mockResponse, MediaType.APPLICATION_JSON));
 
-        String result = placesService.getNearbyPlaces(1, 100.0, 0.0, 0.0, PlaceType.park);
+        String result = placesService.getNearbyPlaces(1, 100.0, 0.0, 0.0, PlaceType.PARK);
 
         assertEquals(mockResponse, result);
         mockServer.verify();
@@ -46,9 +46,8 @@ class PlacesOfInterestServiceTest {
         mockServer.expect(requestTo("https://places.googleapis.com/v1/places:searchNearby"))
                 .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            placesService.getNearbyPlaces(1, 100.0, 0.0, 0.0, null);
-        });
+        assertThrows(RuntimeException.class, () ->
+            placesService.getNearbyPlaces(1, 100.0, 0.0, 0.0, null));
     }
 
     @Test

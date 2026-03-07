@@ -210,9 +210,9 @@ export default function SearchPanel({
           <>
             <Text style={styles.sectionTitle}>Recent Searches</Text>
 
-            {recentSearches.map((item, index) => (
+            {recentSearches.map((item) => (
               <TouchableOpacity
-                key={index.toString()}
+                key={item.query}
                 onPress={() => {
                   setQuery(item.query);
                   handleSearch();
