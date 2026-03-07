@@ -1,0 +1,7 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Search"
+- tapOn: "Parking"
+- tapOn: "Filter"
+- tapOn: "100m"

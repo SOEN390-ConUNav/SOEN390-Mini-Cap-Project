@@ -1,0 +1,6 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Search"
+- tapOn: "Bar George"
+- assertVisible: "OPENING HOURS"
