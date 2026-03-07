@@ -207,3 +207,41 @@ export async function getWaypoints(
     return [];
   }
 }
+
+export interface UniversalDirectionResponse {
+  startIndoorRoute: IndoorDirectionResponse;
+  outdoorRoute: any;
+  endIndoorRoute: IndoorDirectionResponse;
+  nextShuttleTime: string | null;
+  totalDuration: string;
+}
+
+export const getUniversalDirections = async (
+  startBuilding: string,
+  startRoom: string,
+  startFloor: string,
+  endBuilding: string,
+  endRoom: string,
+  endFloor: string,
+  avoidStairs: boolean,
+): Promise<UniversalDirectionResponse> => {
+  const BASE_URL = "http://10.0.2.2:8080/api/directions";
+
+  const queryParams = new URLSearchParams({
+    startBuilding,
+    startRoom,
+    startFloor,
+    endBuilding,
+    endRoom,
+    endFloor,
+    avoidStairs: avoidStairs.toString(),
+  });
+
+  const response = await fetch(
+    `${BASE_URL}/universal?${queryParams.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch universal directions");
+  }
+  return response.json();
+};
