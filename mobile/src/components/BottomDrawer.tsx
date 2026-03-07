@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, ReactNode } from "react";
 import BottomSheet, {
   BottomSheetModal,
   BottomSheetView,
@@ -74,12 +74,15 @@ export default function BottomDrawer({
   onSnapIndexChange,
   useModal = true,
 }: BottomDrawerProps) {
-  const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
+  const snapKey = JSON.stringify(snapPoints);
+  const memoizedSnapPoints = useMemo(() => snapPoints, [snapKey]);
   const modalSheetRef = useRef<BottomSheetModal>(null);
   const nonModalSheetRef = useRef<BottomSheet>(null);
   const currentSnapIndex = useRef(initialSnapIndex);
+  const onPressActionRef = useRef(onPressAction);
+  onPressActionRef.current = onPressAction;
 
-  const onPress = () => {
+  const onPress = useCallback(() => {
     switch (handleMode) {
       case "dismiss":
         if (useModal) {
@@ -96,14 +99,14 @@ export default function BottomDrawer({
         } else {
           nonModalSheetRef.current?.snapToIndex(nextIndex);
         }
-        onPressAction?.();
+        onPressActionRef.current?.();
         break;
       }
 
       default:
         break;
     }
-  };
+  }, [handleMode, useModal]);
 
   const handleComponent = useMemo(
     () =>
@@ -114,6 +117,20 @@ export default function BottomDrawer({
       }),
     [onPress, backgroundColor, handleColor],
   );
+
+  const onSnapIndexChangeRef = useRef(onSnapIndexChange);
+  onSnapIndexChangeRef.current = onSnapIndexChange;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const handleChange = useCallback((index: number) => {
+    currentSnapIndex.current = index;
+    onSnapIndexChangeRef.current?.(index);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    onCloseRef.current?.();
+  }, []);
 
   useEffect(() => {
     if (useModal) {
@@ -140,11 +157,8 @@ export default function BottomDrawer({
         index={visible ? initialSnapIndex : -1}
         enableDynamicSizing={enableDynamicSizing}
         enablePanDownToClose={enablePanDownToClose}
-        onClose={onClose}
-        onChange={(index: number) => {
-          currentSnapIndex.current = index;
-          onSnapIndexChange?.(index);
-        }}
+        onClose={handleClose}
+        onChange={handleChange}
         backgroundStyle={[styles.background, { backgroundColor }]}
         handleComponent={handleComponent}
       >
@@ -164,11 +178,8 @@ export default function BottomDrawer({
       index={initialSnapIndex}
       enableDynamicSizing={enableDynamicSizing}
       enablePanDownToClose={enablePanDownToClose}
-      onDismiss={onClose}
-      onChange={(index) => {
-        currentSnapIndex.current = index;
-        onSnapIndexChange?.(index);
-      }}
+      onDismiss={handleClose}
+      onChange={handleChange}
       backgroundStyle={[styles.background, { backgroundColor }]}
       handleComponent={handleComponent}
     >

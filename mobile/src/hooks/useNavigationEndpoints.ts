@@ -14,21 +14,23 @@ interface NavigationEndpointsState {
   clear: () => void;
 }
 
-const useNavigationEndpointsStore = create<NavigationEndpointsState>((set) => ({
-  origin: null,
-  destination: null,
+export const useNavigationEndpointsStore = create<NavigationEndpointsState>(
+  (set) => ({
+    origin: null,
+    destination: null,
 
-  setOrigin: (endpoint) => set({ origin: endpoint }),
-  setDestination: (endpoint) => set({ destination: endpoint }),
+    setOrigin: (endpoint) => set({ origin: endpoint }),
+    setDestination: (endpoint) => set({ destination: endpoint }),
 
-  swap: () =>
-    set((state) => ({
-      origin: state.destination,
-      destination: state.origin,
-    })),
+    swap: () =>
+      set((state) => ({
+        origin: state.destination,
+        destination: state.origin,
+      })),
 
-  clear: () => set({ origin: null, destination: null }),
-}));
+    clear: () => set({ origin: null, destination: null }),
+  }),
+);
 
 export default function useNavigationEndpoints() {
   const origin = useNavigationEndpointsStore((s) => s.origin);
