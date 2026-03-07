@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
+import { StyleSheet, View, Text, ActivityIndicator, Alert } from "react-native";
 import BottomDrawer from "../BottomDrawer";
 import NavigationTransportCard from "./NavigationTransportCard";
 import NavigationPathRow from "./NavigationPathRow";
@@ -38,6 +38,13 @@ export default function NavigationConfigView({
     return getDurationForMode(apiKey);
   };
   const handleGo = () => {
+    if (navigationMode === "SHUTTLE" && getSelectedDuration() === "N/A") {
+      Alert.alert(
+        "Shuttle Unavailable",
+        "Shuttle service is currently unavailable for this route.",
+      );
+      return;
+    }
     // Logic to start the actual turn-by-turn navigation
     console.log("Start navigation with mode:", navigationMode);
     onGo?.();

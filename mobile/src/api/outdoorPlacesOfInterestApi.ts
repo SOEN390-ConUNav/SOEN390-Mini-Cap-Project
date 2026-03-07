@@ -16,6 +16,8 @@ export interface NearbyPlace {
     longitude: number;
   };
   rating?: number;
+  openingHours?: string[];
+  phoneNumber?: string;
 }
 
 export async function getNearbyPlaces(
@@ -28,7 +30,8 @@ export async function getNearbyPlaces(
       `${API_BASE_URL}/api/places/outdoor` +
         `?latitude=${latitude}` +
         `&longitude=${longitude}` +
-        `&placeType=${placeType}`,
+        `&placeType=${placeType}` +
+        `&maxResultCount=20`,
       { method: "POST" },
     );
 
@@ -44,6 +47,8 @@ export async function getNearbyPlaces(
       address: p.formattedAddress ?? "",
       location: p.location,
       rating: p.rating,
+      openingHours: p.currentOpeningHours ?? "N/A",
+      phoneNumber: p.nationalPhoneNumber ?? "N/A",
     }));
   } catch {
     return [];

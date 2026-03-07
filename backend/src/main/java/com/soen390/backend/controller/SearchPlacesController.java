@@ -19,14 +19,18 @@ public class SearchPlacesController {
 
     @GetMapping("/api/places/search")
     public ResponseEntity<String> searchPlaces(
-            @RequestParam String query
+            @RequestParam String query,
+            @RequestParam double latitude,
+            @RequestParam double longitude
     ) {
         if (query == null || query.trim().isEmpty()) {
             return ResponseEntity.badRequest()
                     .body("{\"error\":\"Query must not be empty\"}");
         }
 
-        String rawJson = placesOfInterestService.searchPlacesByText(query);
+        String rawJson = placesOfInterestService.searchPlacesByText(
+                query, latitude, longitude
+        );
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
