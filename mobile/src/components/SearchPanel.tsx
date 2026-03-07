@@ -64,12 +64,9 @@ export default function SearchPanel({
   
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
-  const canAskAgain = useLocationStore((state) => state.canAskAgain);
   const currentLocation = useLocationStore((state) => state.currentLocation);
-  const userSkippedPermission = useLocationStore(
-    (state) => state.userSkippedPermission,
-  );
-  const { getCurrentPosition, openSettings, requestPermission } =
+
+  const { getCurrentPosition } =
     useLocationService();
 
   const hasLocationPermission = permissionStatus === "granted";

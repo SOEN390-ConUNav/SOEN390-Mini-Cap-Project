@@ -401,4 +401,111 @@ describe("SearchPanel", () => {
       expect(getCurrentPosition).not.toHaveBeenCalled();
     });
   });
+
+  it("does not fetch nearby places when location permission is denied", async () => {
+    storeState.permissionStatus = "denied";
+    storeState.canAskAgain = false;
+
+    render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getNearbyPlaces).not.toHaveBeenCalled();
+    });
+  });
+
+  it("does not refetch nearby places when selecting the same filter twice", async () => {
+    const { getByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    // Initial render triggers one fetch
+    expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByText("Parking"));
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(2);
+    });
+
+    // Selecting the same filter again should not trigger another fetch
+    fireEvent.press(getByText("Parking"));
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(2);
+    });
+
+    // Switching back to restaurants should use cached results and not trigger a network call
+    fireEvent.press(getByText("Restaurants"));
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("filters nearby items when applying a custom distance", async () => {
+    mockCalculateDistance.mockReturnValue(1000); // far away so it will be filtered out
+
+    const { getByTestId, getByPlaceholderText, getByText, queryByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    // Open the distance filter modal
+    fireEvent.press(getByTestId("distance-filter-button"));
+    expect(queryByText("Filter by Distance")).toBeTruthy();
+
+    // Enter an invalid value - modal should remain open
+    fireEvent.changeText(getByPlaceholderText("Enter distance"), "abc");
+    fireEvent.press(getByText("Apply Custom Distance"));
+    expect(queryByText("Filter by Distance")).toBeTruthy();
+
+    // Enter a valid value and apply - should close and filter out the nearby item
+    fireEvent.changeText(getByPlaceholderText("Enter distance"), "0.1");
+    fireEvent.press(getByText("Apply Custom Distance"));
+
+    await waitFor(() => {
+      expect(queryByText("Filter by Distance")).toBeFalsy();
+      expect(queryByText("Cafe Nearby")).toBeNull();
+    });
+  });
+
+  it("shows rating and phone number in the details modal", async () => {
+    mockGetNearbyPlaces.mockResolvedValueOnce([
+      {
+        id: "n1",
+        name: "Cafe Nearby",
+        address: "123 Main St",
+        location: { latitude: 45.5001, longitude: -73.6001 },
+        distanceKm: 0.1,
+        rating: 4.5,
+        phoneNumber: "555-1234",
+      },
+    ]);
+
+    const { findByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    await waitFor(() => {
+      expect(findByText("4.5 / 5.0")).resolves.toBeTruthy();
+      expect(findByText("555-1234")).resolves.toBeTruthy();
+    });
+  });
 });
