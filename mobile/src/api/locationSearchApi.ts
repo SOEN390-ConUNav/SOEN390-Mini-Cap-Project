@@ -3,13 +3,13 @@ import { API_BASE_URL } from "../const";
 export async function searchLocations(
   query: string,
   latitude: number,
-  longitude: number
+  longitude: number,
 ) {
   const response = await fetch(
     `${API_BASE_URL}/api/places/search` +
       `?query=${encodeURIComponent(query)}` +
       `&latitude=${latitude}` +
-      `&longitude=${longitude}`
+      `&longitude=${longitude}`,
   );
 
   const json = await response.json();

@@ -9,7 +9,8 @@ export function useDistanceFilter() {
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [customDistance, setCustomDistance] = useState<string>("5");
 
-  const [selectedLocationDetail, setSelectedLocationDetail] = useState<any>(null);
+  const [selectedLocationDetail, setSelectedLocationDetail] =
+    useState<any>(null);
   const [locationDetailVisible, setLocationDetailVisible] = useState(false);
   const [showHours, setShowHours] = useState(false);
 

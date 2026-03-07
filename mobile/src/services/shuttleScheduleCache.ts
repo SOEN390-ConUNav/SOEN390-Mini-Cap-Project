@@ -1,12 +1,13 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getShuttleSchedule,
   getShuttleVersion,
   ShuttleScheduleResponse,
 } from "../api/shuttleScheduleApi";
 import type { CampusKey } from "../data/ShuttleSchedule";
+import cacheService from "./cacheService";
 
-const CACHE_KEY = "shuttle_schedule_cache";
+const CACHE_NAMESPACE = "shuttle_schedule";
+const CACHE_KEY = "cache";
 const CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 export type DeparturesByDay = {
@@ -20,19 +21,20 @@ interface CachedSchedule {
 }
 
 async function getCachedSchedule(): Promise<CachedSchedule | null> {
-  const raw = await AsyncStorage.getItem(CACHE_KEY);
-  if (!raw) return null;
-  return JSON.parse(raw) as CachedSchedule;
+  return cacheService.getPersistentRaw<CachedSchedule>(
+    CACHE_NAMESPACE,
+    CACHE_KEY,
+  );
 }
 
 async function setCachedSchedule(data: ShuttleScheduleResponse): Promise<void> {
   const entry: CachedSchedule = { data, fetchedAt: Date.now() };
-  await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  await cacheService.setPersistentRaw(CACHE_NAMESPACE, CACHE_KEY, entry);
 }
 
 async function refreshCacheTimestamp(cached: CachedSchedule): Promise<void> {
   cached.fetchedAt = Date.now();
-  await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
+  await cacheService.setPersistentRaw(CACHE_NAMESPACE, CACHE_KEY, cached);
 }
 
 function isFresh(cached: CachedSchedule): boolean {

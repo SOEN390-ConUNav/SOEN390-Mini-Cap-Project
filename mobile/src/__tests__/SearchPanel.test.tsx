@@ -1,7 +1,7 @@
 import React from "react";
-import { Alert } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import SearchPanel from "../components/SearchPanel";
+import cacheService from "../services/cacheService";
 import { searchLocations, getNearbyPlaces } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { calculateDistance, getOpenStatusText } from "../utils/location";
@@ -41,12 +41,24 @@ const mockUseLocationService = useLocationService as jest.MockedFunction<
   typeof useLocationService
 >;
 
-const mockGetNearbyPlaces = getNearbyPlaces as jest.MockedFunction<typeof getNearbyPlaces>;
-const mockSearchLocations = searchLocations as jest.MockedFunction<typeof searchLocations>;
-const mockGetSearchHistory = getSearchHistory as jest.MockedFunction<typeof getSearchHistory>;
-const mockAddSearchHistory = addSearchHistory as jest.MockedFunction<typeof addSearchHistory>;
-const mockCalculateDistance = calculateDistance as jest.MockedFunction<typeof calculateDistance>;
-const mockGetOpenStatusText = getOpenStatusText as jest.MockedFunction<typeof getOpenStatusText>;
+const mockGetNearbyPlaces = getNearbyPlaces as jest.MockedFunction<
+  typeof getNearbyPlaces
+>;
+const mockSearchLocations = searchLocations as jest.MockedFunction<
+  typeof searchLocations
+>;
+const mockGetSearchHistory = getSearchHistory as jest.MockedFunction<
+  typeof getSearchHistory
+>;
+const mockAddSearchHistory = addSearchHistory as jest.MockedFunction<
+  typeof addSearchHistory
+>;
+const mockCalculateDistance = calculateDistance as jest.MockedFunction<
+  typeof calculateDistance
+>;
+const mockGetOpenStatusText = getOpenStatusText as jest.MockedFunction<
+  typeof getOpenStatusText
+>;
 
 describe("SearchPanel", () => {
   const onSelectLocation = jest.fn();
@@ -64,6 +76,7 @@ describe("SearchPanel", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    cacheService.clearMemoryNamespace("nearby_places");
 
     storeState = {
       permissionStatus: "granted",
@@ -72,7 +85,9 @@ describe("SearchPanel", () => {
       currentLocation: { latitude: 45.5, longitude: -73.6 },
     };
 
-    mockUseLocationStore.mockImplementation((selector) => selector(storeState));
+    mockUseLocationStore.mockImplementation((selector) =>
+      selector(storeState as any),
+    );
 
     mockUseLocationService.mockReturnValue({
       getCurrentPosition,
@@ -113,9 +128,11 @@ describe("SearchPanel", () => {
   });
 
   it("renders recent searches when visible", async () => {
-    mockGetSearchHistory.mockResolvedValue([{ query: "Library" }]);
+    mockGetSearchHistory.mockResolvedValue([
+      { query: "Library", timestamp: 1_700_000_000_000 },
+    ]);
 
-    const { queryByText } = render(
+    const { findByText } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -124,10 +141,11 @@ describe("SearchPanel", () => {
     );
 
     await waitFor(() => {
-      expect(getSearchHistory).toHaveBeenCalled();
-      expect(queryByText("Recent Searches")).toBeTruthy();
-      expect(queryByText("Library")).toBeTruthy();
+      expect(mockGetSearchHistory).toHaveBeenCalled();
     });
+
+    expect(await findByText("Recent Searches")).toBeTruthy();
+    expect(await findByText("Library")).toBeTruthy();
   });
 
   it("does not search when query is blank", async () => {
@@ -178,7 +196,7 @@ describe("SearchPanel", () => {
   });
 
   it("fetches nearby places with current location and caches by filter", async () => {
-    const { findByText, getByText } = render(
+    const { getByText } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -256,9 +274,11 @@ describe("SearchPanel", () => {
   });
 
   it("selects recent search item and updates query", async () => {
-    mockGetSearchHistory.mockResolvedValue([{ query: "coffee" }]);
+    mockGetSearchHistory.mockResolvedValue([
+      { query: "coffee", timestamp: 1_700_000_000_000 },
+    ]);
 
-    const { getByText, queryByText } = render(
+    const { getByText } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -361,13 +381,12 @@ describe("SearchPanel", () => {
         name: "Cafe Nearby",
         address: "123 Main St",
         location: { latitude: 45.5001, longitude: -73.6001 },
-        distanceKm: 0.1,
         openingHours: {
           openNow: true,
           weekdayDescriptions: ["Mon: 9am - 5pm"],
         },
       },
-    ]);
+    ] as any);
 
     const { findByText, queryByText, getByTestId } = render(
       <SearchPanel
@@ -452,13 +471,14 @@ describe("SearchPanel", () => {
   it("filters nearby items when applying a custom distance", async () => {
     mockCalculateDistance.mockReturnValue(1000); // far away so it will be filtered out
 
-    const { getByTestId, getByPlaceholderText, getByText, queryByText } = render(
-      <SearchPanel
-        visible
-        onSelectLocation={onSelectLocation}
-        onClose={onClose}
-      />,
-    );
+    const { getByTestId, getByPlaceholderText, getByText, queryByText } =
+      render(
+        <SearchPanel
+          visible
+          onSelectLocation={onSelectLocation}
+          onClose={onClose}
+        />,
+      );
 
     // Open the distance filter modal
     fireEvent.press(getByTestId("distance-filter-button"));
@@ -486,7 +506,6 @@ describe("SearchPanel", () => {
         name: "Cafe Nearby",
         address: "123 Main St",
         location: { latitude: 45.5001, longitude: -73.6001 },
-        distanceKm: 0.1,
         rating: 4.5,
         phoneNumber: "555-1234",
       },
