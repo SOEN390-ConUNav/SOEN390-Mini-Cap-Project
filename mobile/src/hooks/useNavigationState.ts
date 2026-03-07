@@ -11,7 +11,8 @@ export const useNavigationStore = create<NavigationStateStore>((set) => ({
   setNavigationState: (state) => set({ navigationState: state }),
 }));
 export default function useNavigationState() {
-  const { navigationState, setNavigationState } = useNavigationStore();
+  const navigationState = useNavigationStore((s) => s.navigationState);
+  const setNavigationState = useNavigationStore((s) => s.setNavigationState);
 
   return {
     navigationState,

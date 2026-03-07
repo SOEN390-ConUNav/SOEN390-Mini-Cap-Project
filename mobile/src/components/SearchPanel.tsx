@@ -10,14 +10,16 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { getOpenStatusText, calculateDistance } from "../utils/location";
 import { useDistanceFilter } from "../hooks/useDistanceFilter";
 import NearbyPlaceItem from "./NearbyPlaceItem";
+import useLocationStore from "../hooks/useLocationStore";
+import useLocationService from "../hooks/useLocationService";
 
 const BURGUNDY = "#800020";
 
@@ -42,17 +44,6 @@ type SearchPanelProps = {
   }) => void;
 };
 
-async function getUserLocation() {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== "granted") throw new Error("Location denied");
-
-  const location = await Location.getCurrentPositionAsync({});
-  return {
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-  };
-}
-
 export default function SearchPanel({
   visible,
   onClose,
@@ -72,6 +63,20 @@ export default function SearchPanel({
   const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
   const statusText = getOpenStatusText(location.selectedLocationDetail?.openingHours)
 
+  const permissionStatus = useLocationStore((state) => state.permissionStatus);
+  const canAskAgain = useLocationStore((state) => state.canAskAgain);
+  const currentLocation = useLocationStore((state) => state.currentLocation);
+  const userSkippedPermission = useLocationStore(
+    (state) => state.userSkippedPermission,
+  );
+  const { getCurrentPosition, openSettings, requestPermission } =
+    useLocationService();
+
+  const hasLocationPermission = permissionStatus === "granted";
+  const shouldShowOSPrompt =
+    !userSkippedPermission &&
+    (canAskAgain || permissionStatus === "undetermined");
+
   useEffect(() => {
     if (visible) {
       loadSearchHistory();
@@ -80,8 +85,10 @@ export default function SearchPanel({
 
   useEffect(() => {
     setNearby([]);
-    fetchNearbyPlaces(activeFilter);
-  }, [activeFilter]);
+    if (hasLocationPermission) {
+      fetchNearbyPlaces(activeFilter);
+    }
+  }, [activeFilter, hasLocationPermission]);
 
   async function fetchNearbyPlaces(placeType: string) {
     if (cacheRef.current[placeType]) {
@@ -91,17 +98,35 @@ export default function SearchPanel({
 
     setLoading(true);
     try {
-      const coords = await getUserLocation();
-      location.setUserLocation(coords);
+      let coords = currentLocation;
+      coords ??= await getCurrentPosition();
       const results = await getNearbyPlaces(
         coords.latitude,
         coords.longitude,
-        placeType
+        placeType,
       );
+      cacheRef.current[placeType] = results;
       setNearby(results);
       cacheRef.current[placeType] = results;
     } catch (e) {
       console.error(e);
+      Alert.alert(
+        "Location Required",
+        "Enable location to see nearby places.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
+            onPress: () => {
+              if (shouldShowOSPrompt) {
+                void requestPermission();
+                return;
+              }
+              void openSettings();
+            },
+          },
+        ],
+      );
     } finally {
       setLoading(false);
     }
@@ -956,4 +981,38 @@ closingText: {
   color: "#555",
   fontWeight: "500",
 },
+  locationErrorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  locationErrorText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+    marginTop: 12,
+  },
+  locationErrorSubtext: {
+    fontSize: 14,
+    color: "#999",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  enableLocationButton: {
+    marginTop: 16,
+    backgroundColor: BURGUNDY,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  enableLocationButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#999",
+    marginTop: 20,
+  },
 });

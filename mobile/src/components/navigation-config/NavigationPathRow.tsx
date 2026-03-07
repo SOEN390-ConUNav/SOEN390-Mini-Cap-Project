@@ -12,6 +12,8 @@ export default function NavigationPathRow({
   handleGo,
   duration,
 }: Readonly<NavigationPathRowProps>) {
+  const isUnavailable = !duration || duration === "N/A";
+
   return (
     <View style={styles.actionRow}>
       <View style={styles.statsContainer}>
@@ -30,7 +32,7 @@ export default function NavigationPathRow({
         <Text style={styles.etaTime}>{calculateETA(duration)}</Text>
       </View>
 
-      <NavigationGoButton onPress={handleGo} />
+      <NavigationGoButton onPress={handleGo} disabled={isUnavailable} />
     </View>
   );
 }
