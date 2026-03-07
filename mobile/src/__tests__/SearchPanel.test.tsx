@@ -131,8 +131,10 @@ describe("SearchPanel", () => {
     mockGetSearchHistory.mockResolvedValue([
       { query: "Library", timestamp: 1_700_000_000_000 },
     ]);
+    storeState.permissionStatus = "denied";
+    storeState.currentLocation = null;
 
-    const { findByText } = render(
+    const { queryByText } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -141,11 +143,10 @@ describe("SearchPanel", () => {
     );
 
     await waitFor(() => {
-      expect(mockGetSearchHistory).toHaveBeenCalled();
+      expect(mockGetSearchHistory).toHaveBeenCalledTimes(1);
+      expect(queryByText("Recent Searches")).toBeTruthy();
+      expect(queryByText("Library")).toBeTruthy();
     });
-
-    expect(await findByText("Recent Searches")).toBeTruthy();
-    expect(await findByText("Library")).toBeTruthy();
   });
 
   it("does not search when query is blank", async () => {

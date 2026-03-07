@@ -99,7 +99,7 @@ export default function SearchPanel({
 
     try {
       let coords = currentLocation;
-      if (!coords) coords = await getCurrentPosition();
+      coords ??= await getCurrentPosition();
       if (!coords) {
         setNearby([]);
         return;
