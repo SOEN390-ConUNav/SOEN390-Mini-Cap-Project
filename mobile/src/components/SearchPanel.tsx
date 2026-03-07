@@ -62,6 +62,7 @@ export default function SearchPanel({
   // Convert to Google format (Monday first)
   const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
   const statusText = getOpenStatusText(location.selectedLocationDetail?.openingHours)
+  
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
   const canAskAgain = useLocationStore((state) => state.canAskAgain);
@@ -91,42 +92,29 @@ export default function SearchPanel({
   }, [activeFilter, hasLocationPermission]);
 
   async function fetchNearbyPlaces(placeType: string) {
-    if (cacheRef.current[placeType]) {
-      setNearby(cacheRef.current[placeType]);
-      return;
-    }
-
-    setLoading(true);
     try {
       let coords = currentLocation;
       coords ??= await getCurrentPosition();
+
+      const cacheKey = `${placeType}-${coords.latitude}-${coords.longitude}`;
+
+      if (cacheRef.current[cacheKey]) {
+        setNearby(cacheRef.current[cacheKey]);
+        return;
+      }
+
+      setLoading(true);
+
       const results = await getNearbyPlaces(
         coords.latitude,
         coords.longitude,
         placeType,
       );
-      cacheRef.current[placeType] = results;
+
+      cacheRef.current[cacheKey] = results;
       setNearby(results);
-      cacheRef.current[placeType] = results;
     } catch (e) {
       console.error(e);
-      Alert.alert(
-        "Location Required",
-        "Enable location to see nearby places.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
-            onPress: () => {
-              if (shouldShowOSPrompt) {
-                void requestPermission();
-                return;
-              }
-              void openSettings();
-            },
-          },
-        ],
-      );
     } finally {
       setLoading(false);
     }
@@ -137,19 +125,38 @@ export default function SearchPanel({
     setRecentSearches(list);
   }
 
-  async function handleSearch() {
-    if (!query.trim()) return;
+  type SearchEvent = { nativeEvent: { text: string } };
 
+  async function handleSearch(searchQuery?: string | SearchEvent) {
+    const queryToUse = String(
+      ((): string => {
+        if (typeof searchQuery === "string") return searchQuery;
+        if (searchQuery && typeof (searchQuery as any).nativeEvent?.text === "string") {
+          return (searchQuery as any).nativeEvent.text;
+        }
+        return query;
+      })(),
+    ).trim();
+
+    if (!queryToUse) return;
+
+    setQuery(queryToUse);
     setSearching(true);
     setSearchResults([]);
 
     try {
-      // save this search query
-      await addSearchHistory(query);
-      // refresh local state
+      await addSearchHistory(queryToUse);
       loadSearchHistory();
 
-      const results = await searchLocations(query);
+      let coords = currentLocation;
+      coords ??= await getCurrentPosition();
+
+      const results = await searchLocations(
+        queryToUse,
+        coords.latitude,
+        coords.longitude
+      );
+
       setSearchResults(results);
     } catch (e) {
       console.error(e);
@@ -224,10 +231,7 @@ export default function SearchPanel({
             {recentSearches.map((item, index) => (
               <TouchableOpacity
                 key={index.toString()}
-                onPress={() => {
-                  setQuery(item.query);
-                  handleSearch();
-                }}
+                onPress={() => handleSearch(item.query)}
                 style={styles.recentSearchItem}
               >
                 <Ionicons name="time-outline" size={18} color={BURGUNDY} />
@@ -546,10 +550,11 @@ export default function SearchPanel({
             <View style={{ flex: 1 }}>
               <FlatList
                 data={nearby.filter((item) => {
-                  if (!location.userLocation) return true;
+                  if (!currentLocation) return true;
+
                   const distanceValue = calculateDistance(
-                    location.userLocation.latitude,
-                    location.userLocation.longitude,
+                    currentLocation.latitude,
+                    currentLocation.longitude,
                     item.location.latitude,
                     item.location.longitude
                   );
@@ -559,7 +564,7 @@ export default function SearchPanel({
                 renderItem={({ item }) => (
                   <NearbyPlaceItem
                       item={item}
-                      userLocation={location.userLocation}
+                      userLocation={currentLocation}
                       onSelect={(locationDetail) => {
                         location.setSelectedLocationDetail(locationDetail);
                         location.setLocationDetailVisible(true);
