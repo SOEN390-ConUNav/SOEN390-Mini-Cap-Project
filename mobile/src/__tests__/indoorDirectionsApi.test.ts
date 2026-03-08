@@ -53,12 +53,32 @@ describe("getIndoorDirections", () => {
     expect(url).toContain("destinationFloor=9");
   });
 
+  it("appends avoidStairs param when provided", async () => {
+    // Covers avoidStairs !== undefined branch
+    mockFetch({});
+    await getIndoorDirections("Hall-8", "H-831", "H-832", "8", "8", true);
+    const url: string = (global.fetch as jest.Mock).mock.calls[0][0];
+    expect(url).toContain("avoidStairs=true");
+  });
+
   it("throws on non-ok response", async () => {
     mockFetch("Not Found", false, 404);
 
     await expect(
       getIndoorDirections("Hall-8", "H-831", "H-832"),
     ).rejects.toThrow("Backend error (404)");
+  });
+
+  it("includes error text from response.text() when fetch fails", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: () => Promise.reject(new Error("not json")),
+      text: () => Promise.resolve("Internal server error"),
+    });
+    await expect(
+      getIndoorDirections("Hall-8", "H-831", "H-832"),
+    ).rejects.toThrow("Internal server error");
   });
 
   it("wraps network errors with a helpful message", async () => {
@@ -142,6 +162,13 @@ describe("getPointsOfInterest", () => {
     expect(url).toContain("floor=8");
   });
 
+  it("getPointsOfInterest omits floor param when not provided", async () => {
+    mockFetch([]);
+    await getPointsOfInterest("Hall-8");
+    const url: string = (global.fetch as jest.Mock).mock.calls[0][0];
+    expect(url).not.toContain("floor=");
+  });
+
   it("returns empty array on failure", async () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("fail"));
     const result = await getPointsOfInterest("Hall-8");
@@ -209,5 +236,16 @@ describe("getUniversalDirections", () => {
     await expect(
       getUniversalDirections("H", "H1-118-14", "1", "LB", "LB-204", "2", false),
     ).rejects.toThrow("Cannot connect to backend");
+  });
+
+  it("getUniversalDirections includes error text on non-ok response", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      text: () => Promise.resolve("Bad Gateway"),
+    });
+    await expect(
+      getUniversalDirections("H", "H1-118-14", "1", "LB", "LB-204", "2", false),
+    ).rejects.toThrow("Bad Gateway");
   });
 });
