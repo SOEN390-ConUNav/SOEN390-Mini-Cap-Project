@@ -88,8 +88,7 @@ class PathfindingServiceTest {
         Waypoint start = wps.get(0);
         Waypoint end = wps.get(wps.size() - 1);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
-        assertNotNull(path);
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end, false);        assertNotNull(path);
         assertFalse(path.isEmpty());
         assertEquals(start.id, path.get(0).id);
         assertEquals(end.id, path.get(path.size() - 1).id);
@@ -101,7 +100,7 @@ class PathfindingServiceTest {
         List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
         Waypoint wp = wps.get(0);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(wp, wp);
+        List<Waypoint> path = service.findPathThroughWaypoints(wp, wp, false);
         assertNotNull(path);
         assertEquals(1, path.size());
         assertEquals(wp.id, path.get(0).id);
@@ -110,14 +109,14 @@ class PathfindingServiceTest {
     @Test
     void findPath_returnsEmptyForNullInput() {
         service.setBuilding("Hall-8");
-        assertTrue(service.findPathThroughWaypoints(null, null).isEmpty());
+        assertTrue(service.findPathThroughWaypoints(null, null, false).isEmpty());
     }
 
     @Test
     void findPath_returnsEmptyWhenGraphMissing() {
         service.setBuilding("Unknown-99");
         Waypoint fake = new Waypoint(0, 0, "fake");
-        assertTrue(service.findPathThroughWaypoints(fake, fake).isEmpty());
+        assertTrue(service.findPathThroughWaypoints(fake, fake, false).isEmpty());
     }
 
     @ParameterizedTest
@@ -135,8 +134,7 @@ class PathfindingServiceTest {
         Waypoint start = wps.get(0);
         Waypoint end = wps.get(wps.size() - 1);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
-        assertNotNull(path,
+    List<Waypoint> path = service.findPathThroughWaypoints(start, end, false);        assertNotNull(path,
                 buildingId + " graph should be connected — path must exist");
         assertTrue(path.size() >= 2);
     }
@@ -196,8 +194,7 @@ class PathfindingServiceTest {
         Waypoint start = wps.get(0);
         Waypoint end = wps.get(wps.size() / 2);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
-        assertNotNull(path);
+    List<Waypoint> path = service.findPathThroughWaypoints(start, end, false);        assertNotNull(path);
         assertFalse(path.isEmpty());
         assertEquals(start.id, path.get(0).id);
         assertEquals(end.id, path.get(path.size() - 1).id);
