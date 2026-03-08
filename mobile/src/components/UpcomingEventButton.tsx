@@ -23,6 +23,7 @@ import {
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 import { useTheme } from "../hooks/useTheme";
+import { BURGUNDY } from "../theme/theme";
 import {
   useAccessibilitySettings,
   getFontScale,
@@ -326,7 +327,13 @@ export default function UpcomingEventButton({
             if (!isBusy) void startImportFlow();
           }}
         >
-          <Text style={[styles.upcomingBtnText, buttonFontStyle, { color: colors.primary }]}>
+          <Text
+            style={[
+              styles.upcomingBtnText,
+              buttonFontStyle,
+              { color: colors.primary },
+            ]}
+          >
             Import Google Calendar Schedule
           </Text>
         </TouchableOpacity>
@@ -373,7 +380,13 @@ export default function UpcomingEventButton({
             });
           }}
         >
-          <Text style={[styles.upcomingBtnText, buttonFontStyle, { color: colors.primary }]}>
+          <Text
+            style={[
+              styles.upcomingBtnText,
+              buttonFontStyle,
+              { color: colors.primary },
+            ]}
+          >
             {upcomingButtonLabel}
           </Text>
         </TouchableOpacity>
