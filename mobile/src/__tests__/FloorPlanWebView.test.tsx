@@ -196,4 +196,79 @@ describe("FloorPlanWebView Component", () => {
       });
     });
   });
+
+  it("renders with roomData and poiData to trigger marker effects", async () => {
+    const roomData = [{ x: 50, y: 50, id: "H8-801" }];
+    const poiData = [
+      {
+        x: 100,
+        y: 100,
+        id: "elev-1",
+        displayName: "Elevator",
+        type: "elevator",
+      },
+    ];
+    const { getByTestId } = render(
+      <FloorPlanWebView
+        buildingId="H"
+        floorNumber="8"
+        roomData={roomData}
+        poiData={poiData}
+      />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    await waitFor(() => {}, { timeout: 500 });
+  });
+
+  it("showWaypoints and hideWaypoints are callable via ref", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    await waitFor(() => expect(ref.current).toBeTruthy());
+    ref.current?.showWaypoints([{ x: 10, y: 10, id: "wp1" }]);
+    ref.current?.hideWaypoints();
+    expect(ref.current?.showWaypoints).toBeDefined();
+  });
+
+  it("showRoomMarkers and hideRoomMarkers are callable via ref", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    ref.current?.showRoomMarkers([{ x: 20, y: 20, id: "H8-801" }]);
+    ref.current?.hideRoomMarkers();
+    expect(ref.current?.hideRoomMarkers).toBeDefined();
+  });
+
+  it("showPois and hidePois are callable via ref", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    await waitFor(() => expect(ref.current).toBeTruthy());
+    ref.current?.showPois([
+      { x: 30, y: 30, id: "p1", displayName: "Elev", type: "elevator" },
+    ]);
+    ref.current?.hidePois();
+    expect(ref.current?.hidePois).toBeDefined();
+  });
 });

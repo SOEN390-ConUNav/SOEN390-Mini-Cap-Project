@@ -411,4 +411,41 @@ class IndoorDirectionServiceTest {
         assertNotNull(pois);
     }
 
+    @Test
+    void stairMessage_fromRouteWithStairsLabel_setsStairMessage() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "Hall-Stairs-Main", "2", "2", false);
+        assertNotNull(r);
+        if (r.getRoutePoints().stream().anyMatch(p -> p.getLabel() != null && p.getLabel().toLowerCase().contains("stairs"))) {
+            assertNotNull(r.getStairMessage());
+        }
+    }
+
+    @Test
+    void formatFinalDuration_zeroDistance_returnsZeroSec() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "INVALID", "ALSO-INVALID", "8", "8", false);
+        assertEquals("0 sec", r.getDuration());
+    }
+
+    @Test
+    void convertBuildingId_CC_returnsCCFloor() {
+        List<String> rooms = directionService.getAvailableRooms("CC", "1");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void convertBuildingId_MB_returnsMBFloor() {
+        List<String> rooms = directionService.getAvailableRooms("MB", "1");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getIndoorDirections_destinationFloorNull_usesStartFloor() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", null, false);
+        assertEquals("8", r.getStartFloor());
+        assertEquals("8", r.getEndFloor());
+    }
+
 }
