@@ -336,4 +336,63 @@ describe("FloorPlanWebView Component", () => {
     ref.current?.hidePois();
     expect(ref.current?.hidePois).toBeDefined();
   });
+
+  it("covers prop updates for routePoints, roomData, and poiData", async () => {
+    const { rerender, getByTestId } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("mock-webview")).toBeTruthy();
+    });
+
+    const webView = getByTestId("mock-webview");
+    act(() => {
+      webView.props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+
+    rerender(
+      <FloorPlanWebView
+        buildingId="H"
+        floorNumber="8"
+        routePoints={[{ x: 10, y: 20 }]}
+        roomData={[{ x: 100, y: 100, id: "H8-843" }]}
+        poiData={[
+          {
+            x: 50,
+            y: 50,
+            id: "ELEVATOR",
+            displayName: "Elevator",
+            type: "elevator",
+          },
+        ]}
+      />,
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+
+    expect(getByTestId("mock-webview")).toBeTruthy();
+  });
+
+  it("handles empty routePoints during rerender", async () => {
+    const { rerender, getByTestId } = render(
+      <FloorPlanWebView
+        buildingId="H"
+        floorNumber="8"
+        routePoints={[{ x: 1, y: 1 }]}
+      />,
+    );
+
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+
+    rerender(
+      <FloorPlanWebView buildingId="H" floorNumber="8" routePoints={[]} />,
+    );
+
+    expect(getByTestId("mock-webview")).toBeTruthy();
+  });
 });
