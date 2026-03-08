@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,15 +10,19 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getNearbyPlaces, searchLocations } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
+import { getOpenStatusText, calculateDistance } from "../utils/location";
+import { useDistanceFilter } from "../hooks/useDistanceFilter";
+import NearbyPlaceItem from "./NearbyPlaceItem";
 import useLocationStore from "../hooks/useLocationStore";
 import useLocationService from "../hooks/useLocationService";
+import cacheService from "../services/cacheService";
 
 const BURGUNDY = "#800020";
+const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
 
 const PLACE_TYPES = [
   { label: "Restaurants", value: "restaurant" },
@@ -52,25 +56,30 @@ export default function SearchPanel({
   const [activeFilter, setActiveFilter] = useState<string>("restaurant");
   const [nearby, setNearby] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const cacheRef = useRef<Record<string, any[]>>({});
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
+  const { distance, location, hours } = useDistanceFilter();
+  const todayIndexJS = new Date().getDay();
+  // Convert to Google format (Monday first)
+  const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
+  const statusText = getOpenStatusText(
+    location.selectedLocationDetail?.openingHours,
+  );
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
-  const canAskAgain = useLocationStore((state) => state.canAskAgain);
   const currentLocation = useLocationStore((state) => state.currentLocation);
-  const userSkippedPermission = useLocationStore(
-    (state) => state.userSkippedPermission,
-  );
-  const { getCurrentPosition, openSettings, requestPermission } =
-    useLocationService();
+
+  const { getCurrentPosition } = useLocationService();
 
   const hasLocationPermission = permissionStatus === "granted";
-  const shouldShowOSPrompt =
-    !userSkippedPermission &&
-    (canAskAgain || permissionStatus === "undetermined");
+  const locationCacheKeyPart = currentLocation
+    ? `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}`
+    : "no-location";
 
   useEffect(() => {
     if (visible) {
+      setQuery("");
+      setSearchResults([]);
+      setSearching(false);
       loadSearchHistory();
     }
   }, [visible]);
@@ -80,44 +89,45 @@ export default function SearchPanel({
     if (hasLocationPermission) {
       fetchNearbyPlaces(activeFilter);
     }
-  }, [activeFilter, hasLocationPermission]);
+  }, [activeFilter, hasLocationPermission, locationCacheKeyPart]);
 
   async function fetchNearbyPlaces(placeType: string) {
-    if (cacheRef.current[placeType]) {
-      setNearby(cacheRef.current[placeType]);
+    if (!hasLocationPermission) {
+      setNearby([]);
       return;
     }
 
-    setLoading(true);
     try {
       let coords = currentLocation;
       coords ??= await getCurrentPosition();
+      if (!coords) {
+        setNearby([]);
+        return;
+      }
+
+      const cacheKey = `${placeType}-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
+      const cached = cacheService.getMemory<any[]>("nearby_places", cacheKey);
+      if (cached) {
+        setNearby(cached);
+        return;
+      }
+
+      setLoading(true);
+
       const results = await getNearbyPlaces(
         coords.latitude,
         coords.longitude,
         placeType,
       );
-      cacheRef.current[placeType] = results;
+      cacheService.setMemory("nearby_places", cacheKey, results);
       setNearby(results);
     } catch (e) {
-      console.error(e);
-      Alert.alert(
-        "Location Required",
-        "Enable location to see nearby places.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: shouldShowOSPrompt ? "Enable Location" : "Open Settings",
-            onPress: () => {
-              if (shouldShowOSPrompt) {
-                void requestPermission();
-                return;
-              }
-              void openSettings();
-            },
-          },
-        ],
-      );
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
     } finally {
       setLoading(false);
     }
@@ -128,22 +138,52 @@ export default function SearchPanel({
     setRecentSearches(list);
   }
 
-  async function handleSearch() {
-    if (!query.trim()) return;
+  type SearchEvent = { nativeEvent: { text: string } };
 
+  async function handleSearch(searchQuery?: string | SearchEvent) {
+    const queryToUse = String(
+      ((): string => {
+        if (typeof searchQuery === "string") return searchQuery;
+        if (
+          searchQuery &&
+          typeof (searchQuery as any).nativeEvent?.text === "string"
+        ) {
+          return (searchQuery as any).nativeEvent.text;
+        }
+        return query;
+      })(),
+    ).trim();
+
+    if (!queryToUse) return;
+
+    setQuery(queryToUse);
     setSearching(true);
     setSearchResults([]);
 
     try {
-      // save this search query
-      await addSearchHistory(query);
-      // refresh local state
+      await addSearchHistory(queryToUse);
       loadSearchHistory();
 
-      const results = await searchLocations(query);
+      let coords = currentLocation;
+      if (!coords && hasLocationPermission) {
+        coords = await getCurrentPosition();
+      }
+      coords ??= FALLBACK_COORDS;
+
+      const results = await searchLocations(
+        queryToUse,
+        coords.latitude,
+        coords.longitude,
+      );
+
       setSearchResults(results);
     } catch (e) {
-      console.error(e);
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
     } finally {
       setSearching(false);
     }
@@ -177,46 +217,45 @@ export default function SearchPanel({
         </View>
 
         {/* Filters */}
-        <View style={styles.filtersWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filters}
-          >
-            {PLACE_TYPES.map((item) => (
-              <TouchableOpacity
-                key={item.value}
-                onPress={() => setActiveFilter(item.value)}
-                style={[
-                  styles.filterChip,
-                  activeFilter === item.value && styles.activeChip,
-                ]}
-              >
-                <Text
+        {query.length === 0 && (
+          <View style={styles.filtersWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filters}
+            >
+              {PLACE_TYPES.map((item) => (
+                <TouchableOpacity
+                  key={item.value}
+                  onPress={() => setActiveFilter(item.value)}
                   style={[
-                    styles.filterText,
-                    activeFilter === item.value && styles.activeText,
+                    styles.filterChip,
+                    activeFilter === item.value && styles.activeChip,
                   ]}
                 >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                  <Text
+                    style={[
+                      styles.filterText,
+                      activeFilter === item.value && styles.activeText,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Recents */}
         {recentSearches.length > 0 && query.length === 0 && (
           <>
             <Text style={styles.sectionTitle}>Recent Searches</Text>
 
-            {recentSearches.map((item) => (
+            {recentSearches.map((item, index) => (
               <TouchableOpacity
-                key={item.query}
-                onPress={() => {
-                  setQuery(item.query);
-                  handleSearch();
-                }}
+                key={`${item.timestamp ?? "no-ts"}-${item.query}-${index}`}
+                onPress={() => handleSearch(item.query)}
                 style={styles.recentSearchItem}
               >
                 <Ionicons name="time-outline" size={18} color={BURGUNDY} />
@@ -249,7 +288,11 @@ export default function SearchPanel({
                       <Text style={styles.placeName}>{item.name}</Text>
                       <Text style={styles.address}>{item.address}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={18}
+                      color={BURGUNDY}
+                    />
                   </TouchableOpacity>
                 )}
               />
@@ -260,79 +303,316 @@ export default function SearchPanel({
         {/* Nearby Results */}
         {query.length === 0 && (
           <>
-            <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
-            <View style={{ flex: 1 }}>
-              {hasLocationPermission ? (
-                <FlatList
-                  data={nearby}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
-                    <View style={styles.poiItem}>
-                      <View style={styles.poiTextContainer}>
-                        <Text
-                          style={styles.placeName}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {item.name}
-                        </Text>
+            <View style={styles.nearbyHeaderContainer}>
+              <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
+              <TouchableOpacity
+                testID="distance-filter-button"
+                onPress={() => distance.setDistanceFilterVisible(true)}
+                style={styles.filterIconButton}
+              >
+                <Ionicons name="funnel" size={18} color={BURGUNDY} />
+                <Text style={styles.filterButtonText}>Filter</Text>
+              </TouchableOpacity>
+            </View>
 
-                        <Text
-                          style={styles.address}
-                          numberOfLines={2}
-                          ellipsizeMode="tail"
-                        >
-                          {item.address}
-                        </Text>
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.directionsButton}
-                        onPress={() => {
-                          onSelectLocation({
-                            ...item.location,
-                            name: item.name,
-                          });
-                          onClose();
-                        }}
-                      >
-                        <Ionicons name="navigate" size={18} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  ListEmptyComponent={
-                    loading ? null : (
-                      <Text style={styles.emptyText}>
-                        No nearby {activeFilter} found
-                      </Text>
-                    )
-                  }
-                />
-              ) : (
-                <View style={styles.locationErrorContainer}>
-                  <Ionicons name="location-outline" size={48} color="#999" />
-                  <Text style={styles.locationErrorText}>
-                    Location permission required
+            {/* Distance Filter Modal */}
+            <Modal
+              visible={distance.distanceFilterVisible}
+              animationType="slide"
+              transparent
+            >
+              <Pressable
+                testID="distance-filter-backdrop"
+                style={styles.backdrop}
+                onPress={() => distance.setDistanceFilterVisible(false)}
+              />
+              <View style={styles.filterModal}>
+                <View style={styles.filterModalHeader}>
+                  <Text style={styles.filterModalTitle}>
+                    Filter by Distance
                   </Text>
-                  <Text style={styles.locationErrorSubtext}>
-                    Enable location to see nearby places
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.enableLocationButton}
-                    onPress={() => {
-                      if (shouldShowOSPrompt) {
-                        void requestPermission();
-                        return;
-                      }
-                      void openSettings();
-                    }}
+                  <Pressable
+                    testID="close-filter-button"
+                    onPress={() => distance.setDistanceFilterVisible(false)}
+                    style={styles.closeBtn}
                   >
-                    <Text style={styles.enableLocationButtonText}>
-                      {shouldShowOSPrompt ? "Enable Location" : "Open Settings"}
+                    <Ionicons name="close" size={24} color={BURGUNDY} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.filterOptions}>
+                  <Text style={styles.filterSubtitle}>Preset Distances</Text>
+                  {[
+                    { label: "100m", value: 100 },
+                    { label: "500m", value: 500 },
+                    { label: "1 km", value: 1000 },
+                    { label: "2 km", value: 2000 },
+                    { label: "5 km", value: 5000 },
+                    { label: "10 km", value: 10000 },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => {
+                        distance.setMaxDistance(option.value);
+                        distance.setDistanceFilterVisible(false);
+                      }}
+                      style={[
+                        styles.distanceOption,
+                        distance.maxDistance === option.value &&
+                          styles.distanceOptionSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.distanceOptionText,
+                          distance.maxDistance === option.value &&
+                            styles.distanceOptionTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                      {distance.maxDistance === option.value && (
+                        <Ionicons name="checkmark" size={20} color={BURGUNDY} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+
+                  <Text style={styles.filterSubtitle}>Custom Distance</Text>
+                  <View style={styles.customDistanceContainer}>
+                    <TextInput
+                      style={styles.customDistanceInput}
+                      placeholder="Enter distance"
+                      value={distance.customDistance}
+                      onChangeText={distance.setCustomDistance}
+                      keyboardType="decimal-pad"
+                      placeholderTextColor="#999"
+                    />
+                    <Text style={styles.customDistanceUnit}>km</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const distanceInMeters =
+                        Number.parseFloat(distance.customDistance) * 1000;
+                      if (
+                        !Number.isNaN(distanceInMeters) &&
+                        distanceInMeters > 0
+                      ) {
+                        distance.setMaxDistance(distanceInMeters);
+                        distance.setDistanceFilterVisible(false);
+                      }
+                    }}
+                    style={styles.applyCustomButton}
+                  >
+                    <Text style={styles.applyCustomButtonText}>
+                      Apply Custom Distance
                     </Text>
                   </TouchableOpacity>
                 </View>
-              )}
+              </View>
+            </Modal>
+
+            {/* Location Details Modal */}
+            <Modal
+              visible={location.locationDetailVisible}
+              animationType="slide"
+              transparent
+            >
+              <Pressable
+                testID="details-modal-backdrop"
+                style={styles.backdrop}
+                onPress={() => location.setLocationDetailVisible(false)}
+              />
+              <View style={styles.detailModal}>
+                <View style={styles.detailModalHeader}>
+                  <Pressable
+                    testID="close-details-button"
+                    onPress={() => location.setLocationDetailVisible(false)}
+                    style={styles.closeBtn}
+                  >
+                    <Ionicons name="close" size={24} color={BURGUNDY} />
+                  </Pressable>
+                </View>
+
+                {location.selectedLocationDetail && (
+                  <ScrollView
+                    style={styles.detailModalContent}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Text style={styles.detailTitle}>
+                      {location.selectedLocationDetail.name}
+                    </Text>
+
+                    <View style={styles.detailSection}>
+                      <Ionicons name="location" size={18} color={BURGUNDY} />
+                      <View style={styles.detailSectionContent}>
+                        <Text style={styles.detailLabel}>Address</Text>
+                        <Text style={styles.detailValue}>
+                          {location.selectedLocationDetail.address}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailSection}>
+                      <Ionicons
+                        name="navigate-circle"
+                        size={18}
+                        color={BURGUNDY}
+                      />
+                      <View style={styles.detailSectionContent}>
+                        <Text style={styles.detailLabel}>Distance</Text>
+                        <Text style={styles.detailValue}>
+                          {location.selectedLocationDetail.distanceKm} km away
+                        </Text>
+                      </View>
+                    </View>
+
+                    {location.selectedLocationDetail.rating && (
+                      <View style={styles.detailSection}>
+                        <Ionicons name="star" size={18} color={BURGUNDY} />
+                        <View style={styles.detailSectionContent}>
+                          <Text style={styles.detailLabel}>Rating</Text>
+                          <Text style={styles.detailValue}>
+                            {location.selectedLocationDetail.rating.toFixed(1)}{" "}
+                            / 5.0
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    <View style={styles.detailSection}>
+                      <Ionicons name="time" size={18} color={BURGUNDY} />
+
+                      <View style={styles.detailSectionContent}>
+                        <Text style={styles.detailLabel}>Opening Hours</Text>
+                        <TouchableOpacity
+                          testID="opening-hours-toggle"
+                          onPress={() => hours.setShowHours(!hours.showHours)}
+                          style={styles.hoursHeader}
+                        >
+                          {location.selectedLocationDetail.openingHours
+                            ?.openNow !== undefined && (
+                            <View style={styles.openStatusContainer}>
+                              <View
+                                style={[
+                                  styles.statusDot,
+                                  {
+                                    backgroundColor: location
+                                      .selectedLocationDetail.openingHours
+                                      .openNow
+                                      ? "#22c55e"
+                                      : "#ef4444",
+                                  },
+                                ]}
+                              />
+
+                              <Text
+                                style={[
+                                  styles.openStatusText,
+                                  {
+                                    color: location.selectedLocationDetail
+                                      .openingHours.openNow
+                                      ? "#22c55e"
+                                      : "#ef4444",
+                                  },
+                                ]}
+                              >
+                                {location.selectedLocationDetail.openingHours
+                                  .openNow
+                                  ? "Open"
+                                  : "Closed"}
+                              </Text>
+
+                              {statusText !== "" && (
+                                <Text style={styles.closingText}>
+                                  {"  ·  " + statusText}
+                                </Text>
+                              )}
+                            </View>
+                          )}
+                          <Ionicons
+                            name={
+                              hours.showHours ? "chevron-up" : "chevron-down"
+                            }
+                            size={16}
+                            color="#777"
+                          />
+                        </TouchableOpacity>
+
+                        {hours.showHours &&
+                          location.selectedLocationDetail.openingHours.weekdayDescriptions?.map(
+                            (day: string, index: number) => (
+                              <Text
+                                key={`${day}-${index}`}
+                                style={[
+                                  styles.hoursRow,
+                                  index === todayIndex && styles.todayHoursRow,
+                                ]}
+                              >
+                                {day}
+                              </Text>
+                            ),
+                          )}
+                      </View>
+                    </View>
+
+                    {location.selectedLocationDetail.phoneNumber && (
+                      <View style={styles.detailSection}>
+                        <Ionicons name="call" size={18} color={BURGUNDY} />
+                        <View style={styles.detailSectionContent}>
+                          <Text style={styles.detailLabel}>Phone Number</Text>
+                          <Text style={styles.detailValue}>
+                            {location.selectedLocationDetail.phoneNumber}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.detailNavigateButton}
+                      onPress={() => {
+                        onSelectLocation({
+                          ...location.selectedLocationDetail.location,
+                          name: location.selectedLocationDetail.name,
+                        });
+                        location.setLocationDetailVisible(false);
+                        onClose();
+                      }}
+                    >
+                      <Ionicons name="navigate" size={20} color="#fff" />
+                      <Text style={styles.detailNavigateButtonText}>
+                        Get Directions
+                      </Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                )}
+              </View>
+            </Modal>
+
+            <View style={{ flex: 1 }}>
+              <FlatList
+                data={nearby.filter((item) => {
+                  if (!currentLocation) return true;
+
+                  const distanceValue = calculateDistance(
+                    currentLocation.latitude,
+                    currentLocation.longitude,
+                    item.location.latitude,
+                    item.location.longitude,
+                  );
+                  return distanceValue <= distance.maxDistance;
+                })}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <NearbyPlaceItem
+                    item={item}
+                    userLocation={currentLocation}
+                    onSelect={(locationDetail) => {
+                      location.setSelectedLocationDetail(locationDetail);
+                      location.setLocationDetailVisible(true);
+                    }}
+                  />
+                )}
+              />
 
               {loading && (
                 <View style={styles.loadingOverlay}>
@@ -519,6 +799,233 @@ const styles = StyleSheet.create({
   recentSearchText: {
     marginLeft: 8,
     color: "#333",
+  },
+  nearbyHeaderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  filterIconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(128, 0, 32, 0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  filterButtonText: {
+    color: BURGUNDY,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  filterModal: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 10,
+  },
+  filterModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: BURGUNDY,
+  },
+  filterOptions: {
+    gap: 8,
+  },
+  distanceOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  distanceOptionSelected: {
+    backgroundColor: "rgba(128, 0, 32, 0.1)",
+    borderColor: BURGUNDY,
+  },
+  distanceOptionText: {
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
+  },
+  distanceOptionTextSelected: {
+    color: BURGUNDY,
+    fontWeight: "700",
+  },
+  distanceText: {
+    fontSize: 12,
+    color: BURGUNDY,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  filterSubtitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#555",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  customDistanceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  customDistanceInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  customDistanceUnit: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
+  applyCustomButton: {
+    backgroundColor: BURGUNDY,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  applyCustomButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  detailModal: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 15,
+  },
+  detailModalHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  detailModalContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 20,
+  },
+  detailSection: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
+  },
+  detailSectionContent: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: "#888",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
+  },
+  detailNavigateButton: {
+    backgroundColor: BURGUNDY,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  detailNavigateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  openStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  openStatusText: {
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  hoursHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  hoursRow: {
+    fontSize: 14,
+    color: "#444",
+    marginTop: 4,
+  },
+  todayHoursRow: {
+    fontWeight: "700",
+    color: BURGUNDY,
+  },
+  closingText: {
+    fontSize: 14,
+    color: "#555",
+    fontWeight: "500",
   },
   locationErrorContainer: {
     flex: 1,

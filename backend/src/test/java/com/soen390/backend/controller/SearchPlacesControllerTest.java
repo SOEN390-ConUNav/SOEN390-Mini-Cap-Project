@@ -8,7 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -24,7 +25,9 @@ public class SearchPlacesControllerTest {
     @Test
     void searchPlaces_ShouldReturn400ForEmptyQuery() throws Exception {
         mockMvc.perform(get("/api/places/search")
-                        .param("query", " "))
+                        .param("query", " ")
+                        .param("latitude", "45.5")
+                        .param("longitude", "-73.5"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("{\"error\":\"Query must not be empty\"}"));
     }
@@ -43,12 +46,15 @@ public class SearchPlacesControllerTest {
             }
             """;
 
-        when(placesOfInterestService.searchPlacesByText("pizza")).thenReturn(fakeJson);
+        when(placesOfInterestService.searchPlacesByText("pizza", 45.5, -73.5))
+                .thenReturn(fakeJson);
 
         mockMvc.perform(get("/api/places/search")
-                        .param("query", "pizza"))
+                        .param("query", "pizza")
+                        .param("latitude", "45.5")
+                        .param("longitude", "-73.5"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(content().string(fakeJson));
     }
 }

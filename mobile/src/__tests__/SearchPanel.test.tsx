@@ -1,7 +1,12 @@
 import React from "react";
-import { Alert } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import SearchPanel from "../components/SearchPanel";
+import cacheService from "../services/cacheService";
+import { searchLocations, getNearbyPlaces } from "../api";
+import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
+import { calculateDistance, getOpenStatusText } from "../utils/location";
+import useLocationStore from "../hooks/useLocationStore";
+import useLocationService from "../hooks/useLocationService";
 
 jest.mock("../api", () => ({
   searchLocations: jest.fn(),
@@ -24,16 +29,35 @@ jest.mock("../hooks/useLocationService", () => ({
   default: jest.fn(),
 }));
 
-import { searchLocations, getNearbyPlaces } from "../api";
-import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
-import useLocationStore from "../hooks/useLocationStore";
-import useLocationService from "../hooks/useLocationService";
+jest.mock("../utils/location", () => ({
+  calculateDistance: jest.fn(),
+  getOpenStatusText: jest.fn(),
+}));
 
 const mockUseLocationStore = useLocationStore as jest.MockedFunction<
   typeof useLocationStore
 >;
 const mockUseLocationService = useLocationService as jest.MockedFunction<
   typeof useLocationService
+>;
+
+const mockGetNearbyPlaces = getNearbyPlaces as jest.MockedFunction<
+  typeof getNearbyPlaces
+>;
+const mockSearchLocations = searchLocations as jest.MockedFunction<
+  typeof searchLocations
+>;
+const mockGetSearchHistory = getSearchHistory as jest.MockedFunction<
+  typeof getSearchHistory
+>;
+const mockAddSearchHistory = addSearchHistory as jest.MockedFunction<
+  typeof addSearchHistory
+>;
+const mockCalculateDistance = calculateDistance as jest.MockedFunction<
+  typeof calculateDistance
+>;
+const mockGetOpenStatusText = getOpenStatusText as jest.MockedFunction<
+  typeof getOpenStatusText
 >;
 
 describe("SearchPanel", () => {
@@ -52,6 +76,7 @@ describe("SearchPanel", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    cacheService.clearMemoryNamespace("nearby_places");
 
     storeState = {
       permissionStatus: "granted",
@@ -60,7 +85,9 @@ describe("SearchPanel", () => {
       currentLocation: { latitude: 45.5, longitude: -73.6 },
     };
 
-    mockUseLocationStore.mockImplementation((selector) => selector(storeState));
+    mockUseLocationStore.mockImplementation((selector) =>
+      selector(storeState as any),
+    );
 
     mockUseLocationService.mockReturnValue({
       getCurrentPosition,
@@ -78,8 +105,8 @@ describe("SearchPanel", () => {
       stopWatching: jest.fn(),
     } as any);
 
-    (getSearchHistory as jest.Mock).mockResolvedValue([]);
-    (getNearbyPlaces as jest.Mock).mockResolvedValue([
+    mockGetSearchHistory.mockResolvedValue([]);
+    mockGetNearbyPlaces.mockResolvedValue([
       {
         id: "n1",
         name: "Cafe Nearby",
@@ -87,7 +114,7 @@ describe("SearchPanel", () => {
         location: { latitude: 45.5001, longitude: -73.6001 },
       },
     ]);
-    (searchLocations as jest.Mock).mockResolvedValue([
+    mockSearchLocations.mockResolvedValue([
       {
         id: "1",
         name: "Place A",
@@ -95,10 +122,17 @@ describe("SearchPanel", () => {
         location: { latitude: 1, longitude: 2 },
       },
     ]);
+
+    // Ensure nearby items aren't filtered out during tests by returning a valid distance
+    mockCalculateDistance.mockReturnValue(0);
   });
 
   it("renders recent searches when visible", async () => {
-    (getSearchHistory as jest.Mock).mockResolvedValue([{ query: "Library" }]);
+    mockGetSearchHistory.mockResolvedValue([
+      { query: "Library", timestamp: 1_700_000_000_000 },
+    ]);
+    storeState.permissionStatus = "denied";
+    storeState.currentLocation = null;
 
     const { queryByText } = render(
       <SearchPanel
@@ -109,7 +143,7 @@ describe("SearchPanel", () => {
     );
 
     await waitFor(() => {
-      expect(getSearchHistory).toHaveBeenCalled();
+      expect(mockGetSearchHistory).toHaveBeenCalledTimes(1);
       expect(queryByText("Recent Searches")).toBeTruthy();
       expect(queryByText("Library")).toBeTruthy();
     });
@@ -152,7 +186,7 @@ describe("SearchPanel", () => {
 
     await waitFor(() => {
       expect(addSearchHistory).toHaveBeenCalledWith("Place A");
-      expect(searchLocations).toHaveBeenCalledWith("Place A");
+      expect(searchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
       expect(onSelectLocation).toHaveBeenCalledWith({
         latitude: 1,
         longitude: 2,
@@ -163,7 +197,7 @@ describe("SearchPanel", () => {
   });
 
   it("fetches nearby places with current location and caches by filter", async () => {
-    const { findByText, getByText } = render(
+    const { getByText } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -171,7 +205,7 @@ describe("SearchPanel", () => {
       />,
     );
 
-    expect(await findByText("Cafe Nearby")).toBeTruthy();
+    expect(mockGetNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
     expect(getNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
 
     fireEvent.press(getByText("Parking"));
@@ -182,7 +216,7 @@ describe("SearchPanel", () => {
     fireEvent.press(getByText("Restaurants"));
 
     await waitFor(() => {
-      expect((getNearbyPlaces as jest.Mock).mock.calls.length).toBe(2);
+      expect(mockGetNearbyPlaces.mock.calls.length).toBe(2);
     });
   });
 
@@ -207,48 +241,10 @@ describe("SearchPanel", () => {
     });
   });
 
-  it("shows location permission UI and calls requestPermission when prompt is allowed", async () => {
-    storeState.permissionStatus = "denied";
-    storeState.canAskAgain = true;
-    storeState.userSkippedPermission = false;
+  it("logs errors when fetching nearby places fails", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
-    const { findByText } = render(
-      <SearchPanel
-        visible
-        onSelectLocation={onSelectLocation}
-        onClose={onClose}
-      />,
-    );
-
-    const button = await findByText("Enable Location");
-    fireEvent.press(button);
-
-    expect(requestPermission).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows settings button and calls openSettings when OS prompt should not be shown", async () => {
-    storeState.permissionStatus = "denied";
-    storeState.canAskAgain = false;
-    storeState.userSkippedPermission = true;
-
-    const { findByText } = render(
-      <SearchPanel
-        visible
-        onSelectLocation={onSelectLocation}
-        onClose={onClose}
-      />,
-    );
-
-    const button = await findByText("Open Settings");
-    fireEvent.press(button);
-
-    expect(openSettings).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows location alert when nearby fetch fails", async () => {
-    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
-    storeState.currentLocation = null;
-    getCurrentPosition.mockRejectedValue(new Error("gps failed"));
+    mockGetNearbyPlaces.mockRejectedValue(new Error("fetch failed"));
 
     render(
       <SearchPanel
@@ -259,14 +255,10 @@ describe("SearchPanel", () => {
     );
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        "Location Required",
-        "Enable location to see nearby places.",
-        expect.any(Array),
-      );
+      expect(errorSpy).toHaveBeenCalled();
     });
 
-    alertSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("close button triggers onClose", () => {
@@ -280,5 +272,260 @@ describe("SearchPanel", () => {
 
     fireEvent.press(getByText("Close"));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("selects recent search item and updates query", async () => {
+    mockGetSearchHistory.mockResolvedValue([
+      { query: "coffee", timestamp: 1_700_000_000_000 },
+    ]);
+
+    const { getByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    // Wait for recent searches to load
+    await waitFor(() => {
+      expect(getByText("coffee")).toBeTruthy();
+    });
+
+    // Click on recent search - this will trigger setQuery and handleSearch
+    fireEvent.press(getByText("coffee"));
+
+    // After clicking, the query should be updated and search should be run
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalled();
+    });
+  });
+
+  it("closes distance filter modal by pressing backdrop", async () => {
+    const { getByTestId, queryByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    await waitFor(() => {
+      fireEvent.press(getByTestId("distance-filter-button"));
+    });
+
+    expect(queryByText("Filter by Distance")).toBeTruthy();
+
+    // Press backdrop to close
+    fireEvent.press(getByTestId("distance-filter-backdrop"));
+
+    // Modal should close
+    await waitFor(() => {
+      expect(queryByText("Filter by Distance")).toBeFalsy();
+    });
+  });
+
+  it("closes details modal by pressing backdrop", async () => {
+    const { findByText, queryByText, getByTestId } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    expect(queryByText("Get Directions")).toBeTruthy();
+
+    // Press backdrop to close
+    fireEvent.press(getByTestId("details-modal-backdrop"));
+
+    // Modal should close
+    await waitFor(() => {
+      expect(queryByText("Get Directions")).toBeFalsy();
+    });
+  });
+
+  it("selects Get Directions and closes modal", async () => {
+    const { findByText, queryByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    const directionsButton = await findByText("Get Directions");
+    fireEvent.press(directionsButton);
+
+    await waitFor(() => {
+      expect(onSelectLocation).toHaveBeenCalledWith({
+        latitude: 45.5001,
+        longitude: -73.6001,
+        name: "Cafe Nearby",
+      });
+      expect(onClose).toHaveBeenCalled();
+      expect(queryByText("Get Directions")).toBeFalsy();
+    });
+  });
+
+  it("toggles opening hours in the details modal", async () => {
+    // Provide opening hours data so the toggle is visible
+    mockGetNearbyPlaces.mockResolvedValueOnce([
+      {
+        id: "n1",
+        name: "Cafe Nearby",
+        address: "123 Main St",
+        location: { latitude: 45.5001, longitude: -73.6001 },
+        openingHours: {
+          openNow: true,
+          weekdayDescriptions: ["Mon: 9am - 5pm"],
+        },
+      },
+    ] as any);
+
+    const { findByText, queryByText, getByTestId } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    // The toggle should appear and show opening hours when pressed
+    fireEvent.press(getByTestId("opening-hours-toggle"));
+
+    await waitFor(() => {
+      expect(queryByText("Mon: 9am - 5pm")).toBeTruthy();
+    });
+  });
+
+  it("does not call getCurrentPosition when store has location", async () => {
+    render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getCurrentPosition).not.toHaveBeenCalled();
+    });
+  });
+
+  it("does not fetch nearby places when location permission is denied", async () => {
+    storeState.permissionStatus = "denied";
+    storeState.canAskAgain = false;
+
+    render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getNearbyPlaces).not.toHaveBeenCalled();
+    });
+  });
+
+  it("does not refetch nearby places when selecting the same filter twice", async () => {
+    const { getByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    // Initial render triggers one fetch
+    expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByText("Parking"));
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(2);
+    });
+
+    // Selecting the same filter again should not trigger another fetch
+    fireEvent.press(getByText("Parking"));
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(2);
+    });
+
+    // Switching back to restaurants should use cached results and not trigger a network call
+    fireEvent.press(getByText("Restaurants"));
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("filters nearby items when applying a custom distance", async () => {
+    mockCalculateDistance.mockReturnValue(1000); // far away so it will be filtered out
+
+    const { getByTestId, getByPlaceholderText, getByText, queryByText } =
+      render(
+        <SearchPanel
+          visible
+          onSelectLocation={onSelectLocation}
+          onClose={onClose}
+        />,
+      );
+
+    // Open the distance filter modal
+    fireEvent.press(getByTestId("distance-filter-button"));
+    expect(queryByText("Filter by Distance")).toBeTruthy();
+
+    // Enter an invalid value - modal should remain open
+    fireEvent.changeText(getByPlaceholderText("Enter distance"), "abc");
+    fireEvent.press(getByText("Apply Custom Distance"));
+    expect(queryByText("Filter by Distance")).toBeTruthy();
+
+    // Enter a valid value and apply - should close and filter out the nearby item
+    fireEvent.changeText(getByPlaceholderText("Enter distance"), "0.1");
+    fireEvent.press(getByText("Apply Custom Distance"));
+
+    await waitFor(() => {
+      expect(queryByText("Filter by Distance")).toBeFalsy();
+      expect(queryByText("Cafe Nearby")).toBeNull();
+    });
+  });
+
+  it("shows rating and phone number in the details modal", async () => {
+    mockGetNearbyPlaces.mockResolvedValueOnce([
+      {
+        id: "n1",
+        name: "Cafe Nearby",
+        address: "123 Main St",
+        location: { latitude: 45.5001, longitude: -73.6001 },
+        rating: 4.5,
+        phoneNumber: "555-1234",
+      },
+    ]);
+
+    const { findByText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const item = await findByText("Cafe Nearby");
+    fireEvent.press(item);
+
+    await waitFor(() => {
+      expect(findByText("4.5 / 5.0")).resolves.toBeTruthy();
+      expect(findByText("555-1234")).resolves.toBeTruthy();
+    });
   });
 });

@@ -68,22 +68,20 @@ class PlacesOfInterestServiceTest {
                 .andExpect(method(org.springframework.http.HttpMethod.POST))
                 .andRespond(withSuccess(mockResponse, MediaType.APPLICATION_JSON));
 
-        String result = placesService.searchPlacesByText("pizza");
-        assertEquals(mockResponse, result);
+        String result = placesService.searchPlacesByText("pizza", 45.5, -73.5);
 
+        assertEquals(mockResponse, result);
         mockServer.verify();
     }
 
     @Test
-    void searchPlacesByText_ReturnsBlank_WhenResponseIsBlank() {
+    void searchPlacesByText_ReturnsNull_WhenResponseIsBlank() {
         mockServer.expect(requestTo("https://places.googleapis.com/v1/places:searchText"))
                 .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        String result = placesService.searchPlacesByText("pizza");
+        String result = placesService.searchPlacesByText("pizza", 45.5, -73.5);
 
         assertNull(result);
         mockServer.verify();
     }
-
-
 }
