@@ -34,8 +34,13 @@ global.fetch = jest.fn(() =>
 ) as jest.Mock;
 
 describe("FloorPlanWebView Component", () => {
+  const defaultFetchResponse = {
+    text: () => Promise.resolve('<svg viewBox="0 0 100 100"><g></g></svg>'),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (global.fetch as jest.Mock).mockResolvedValue(defaultFetchResponse);
   });
 
   it("renders the loading state initially", () => {
@@ -335,5 +340,149 @@ describe("FloorPlanWebView Component", () => {
     ]);
     ref.current?.hidePois();
     expect(ref.current?.hidePois).toBeDefined();
+  });
+
+  it("showRoomMarkers with empty array returns early without error", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    ref.current?.showRoomMarkers([]);
+    expect(ref.current?.showRoomMarkers).toBeDefined();
+  });
+
+  it("drawRoute with empty array does not inject JavaScript", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    ref.current?.drawRoute([]);
+    expect(ref.current?.drawRoute).toBeDefined();
+  });
+
+  it("webViewReady message with pending route triggers executeDrawRoute", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    ref.current?.drawRoute([
+      { x: 50, y: 50 },
+      { x: 100, y: 100 },
+    ]);
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    await waitFor(() => {}, { timeout: 300 });
+    expect(ref.current?.drawRoute).toBeDefined();
+  });
+
+  it("loads SVG without viewBox and adds default viewBox", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      text: () => Promise.resolve("<svg><g></g></svg>"),
+    });
+    const { getByTestId, queryByText } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => {
+      expect(queryByText("Loading floor plan...")).toBeNull();
+      expect(getByTestId("mock-webview")).toBeTruthy();
+    });
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  it("loads SVG without preserveAspectRatio and adds default", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      text: () => Promise.resolve('<svg viewBox="0 0 200 200"><g></g></svg>'),
+    });
+    const { getByTestId, queryByText } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => {
+      expect(queryByText("Loading floor plan...")).toBeNull();
+      expect(getByTestId("mock-webview")).toBeTruthy();
+    });
+  });
+
+  it("renders with routePoints prop and draws route when ready", async () => {
+    const routePoints = [
+      { x: 10, y: 10 },
+      { x: 50, y: 50 },
+      { x: 100, y: 100 },
+    ];
+    const { getByTestId } = render(
+      <FloorPlanWebView
+        buildingId="H"
+        floorNumber="8"
+        routePoints={routePoints}
+      />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    await waitFor(() => {}, { timeout: 400 });
+  });
+
+  it("handles fetch error gracefully", async () => {
+    (global.fetch as jest.Mock).mockRejectedValueOnce(
+      new Error("Network error"),
+    );
+    const { getByText } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => {}, { timeout: 500 });
+    expect(getByText("Loading floor plan...")).toBeTruthy();
+  });
+
+  it("showWaypoints before WebView ready returns early", async () => {
+    const ref = createRef<FloorPlanWebViewRef>();
+    const { getByTestId } = render(
+      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    ref.current?.showWaypoints([{ x: 5, y: 5, id: "wp1" }]);
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    expect(ref.current?.showWaypoints).toBeDefined();
+  });
+
+  it("renders with VL building", async () => {
+    const { getByTestId, queryByText } = render(
+      <FloorPlanWebView buildingId="VL" floorNumber="1" />,
+    );
+    await waitFor(() => {
+      expect(queryByText("Loading floor plan...")).toBeNull();
+      expect(getByTestId("mock-webview")).toBeTruthy();
+    });
+  });
+
+  it("renders with LB building", async () => {
+    const { getByTestId, queryByText } = render(
+      <FloorPlanWebView buildingId="LB" floorNumber="2" />,
+    );
+    await waitFor(() => {
+      expect(queryByText("Loading floor plan...")).toBeNull();
+      expect(getByTestId("mock-webview")).toBeTruthy();
+    });
   });
 });

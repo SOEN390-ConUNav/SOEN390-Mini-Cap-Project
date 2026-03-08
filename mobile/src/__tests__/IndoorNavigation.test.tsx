@@ -579,4 +579,99 @@ describe("IndoorNavigation", () => {
       expect(getByText("Next Shuttle Bus: 14:30")).toBeTruthy(),
     );
   });
+
+  it("resets state when building changes via params", async () => {
+    const { rerender, getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+
+    mockParams = { buildingId: "VL", floor: "1" };
+    rerender(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getAvailableRooms).toHaveBeenCalledWith("VL", "1");
+    });
+  });
+
+  it("selects LB building room and triggers indoor directions", async () => {
+    (getAvailableRooms as jest.Mock).mockImplementation((bId: string) => {
+      if (bId === "LB" || String(bId).startsWith("LB"))
+        return Promise.resolve(["LB-204", "LB-259"]);
+      return Promise.resolve(["H-801", "H-820"]);
+    });
+    mockParams = { buildingId: "LB", floor: "2" };
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      routePoints: [{ x: 1, y: 1 }],
+      steps: [],
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalled();
+    });
+  });
+
+  it("selects CC building room for cross-building routing", async () => {
+    (getAvailableRooms as jest.Mock).mockImplementation((bId: string) => {
+      if (bId === "CC" || String(bId).startsWith("CC"))
+        return Promise.resolve(["CC-101"]);
+      return Promise.resolve(["H-801", "H-820"]);
+    });
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: { routePoints: [], startFloor: "8", endFloor: "8" },
+      endIndoorRoute: { routePoints: [], startFloor: "1", endFloor: "1" },
+      nextShuttleTime: null,
+      totalDuration: "5 min",
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getUniversalDirections).toHaveBeenCalled();
+    });
+  });
+
+  it("handles getRoomPoints error without crashing", async () => {
+    (getRoomPoints as jest.Mock).mockRejectedValue(
+      new Error("Room points error"),
+    );
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+    expect(getByTestId("floor-plan-webview")).toBeTruthy();
+  });
+
+  it("handles getPointsOfInterest error without crashing", async () => {
+    (getPointsOfInterest as jest.Mock).mockRejectedValue(
+      new Error("POI fetch error"),
+    );
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+    expect(getByTestId("floor-plan-webview")).toBeTruthy();
+  });
+
+  it("room tap sets end room and opens start picker when no start", async () => {
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("sim-room-tap"));
+
+    await waitFor(() => {
+      expect(getByTestId("selecting-for").props.children).toBe("start");
+    });
+  });
 });

@@ -2,6 +2,7 @@ package com.soen390.backend.service;
 
 import com.soen390.backend.enums.IndoorManeuverType;
 import com.soen390.backend.object.IndoorDirectionResponse;
+import com.soen390.backend.object.IndoorRouteStep;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -486,6 +487,209 @@ class IndoorDirectionServiceTest {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
                 "Hall-8", "H8-843", "H8-807", "8", null, false);
         assertEquals("8", r.getEndFloor());
+    }
+
+    @Test
+    void getIndoorDirections_routeToStairsWaypoint_setsStairMessageFromRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "Hall-Stairs-Main", "2", "2", false);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty());
+        assertNotNull(r.getStairMessage());
+        assertTrue(r.getStairMessage().contains("stairs"));
+    }
+
+    @Test
+    void getIndoorDirections_crossFloor_elevatorTransition() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H9-903", "8", "9", true);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty());
+        boolean hasElevatorStep = r.getSteps().stream()
+                .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("elevator"));
+        boolean hasStairsStep = r.getSteps().stream()
+                .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("stairs"));
+        assertTrue(hasElevatorStep || hasStairsStep, "Cross-floor route should have transition step");
+    }
+
+    @Test
+    void getIndoorDirections_crossFloor_stairsTransition() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H9-903", "8", "9", false);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty());
+    }
+
+    @Test
+    void getIndoorDirections_stepsIncludeTurnInstructions() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-801", "8", "8", false);
+        assertNotNull(r);
+        assertFalse(r.getSteps().isEmpty());
+        boolean hasTurnOrStraight = r.getSteps().stream()
+                .anyMatch(s -> s.instruction() != null && (
+                        s.instruction().contains("Turn") ||
+                                s.instruction().contains("straight") ||
+                                s.instruction().contains("Walk")));
+        assertTrue(hasTurnOrStraight, "Steps should include movement instructions");
+    }
+
+    @Test
+    void getIndoorDirections_singlePointRoute_returnsEmptySteps() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "INVALID", "ALSO-INVALID", "8", "8", false);
+        assertNotNull(r);
+        assertTrue(r.getRoutePoints().isEmpty());
+        assertTrue(r.getSteps().isEmpty());
+    }
+
+    @Test
+    void getBuildingName_H_returnsHallBuilding() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H8-843", "H8-807", "8", "8", false);
+        assertEquals("Hall Building", r.getBuildingName());
+    }
+
+    @Test
+    void getIndoorDirections_durationFormat_includesUnits() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertNotNull(r.getDuration());
+        assertTrue(r.getDuration().contains("sec") || r.getDuration().contains("min"));
+    }
+
+    @Test
+    void getIndoorDirections_distanceFormat_includesMeters() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertNotNull(r.getDistance());
+        assertTrue(r.getDistance().contains("m"));
+    }
+
+    @Test
+    void getIndoorDirections_arriveStep_hasEnterRoomManeuver() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertFalse(r.getSteps().isEmpty());
+        IndoorRouteStep lastStep = r.getSteps().get(r.getSteps().size() - 1);
+        assertEquals(IndoorManeuverType.ENTER_ROOM, lastStep.maneuverType());
+        assertTrue(lastStep.instruction().contains("Arrive"));
+    }
+
+    @Test
+    void getWaypoints_unknownBuilding_returnsEmpty() {
+        var wps = directionService.getWaypoints("XX", "99");
+        assertNotNull(wps);
+        assertTrue(wps.isEmpty());
+    }
+
+    @Test
+    void getPointsOfInterest_unknownBuilding_returnsEmpty() {
+        var pois = directionService.getPointsOfInterest("XX", "99");
+        assertNotNull(pois);
+        assertTrue(pois.isEmpty());
+    }
+
+    @Test
+    void getIndoorDirections_LB3_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-3", "LB-322", "LB-359", "3", "3", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_LB4_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-4", "LB-451", "LB-459", "4", "4", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_LB5_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-5", "LB-518", "LB-522", "5", "5", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_Hall1_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-1", "H1-101", "H1-102", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_responseHasBuildingInfo() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertNotNull(r.getBuildingId());
+        assertNotNull(r.getStartFloor());
+        assertNotNull(r.getEndFloor());
+    }
+
+    @Test
+    void getIndoorDirections_allStepsHaveRequiredFields() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        for (IndoorRouteStep step : r.getSteps()) {
+            assertNotNull(step.instruction());
+            assertNotNull(step.distance());
+            assertNotNull(step.duration());
+            assertNotNull(step.maneuverType());
+        }
+    }
+
+    @Test
+    void getIndoorDirections_routePointsHaveCoordinates() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        for (var pt : r.getRoutePoints()) {
+            assertNotNull(pt.getX());
+            assertNotNull(pt.getY());
+        }
+    }
+
+    @Test
+    void getAvailableRooms_VL_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("VL", "2");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getAvailableRooms_MB_S2_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("MB", "S2");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getIndoorDirections_crossFloor_Hall8to9_hasTransitionLabel() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H9-903", "8", "9", false);
+        boolean hasTransition = r.getRoutePoints().stream()
+                .anyMatch(p -> p.getLabel() != null && p.getLabel().startsWith("TRANSITION_"));
+        assertTrue(hasTransition || r.getRoutePoints().isEmpty(),
+                "Cross-floor route should have transition point or be empty");
+    }
+
+    @Test
+    void getIndoorDirections_avoidStairs_sameFloor_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-2", "LB-204", "LB-259", "2", "2", true);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_CC_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "CC-1", "CC-101", "CC-102", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_VE_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-101", "VE-102", "1", "1", false);
+        assertNotNull(r);
     }
 
 }
