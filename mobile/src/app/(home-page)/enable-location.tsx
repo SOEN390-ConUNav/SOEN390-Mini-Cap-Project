@@ -3,12 +3,12 @@ import { StyleSheet, Text, View, Pressable, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import useLocationService from "../../hooks/useLocationService";
 import useLocationStore from "../../hooks/useLocationStore";
-
-const BURGUNDY = "#800020";
+import { useTheme } from "../../hooks/useTheme";
 
 export default function EnableLocation() {
   const router = useRouter();
   const params = useLocalSearchParams<{ reason?: string }>();
+  const { colors } = useTheme();
   const {
     requestPermission,
     markPermissionScreenSeen,
@@ -74,15 +74,15 @@ export default function EnableLocation() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconCircle}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.iconCircle, { backgroundColor: colors.primary + "2E" }]}>
         <Text style={styles.icon}>{isRevoked ? "⚠️" : "📍"}</Text>
       </View>
 
       {isRevoked ? (
         <>
-          <Text style={styles.title}>Location Permission Revoked</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.text }]}>Location Permission Revoked</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             Location access was previously granted but has been revoked. To
             continue using location features, please re-enable permission in
             your device settings.
@@ -90,8 +90,8 @@ export default function EnableLocation() {
         </>
       ) : (
         <>
-          <Text style={styles.title}>Enable Location Services</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.text }]}>Enable Location Services</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             To help you navigate Concordia's campus, we need access to your
             location. This allows us to show your position on the map and
             provide accurate directions.
@@ -101,14 +101,17 @@ export default function EnableLocation() {
 
       <View style={styles.bullets}>
         <Bullet
+          colors={colors}
           title="Real-time positioning"
           desc="See your exact location on campus"
         />
         <Bullet
+          colors={colors}
           title="Turn-by-turn directions"
           desc="Navigate between buildings easily"
         />
         <Bullet
+          colors={colors}
           title="Nearby points of interest"
           desc="Find cafeterias, libraries, and more"
         />
@@ -116,7 +119,7 @@ export default function EnableLocation() {
 
       {shouldShowOSPrompt ? (
         <Pressable
-          style={styles.enableBtn}
+          style={[styles.enableBtn, { backgroundColor: colors.primary }]}
           onPress={() => {
             void onEnableLocation();
           }}
@@ -125,7 +128,7 @@ export default function EnableLocation() {
         </Pressable>
       ) : (
         <Pressable
-          style={styles.enableBtn}
+          style={[styles.enableBtn, { backgroundColor: colors.primary }]}
           onPress={() => {
             void openSettings();
           }}
@@ -140,7 +143,7 @@ export default function EnableLocation() {
           void onSkipLocation();
         }}
       >
-        <Text style={styles.skipText}>
+        <Text style={[styles.skipText, { color: colors.textMuted }]}>
           {isRevoked ? "Continue without location" : "Skip for now"}
         </Text>
       </Pressable>
@@ -148,13 +151,21 @@ export default function EnableLocation() {
   );
 }
 
-function Bullet({ title, desc }: Readonly<{ title: string; desc: string }>) {
+function Bullet({
+  colors,
+  title,
+  desc,
+}: {
+  colors: { text: string; textMuted: string; primary: string };
+  title: string;
+  desc: string;
+}) {
   return (
     <View style={styles.bulletRow}>
-      <View style={styles.dot} />
+      <View style={[styles.dot, { backgroundColor: colors.primary }]} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.bulletTitle}>{title}</Text>
-        <Text style={styles.bulletDesc}>{desc}</Text>
+        <Text style={[styles.bulletTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.bulletDesc, { color: colors.textMuted }]}>{desc}</Text>
       </View>
     </View>
   );
@@ -163,7 +174,6 @@ function Bullet({ title, desc }: Readonly<{ title: string; desc: string }>) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     paddingTop: 80,
     paddingHorizontal: 24,
   },
@@ -171,7 +181,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(128,0,32,0.18)",
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
@@ -187,7 +196,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: "center",
-    color: "#666",
     lineHeight: 20,
     marginBottom: 24,
   },
@@ -199,14 +207,12 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: BURGUNDY,
     marginTop: 6,
   },
   bulletTitle: { fontWeight: "700", marginBottom: 2 },
-  bulletDesc: { color: "#666" },
+  bulletDesc: {},
 
   enableBtn: {
-    backgroundColor: BURGUNDY,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
@@ -215,5 +221,5 @@ const styles = StyleSheet.create({
   enableText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 
   skipBtn: { paddingVertical: 14, alignItems: "center" },
-  skipText: { color: "#777", fontWeight: "600" },
+  skipText: { fontWeight: "600" },
 });

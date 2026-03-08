@@ -25,7 +25,7 @@ import EventDetailsPopup from "../../components/EventDetailsPopup";
 import useNavigationState from "../../hooks/useNavigationState";
 import { NAVIGATION_STATE } from "../../const";
 import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
-import { styles as navStyles } from "../../components/BottomNav";
+import { useTabBarStyle } from "../../components/BottomNav";
 import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
 import DirectionPath from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
@@ -43,6 +43,8 @@ import useLocationStore from "../../hooks/useLocationStore";
 import useRerouting from "../../hooks/useRerouting";
 import useNavigationProgress from "../../hooks/useNavigationProgress";
 import LocationPromptModal from "../../components/LocationPromptModal";
+import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
+import { useTheme } from "../../hooks/useTheme";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -76,8 +78,20 @@ export default function HomePageIndex() {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams<{ shuttleCampus?: string }>();
+  const tabBarStyle = useTabBarStyle();
+  const { hydrateFromStorage: hydrateGeneral } = useGeneralSettingsStore();
+  const { colors } = useTheme();
 
   const [campus, setCampus] = useState<"SGW" | "LOYOLA">("SGW");
+
+  useEffect(() => {
+    let mounted = true;
+    hydrateGeneral().then(() => {
+      if (mounted) setCampus(useGeneralSettingsStore.getState().defaultCampus);
+    });
+    return () => { mounted = false; };
+  }, [hydrateGeneral]);
+
   const {
     setNavigationState,
     isNavigating,
@@ -251,12 +265,12 @@ export default function HomePageIndex() {
     const style =
       isConfiguring || isNavigating || isCancellingNavigation
         ? { display: "none" }
-        : navStyles.tabBarStyle;
+        : tabBarStyle;
 
     navigation.setOptions({ tabBarStyle: style });
 
     navigation.getParent()?.setOptions({ tabBarStyle: style });
-  }, [isConfiguring, isNavigating, isCancellingNavigation, navigation]);
+  }, [isConfiguring, isNavigating, isCancellingNavigation, navigation, tabBarStyle]);
 
   useEffect(() => {
     scheduleFreezeMarkers();
@@ -808,44 +822,44 @@ export default function HomePageIndex() {
 
   if (shouldShowEnableLocation) {
     return (
-      <View style={styles.root}>
-        <View style={styles.enableLocationContainer}>
-          <View style={styles.enableLocationIconCircle}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <View style={[styles.enableLocationContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.enableLocationIconCircle, { backgroundColor: colors.primary + "2E" }]}>
             <Text style={styles.enableLocationIcon}>
               {isRevoked ? "⚠️" : "📍"}
             </Text>
           </View>
-          <Text style={styles.enableLocationTitle}>
+          <Text style={[styles.enableLocationTitle, { color: colors.text }]}>
             {isRevoked
               ? "Location Permission Revoked"
               : "Enable Location Services"}
           </Text>
-          <Text style={styles.enableLocationSubtitle}>
+          <Text style={[styles.enableLocationSubtitle, { color: colors.textMuted }]}>
             {isRevoked
               ? "Location access was previously granted but has been revoked. Please re-enable in settings."
               : "To help you navigate Concordia's campus, we need access to your location."}
           </Text>
           <View style={styles.enableLocationBullets}>
-            <Text style={styles.enableLocationBullet}>
+            <Text style={[styles.enableLocationBullet, { color: colors.textMuted }]}>
               • Real-time positioning on the map
             </Text>
-            <Text style={styles.enableLocationBullet}>
+            <Text style={[styles.enableLocationBullet, { color: colors.textMuted }]}>
               • Turn-by-turn directions
             </Text>
-            <Text style={styles.enableLocationBullet}>
+            <Text style={[styles.enableLocationBullet, { color: colors.textMuted }]}>
               • Nearby points of interest
             </Text>
           </View>
           {shouldShowOSPrompt ? (
             <Pressable
-              style={styles.enableLocationBtn}
+              style={[styles.enableLocationBtn, { backgroundColor: colors.primary }]}
               onPress={() => void onEnableLocation()}
             >
               <Text style={styles.enableLocationBtnText}>Enable Location</Text>
             </Pressable>
           ) : (
             <Pressable
-              style={styles.enableLocationBtn}
+              style={[styles.enableLocationBtn, { backgroundColor: colors.primary }]}
               onPress={() => void openSettings()}
             >
               <Text style={styles.enableLocationBtnText}>Open Settings</Text>
@@ -855,7 +869,7 @@ export default function HomePageIndex() {
             style={styles.enableLocationSkip}
             onPress={() => void onSkipLocation()}
           >
-            <Text style={styles.enableLocationSkipText}>
+            <Text style={[styles.enableLocationSkipText, { color: colors.textMuted }]}>
               {isRevoked ? "Continue without location" : "Skip for now"}
             </Text>
           </Pressable>
@@ -865,7 +879,7 @@ export default function HomePageIndex() {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
@@ -1111,7 +1125,7 @@ export default function HomePageIndex() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#fff" },
+  root: { flex: 1 },
   enableLocationContainer: { flex: 1, paddingTop: 80, paddingHorizontal: 24 },
   enableLocationIconCircle: {
     width: 120,

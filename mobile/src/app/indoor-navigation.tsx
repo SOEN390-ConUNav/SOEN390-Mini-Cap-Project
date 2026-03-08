@@ -12,10 +12,12 @@ import FloorPlanWebView, { FloorPlanWebViewRef, PoiMarker, RoomMarkerData } from
 import FloorSelector from '../components/FloorSelector';
 import { BuildingId } from '../data/buildings';
 import { getBackendBuildingId, getDefaultFloor, getAvailableFloors } from '../utils/buildingIndoorMaps';
+import { useTheme } from '../hooks/useTheme';
 
 export default function IndoorNavigation() {
   const router = useRouter();
   const params = useLocalSearchParams<{ buildingId?: string; floor?: string }>();
+  const { colors } = useTheme();
   
   
   const buildingId = (params.buildingId as BuildingId) || 'H';
@@ -225,7 +227,7 @@ export default function IndoorNavigation() {
   const statusBarHeight = Constants.statusBarHeight || (Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="dark-content" />
       
   
@@ -281,8 +283,8 @@ export default function IndoorNavigation() {
 
    
       {routeData?.stairMessage && (
-        <View style={styles.stairBanner}>
-          <Text style={styles.stairBannerText}>🚶 {routeData.stairMessage}</Text>
+        <View style={[styles.stairBanner, { backgroundColor: colors.card, borderLeftColor: colors.primary }]}>
+          <Text style={[styles.stairBannerText, { color: colors.text }]}>🚶 {routeData.stairMessage}</Text>
         </View>
       )}
 
@@ -327,7 +329,6 @@ export default function IndoorNavigation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   mapContainer: {
     flex: 1,
@@ -342,7 +343,6 @@ const styles = StyleSheet.create({
     bottom: 180,
     left: 16,
     right: 16,
-    backgroundColor: '#FFF3E0',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -353,10 +353,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
   },
   stairBannerText: {
-    color: '#E65100',
     fontSize: 14,
     fontWeight: '600',
   },

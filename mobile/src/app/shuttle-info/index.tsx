@@ -5,6 +5,14 @@ import { useRouter } from "expo-router";
 import CampusSwitcher from "../../components/CampusSwitcher";
 import { computeNextDepartures } from "../../data/ShuttleSchedule";
 import { getSchedule, DeparturesByDay } from "../../services/shuttleScheduleCache";
+import {
+  useAccessibilitySettings,
+  getFontScale,
+  getFontWeightValue,
+} from "../../hooks/useAccessibilitySettings";
+import { useTheme } from "../../hooks/useTheme";
+import { type ThemeColors, BURGUNDY } from "../../theme/theme";
+import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
 
 type Campus = "SGW" | "LOYOLA";
 type CampusKey = "sgw" | "loyola";
@@ -20,14 +28,29 @@ const CAMPUS_INFO = {
     },
 } as const;
 
-const BURGUNDY = "#800020";
-
 export default function ShuttleInfoPage() {
     const router = useRouter();
+    const { colors } = useTheme();
+    const { fontSize, fontWeight } = useAccessibilitySettings();
+    const fontScale = getFontScale(fontSize);
+    const weightValue = getFontWeightValue(fontWeight);
+
+    const font = (base: number) => ({
+        fontSize: base * fontScale,
+        fontWeight: weightValue,
+    });
     const [campus, setCampus] = useState<Campus>("SGW");
     const [showFullSchedule, setShowFullSchedule] = useState(false);
     const [schedule, setSchedule] = useState<DeparturesByDay | null>(null);
     const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+        useGeneralSettingsStore.getState().hydrateFromStorage().then(() => {
+            if (mounted) setCampus(useGeneralSettingsStore.getState().defaultCampus);
+        });
+        return () => { mounted = false; };
+    }, []);
 
     useEffect(() => {
         getSchedule()
@@ -61,8 +84,8 @@ export default function ShuttleInfoPage() {
 
     if (error) {
         return (
-            <View style={styles.center}>
-                <Text style={styles.errorText}>
+            <View style={[styles.center, { backgroundColor: colors.background }]}>
+                <Text style={[styles.errorText, { color: colors.text }]}>
                     Unable to load shuttle schedule. Please try again later.
                 </Text>
             </View>
@@ -71,15 +94,15 @@ export default function ShuttleInfoPage() {
 
     if (!schedule) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color={BURGUNDY} />
-                <Text style={styles.loadingText}>Loading shuttle schedule…</Text>
+            <View style={[styles.center, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.text }]}>Loading shuttle schedule…</Text>
             </View>
         );
     }
 
     return (
-        <View style={styles.root}>
+        <View style={[styles.root, { backgroundColor: colors.background }]}>
             <ScrollView
                 contentContainerStyle={styles.content}
                 style={{ flex: 1 }}
@@ -90,20 +113,20 @@ export default function ShuttleInfoPage() {
                         onPress={() => setShowFullSchedule(false)}
                         hitSlop={10}
                     >
-                        <Ionicons name="arrow-back" size={22} color={BURGUNDY} />
+                        <Ionicons name="arrow-back" size={22} color={colors.primary} />
                     </Pressable>
                 )}
 
-                <Text style={styles.title}>Shuttle Schedule</Text>
+                <Text style={[styles.title, font(30), { color: colors.text }]}>Shuttle Schedule</Text>
 
                 <View style={styles.locationRow}>
-                    <Text style={styles.locationLabel}>
+                    <Text style={[styles.locationLabel, font(13), { color: colors.textMuted }]}>
                         {campus === "SGW" ? "S.G.W Departures" : "Loyola Departures"}
                     </Text>
                     <View style={styles.locationLine}>
-                        <Text style={styles.locationText}>{campusInfo.address}</Text>
+                        <Text style={[styles.locationText, font(14), { color: colors.text }]}>{campusInfo.address}</Text>
                         <Pressable
-                            style={styles.directionsBtn}
+                            style={[styles.directionsBtn, { backgroundColor: colors.primary }]}
                             onPress={onDirectionsPress}
                             hitSlop={10}
                         >
@@ -113,13 +136,13 @@ export default function ShuttleInfoPage() {
                 </View>
 
                 {showFullSchedule ? (
-                    <FullScheduleTable monThu={monThuTimes} fri={fridayTimes} />
+                    <FullScheduleTable monThu={monThuTimes} fri={fridayTimes} colors={colors} />
                 ) : (
                     <>
-                        <Text style={styles.sectionTitle}>Next Departures</Text>
+                        <Text style={[styles.sectionTitle, font(18), { color: colors.text }]}>Next Departures</Text>
 
                         {nextDepartures.length === 0 ? (
-                            <Text style={{ color: "#666" }}>No more departures today.</Text>
+                            <Text style={[{ color: colors.textMuted }, font(14)]}>No more departures today.</Text>
                         ) : (
                             <View style={styles.list}>
                                 {nextDepartures.map((d) => (
@@ -129,6 +152,7 @@ export default function ShuttleInfoPage() {
                                         from={d.from}
                                         eta={d.eta}
                                         countdownMin={d.countdownMin}
+                                        colors={colors}
                                     />
                                 ))}
                             </View>
@@ -137,10 +161,10 @@ export default function ShuttleInfoPage() {
                         <View style={styles.divider} />
 
                         <Pressable
-                            style={styles.fullButton}
+                            style={[styles.fullButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                             onPress={() => setShowFullSchedule(true)}
                         >
-                            <Text style={styles.fullButtonText}>View Full Schedule</Text>
+                            <Text style={[styles.fullButtonText, font(16), { color: "#fff" }]}>View Full Schedule</Text>
                         </Pressable>
                     </>
                 )}
@@ -154,50 +178,75 @@ export default function ShuttleInfoPage() {
 }
 
 function DepartureCard({
-                           time,
-                           from,
-                           eta,
-                           countdownMin,
-                       }: {
+    time,
+    from,
+    eta,
+    countdownMin,
+    colors,
+}: {
     time: string;
     from: string;
     eta: string;
     countdownMin: number;
+    colors: ThemeColors;
 }) {
+    const { fontSize, fontWeight } = useAccessibilitySettings();
+    const fontScale = getFontScale(fontSize);
+    const weightValue = getFontWeightValue(fontWeight);
+
+    const font = (base: number) => ({
+        fontSize: base * fontScale,
+        fontWeight: weightValue,
+    });
+
     return (
         <Pressable
-            style={styles.card}
+            style={[styles.card, { backgroundColor: colors.card }]}
             onPress={() => {
                 /* TODO: open route/directions */
             }}
         >
             <View style={styles.cardLeft}>
-                <Text style={styles.cardTime}>{time}</Text>
-                <Text style={styles.cardFrom}>from {from}</Text>
-                <Text style={styles.cardEta}>{eta}</Text>
+                <Text style={[styles.cardTime, font(22), { color: colors.text }]}>{time}</Text>
+                <Text style={[styles.cardFrom, font(13), { color: colors.textMuted }]}>from {from}</Text>
+                <Text style={[styles.cardEta, font(13), { color: colors.textMuted }]}>{eta}</Text>
             </View>
 
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>{countdownMin}min</Text>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.badgeText, font(14)]}>{countdownMin}min</Text>
             </View>
         </Pressable>
     );
 }
 
 function FullScheduleTable({
-                               monThu,
-                               fri,
-                           }: {
+    monThu,
+    fri,
+    colors,
+}: {
     monThu: string[];
     fri: string[];
+    colors: ThemeColors;
 }) {
     const rows = Math.max(monThu.length, fri.length);
 
+    const { fontSize, fontWeight } = useAccessibilitySettings();
+    const fontScale = getFontScale(fontSize);
+    const weightValue = getFontWeightValue(fontWeight);
+
+    const font = (base: number) => ({
+        fontSize: base * fontScale,
+        fontWeight: weightValue,
+    });
+
+    const rowAltBg = colors.surface;
+    const rowMainBg = colors.card;
+
     return (
-        <View style={styles.table}>
-            <View style={styles.tableHeader}>
-                <Text style={styles.tableHeaderText}>Monday - Thursday</Text>
-                <Text style={styles.tableHeaderText}>Friday</Text>
+        <View style={[styles.table, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.tableHeader, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.tableHeaderText, font(16)]}>Monday - Thursday</Text>
+                <Text style={[styles.tableHeaderText, font(16)]}>Friday</Text>
             </View>
 
             {Array.from({ length: rows }).map((_, i) => {
@@ -205,10 +254,10 @@ function FullScheduleTable({
                 return (
                     <View
                         key={i}
-                        style={[styles.tableRow, zebra ? styles.rowLight : styles.rowDark]}
+                        style={[styles.tableRow, { backgroundColor: zebra ? rowMainBg : rowAltBg }]}
                     >
-                        <Text style={styles.cellText}>{monThu[i] ?? ""}</Text>
-                        <Text style={styles.cellText}>{fri[i] ?? ""}</Text>
+                        <Text style={[styles.cellText, font(14), { color: colors.text }]}>{monThu[i] ?? ""}</Text>
+                        <Text style={[styles.cellText, font(14), { color: colors.text }]}>{fri[i] ?? ""}</Text>
                     </View>
                 );
             })}
@@ -217,13 +266,12 @@ function FullScheduleTable({
 }
 
 const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#fff" },
+    root: { flex: 1 },
 
     center: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#fff",
         padding: 24,
     },
     loadingText: { marginTop: 12, fontSize: 14, color: "#666" },

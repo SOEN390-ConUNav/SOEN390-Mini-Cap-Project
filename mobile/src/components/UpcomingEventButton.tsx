@@ -22,8 +22,12 @@ import {
   requestSetGoogleSelectedCalendar,
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
-
-const BURGUNDY = "#800020";
+import { useTheme } from "../hooks/useTheme";
+import {
+  useAccessibilitySettings,
+  getFontScale,
+  getFontWeightValue,
+} from "../hooks/useAccessibilitySettings";
 
 export default function UpcomingEventButton({
   onMainButtonPress,
@@ -51,6 +55,14 @@ export default function UpcomingEventButton({
   const [nextEvent, setNextEvent] = useState<any | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
+  const { colors } = useTheme();
+  const { fontSize, fontWeight } = useAccessibilitySettings();
+  const fontScale = getFontScale(fontSize);
+  const weightValue = getFontWeightValue(fontWeight);
+  const buttonFontStyle = {
+    fontSize: Math.round(12 * fontScale),
+    fontWeight: weightValue as "400" | "500" | "700",
+  };
 
   const clearLocalGoogleState = () => {
     setSelectedCalendar(null);
@@ -301,19 +313,33 @@ export default function UpcomingEventButton({
     <View style={{ width: "100%" }}>
       {!showRedEventButton ? (
         <TouchableOpacity
-          style={[styles.upcomingBtn, styles.importBtn]}
+          style={[
+            styles.upcomingBtn,
+            styles.importBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.primary,
+            },
+          ]}
           onPress={() => {
             onMainButtonPress?.();
             if (!isBusy) void startImportFlow();
           }}
         >
-          <Text style={styles.upcomingBtnText}>
+          <Text style={[styles.upcomingBtnText, buttonFontStyle, { color: colors.primary }]}>
             Import Google Calendar Schedule
           </Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[styles.upcomingBtn, styles.upcomingEventBtn]}
+          style={[
+            styles.upcomingBtn,
+            styles.upcomingEventBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.primary,
+            },
+          ]}
           onPress={() => {
             onMainButtonPress?.();
             onOpenEventDetails?.({
@@ -347,7 +373,9 @@ export default function UpcomingEventButton({
             });
           }}
         >
-          <Text style={styles.upcomingBtnText}>{upcomingButtonLabel}</Text>
+          <Text style={[styles.upcomingBtnText, buttonFontStyle, { color: colors.primary }]}>
+            {upcomingButtonLabel}
+          </Text>
         </TouchableOpacity>
       )}
 
@@ -431,8 +459,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: BURGUNDY,
-    backgroundColor: "white",
     alignItems: "center",
     width: "80%",
     alignSelf: "center",
@@ -444,10 +470,7 @@ const styles = StyleSheet.create({
     width: "67%",
   },
   upcomingBtnText: {
-    color: BURGUNDY,
-    fontWeight: "700",
     textAlign: "center",
-    fontSize: 12,
   },
 
   modalBackdrop: {

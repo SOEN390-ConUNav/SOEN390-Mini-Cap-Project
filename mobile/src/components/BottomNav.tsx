@@ -1,12 +1,13 @@
 import React from "react";
-import { StyleSheet, View, Pressable } from "react-native";
+import { StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useAccessibilitySettings } from "../hooks/useAccessibilitySettings";
+import { useTheme } from "../hooks/useTheme";
 
-const BURGUNDY = "#800020";
 const TABS = [
   {
-    name: "settings/index",
+    name: "settings",
     title: "Settings",
     iconFocused: "settings",
     iconOutline: "settings-outline",
@@ -25,40 +26,55 @@ const TABS = [
   },
 ] as const;
 
-export const styles = StyleSheet.create({
-  tabBarStyle: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 78,
-    paddingBottom: 18,
-    paddingTop: 10,
-    backgroundColor: "rgba(255,255,255,0.98)",
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 10,
-    borderTopWidth: 0, // Remove default border
-  },
-  tabBarItemStyle: {
-    width: 52,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+const createTabBarStyle = (tabBarBackground: string) => ({
+  position: "absolute" as const,
+  bottom: 0,
+  left: 0,
+  right: 0,
+  height: 78,
+  paddingBottom: 18,
+  paddingTop: 10,
+  backgroundColor: tabBarBackground,
+  borderTopLeftRadius: 18,
+  borderTopRightRadius: 18,
+  shadowColor: "#000",
+  shadowOpacity: 0.1,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: -4 },
+  elevation: 10,
+  borderTopWidth: 0,
 });
 
+export const tabBarItemStyle = {
+  width: 52,
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+};
+
+/** Used by home page to show tab bar with correct theme (e.g. after hiding during navigation). */
+export function useTabBarStyle() {
+  const { colors } = useTheme();
+  return createTabBarStyle(colors.tabBarBackground);
+}
+
 export default function BottomNav() {
+  const { colorBlindMode, highContrastMode } = useAccessibilitySettings();
+  const { colors } = useTheme();
+
+  const primaryColor = highContrastMode
+    ? "#000000"
+    : colorBlindMode
+    ? "#005F99"
+    : colors.primary;
+
   return (
     <Tabs
       screenOptions={{
-        ...styles,
         headerShown: false,
-        tabBarActiveTintColor: BURGUNDY,
-        tabBarInactiveTintColor: BURGUNDY,
+        tabBarStyle: createTabBarStyle(colors.tabBarBackground),
+        tabBarItemStyle,
+        tabBarActiveTintColor: primaryColor,
+        tabBarInactiveTintColor: primaryColor,
         tabBarShowLabel: false,
       }}
     >
@@ -71,19 +87,23 @@ export default function BottomNav() {
             tabBarIcon: ({ focused }) => (
               <Ionicons
                 name={focused ? tab.iconFocused : tab.iconOutline}
-                color={BURGUNDY}
+                color={primaryColor}
                 size={22}
               />
             ),
           }}
         />
       ))}
-      <Tabs.Screen
-        name="indoor-navigation"
-        options={{
-          href: null,
-        }}
-      />
+      {/* Hide settings sub-screens from the tab bar so only the root appears */}
+      <Tabs.Screen name="settings/general" options={{ href: null }} />
+      <Tabs.Screen name="settings/display" options={{ href: null }} />
+      <Tabs.Screen name="settings/notifications" options={{ href: null }} />
+      <Tabs.Screen name="settings/location-privacy" options={{ href: null }} />
+      <Tabs.Screen name="settings/navigation" options={{ href: null }} />
+      <Tabs.Screen name="settings/accessibility" options={{ href: null }} />
+      <Tabs.Screen name="settings/about" options={{ href: null }} />
+      <Tabs.Screen name="settings/terms" options={{ href: null }} />
+      <Tabs.Screen name="indoor-navigation" options={{ href: null }} />
     </Tabs>
   );
 }
