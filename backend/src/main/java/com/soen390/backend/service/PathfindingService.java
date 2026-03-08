@@ -3,6 +3,7 @@ package com.soen390.backend.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.soen390.backend.controller.IndoorDirectionsController;
+import com.soen390.backend.service.strategy.AccessibilityRoutingStrategy;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -184,15 +185,23 @@ public class PathfindingService {
         return input.replaceAll("[\\r\\n\\t]", "_");
     }
 
+    public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end) {
+        return findPathThroughWaypoints(start, end, false);
+    }
+
     public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end, boolean avoidStairs) {
+        return findPathThroughWaypoints(start, end, AccessibilityRoutingStrategy.fromAvoidStairs(avoidStairs));
+    }
+
+    public List<Waypoint> findPathThroughWaypoints(Waypoint start, Waypoint end, AccessibilityRoutingStrategy strategy) {
         if (start == null || end == null) return Collections.emptyList();
 
         Graph<Waypoint, DefaultWeightedEdge> graph =
-                avoidStairs ? graphsNoStairs.get(currentBuildingId) : graphs.get(currentBuildingId);
+                strategy.allowsStairs() ? graphs.get(currentBuildingId) : graphsNoStairs.get(currentBuildingId);
 
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
-            log.error("Graph missing or vertices not found for {} (avoidStairs={})",
-                    sanitize(currentBuildingId), avoidStairs);
+            log.error("Graph missing or vertices not found for {} (allowsStairs={})",
+                    sanitize(currentBuildingId), strategy.allowsStairs());
             return Collections.emptyList();
         }
 
@@ -200,8 +209,8 @@ public class PathfindingService {
                 new DijkstraShortestPath<>(graph).getPath(start, end);
 
         if (path == null) {
-            log.error("No path found between waypoints: {} -> {} (avoidStairs={})",
-                    sanitize(start.id), sanitize(end.id), avoidStairs);
+            log.error("No path found between waypoints: {} -> {} (allowsStairs={})",
+                    sanitize(start.id), sanitize(end.id), strategy.allowsStairs());
             return Collections.emptyList();
         }
 

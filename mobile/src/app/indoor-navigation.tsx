@@ -37,6 +37,12 @@ import {
   getAvailableFloors,
 } from "../utils/buildingIndoorMaps";
 
+function getRoomPromisesForBuildings(buildings: BuildingId[]) {
+  return buildings.flatMap((bId) =>
+    getAvailableFloors(bId).map((floorNum) => getAvailableRooms(bId, floorNum)),
+  );
+}
+
 export default function IndoorNavigation() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -141,8 +147,22 @@ export default function IndoorNavigation() {
 
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
     if (!roomId) return fallbackFloor;
-    const match = roomId.match(/[a-zA-Z]+-?(S?\d)/);
-    return match ? match[1] : fallbackFloor;
+    const parts = roomId.split("-");
+    const lastPart = parts.length > 1 ? parts[parts.length - 1] : roomId;
+    if (
+      lastPart.startsWith("S") &&
+      lastPart.length >= 2 &&
+      lastPart[1] >= "0" &&
+      lastPart[1] <= "9"
+    ) {
+      return lastPart.slice(0, 2);
+    }
+    for (let i = 0; i < lastPart.length; i++) {
+      if (lastPart[i] >= "0" && lastPart[i] <= "9") {
+        return lastPart[i];
+      }
+    }
+    return fallbackFloor;
   };
 
   const getBuildingFromRoom = (roomId: string, fallbackBuilding: string) => {
@@ -179,6 +199,36 @@ export default function IndoorNavigation() {
     setEndBuildingId(getBuildingFromRoom(tempRoom, buildingId));
   };
 
+  const applyIndoorRouteResponse = useCallback(
+    (response: IndoorDirectionResponse, requestId: number) => {
+      if (requestId !== routeRequestIdRef.current) return;
+      const hasValidRoute =
+        response.routePoints && response.routePoints.length > 0;
+      if (hasValidRoute) {
+        mapViewRef.current?.clearRoute();
+        setRouteData(response);
+        setUniversalRouteData(null);
+      } else {
+        handleClearRoute();
+        setRouteData(null);
+      }
+    },
+    [handleClearRoute],
+  );
+
+  const applyUniversalRouteResponse = useCallback(
+    (response: any, requestId: number) => {
+      if (requestId !== routeRequestIdRef.current) return;
+      if (response.startIndoorRoute) {
+        mapViewRef.current?.clearRoute();
+        setUniversalRouteData(response);
+        setRouteData(response.startIndoorRoute);
+        setRoutePhase("origin");
+      }
+    },
+    [],
+  );
+
   const fetchRoute = useCallback(async () => {
     if (!startRoom || !endRoom || startRoom === endRoom) return;
 
@@ -199,17 +249,7 @@ export default function IndoorNavigation() {
           destFloor,
           avoidStairs,
         );
-
-        if (requestId !== routeRequestIdRef.current) return;
-
-        if (response.routePoints && response.routePoints.length > 0) {
-          mapViewRef.current?.clearRoute();
-          setRouteData(response);
-          setUniversalRouteData(null);
-        } else {
-          handleClearRoute();
-          setRouteData(null);
-        }
+        applyIndoorRouteResponse(response, requestId);
       } else {
         const response = await getUniversalDirections(
           startBuildingId,
@@ -220,15 +260,7 @@ export default function IndoorNavigation() {
           destFloor,
           avoidStairs,
         );
-
-        if (requestId !== routeRequestIdRef.current) return;
-
-        if (response.startIndoorRoute) {
-          mapViewRef.current?.clearRoute();
-          setUniversalRouteData(response);
-          setRouteData(response.startIndoorRoute);
-          setRoutePhase("origin");
-        }
+        applyUniversalRouteResponse(response, requestId);
       }
     } catch (error: any) {
       if (requestId !== routeRequestIdRef.current) return;
@@ -248,16 +280,15 @@ export default function IndoorNavigation() {
     currentFloor,
     avoidStairs,
     handleClearRoute,
+    applyIndoorRouteResponse,
+    applyUniversalRouteResponse,
   ]);
 
   useEffect(() => {
     const loadAllUniversityRooms = async () => {
       try {
         const allBuildings: BuildingId[] = ["H", "LB", "MB", "VL", "VE", "CC"];
-        const roomPromises = allBuildings.flatMap((bId) => {
-          const floors = getAvailableFloors(bId);
-          return floors.map((floorNum) => getAvailableRooms(bId, floorNum));
-        });
+        const roomPromises = getRoomPromisesForBuildings(allBuildings);
 
         const roomsArrays = await Promise.all(roomPromises);
         const combinedRooms = roomsArrays.flat();
@@ -478,8 +509,8 @@ export default function IndoorNavigation() {
       </View>
 
       {routeData &&
-        routeData.startFloor &&
-        routeData.endFloor &&
+        Boolean(routeData.startFloor) &&
+        Boolean(routeData.endFloor) &&
         routeData.startFloor !== routeData.endFloor && (
           <View style={styles.floorTransitionContainer}>
             {currentFloor === routeData.startFloor ? (

@@ -2,6 +2,7 @@ package com.soen390.backend.service;
 
 import com.soen390.backend.controller.IndoorDirectionsController;
 import com.soen390.backend.model.FloorPlanData;
+import com.soen390.backend.service.strategy.AccessibilityRoutingStrategy;
 import com.soen390.backend.object.IndoorDirectionResponse;
 import com.soen390.backend.object.IndoorRouteStep;
 import com.soen390.backend.enums.IndoorManeuverType;
@@ -13,6 +14,7 @@ import java.util.*;
 public class IndoorDirectionService {
 
     private static final String KEYWORD_STAIRS = "stairs";
+    private static final String TRANSITION_TYPE_STAIRS = "STAIRS";
     private static final String PREFIX_HALL = "Hall-";
     private static final String MSG_STAIRS_UP = "You will need to go up the stairs to reach the main floor.";
     private static final String MSG_STAIRS_DOWN = "You will need to go down the stairs to reach the exit level.";
@@ -49,6 +51,7 @@ public class IndoorDirectionService {
             String destinationFloor,
             boolean avoidStairs) {
 
+        AccessibilityRoutingStrategy strategy = AccessibilityRoutingStrategy.fromAvoidStairs(avoidStairs);
         String buildingName = getBuildingName(buildingId);
         pathfindingService.setBuilding(buildingId);
 
@@ -58,9 +61,9 @@ public class IndoorDirectionService {
         List<IndoorDirectionResponse.RoutePoint> routePoints;
 
         if (startFloor.equals(endFloor)) {
-            routePoints = calculateRoute(buildingId, origin, destination, startFloor, avoidStairs);
+            routePoints = calculateRoute(buildingId, origin, destination, startFloor, strategy);
         } else {
-            routePoints = calculateCrossFloorRoute(buildingId, origin, destination, startFloor, endFloor, avoidStairs);
+            routePoints = calculateCrossFloorRoute(buildingId, origin, destination, startFloor, endFloor, strategy);
         }
 
         double exactDistance = calculatePreciseDistance(routePoints);
@@ -81,7 +84,7 @@ public class IndoorDirectionService {
         if (stairMsg == null) {
             stairMsg = detectStairMessageFromRoute(routePoints);
         }
-        boolean routeUsedStairs = "STAIRS".equals(usedTransition);
+        boolean routeUsedStairs = TRANSITION_TYPE_STAIRS.equals(usedTransition);
 
         if (stairMsg != null && routeUsedStairs) {
             response.setStairMessage(stairMsg);
@@ -94,7 +97,7 @@ public class IndoorDirectionService {
 
     private List<IndoorDirectionResponse.RoutePoint> calculateCrossFloorRoute(
             String buildingId, String originRoomId, String destinationRoomId,
-            String startFloor, String endFloor, boolean avoidStairs) {
+            String startFloor, String endFloor, AccessibilityRoutingStrategy strategy) {
 
         String startPlanId = convertBuildingIdForPathfinding(buildingId, startFloor);
         String endPlanId = convertBuildingIdForPathfinding(buildingId, endFloor);
@@ -105,8 +108,8 @@ public class IndoorDirectionService {
 
         if (origin == null || dest == null) return new ArrayList<>();
 
-        List<IndoorDirectionsController.PoiResponse> startConnectors = filterPois(helper.getPoisForBuilding(startPlanId), avoidStairs);
-        List<IndoorDirectionsController.PoiResponse> endConnectors = filterPois(helper.getPoisForBuilding(endPlanId), avoidStairs);
+        List<IndoorDirectionsController.PoiResponse> startConnectors = filterPois(helper.getPoisForBuilding(startPlanId), strategy);
+        List<IndoorDirectionsController.PoiResponse> endConnectors = filterPois(helper.getPoisForBuilding(endPlanId), strategy);
 
         if (startConnectors.isEmpty() || endConnectors.isEmpty()) return new ArrayList<>();
 
@@ -116,7 +119,7 @@ public class IndoorDirectionService {
         boolean foundStairs = false;
 
         // PRIORITY 1: Force Stairs (if the user didn't click avoid stairs)
-        if (!avoidStairs) {
+        if (strategy.preferStairsForConnectors()) {
             for (var s : startConnectors) {
                 for (var e : endConnectors) {
                     if (s.type != null && e.type != null &&
@@ -159,12 +162,12 @@ public class IndoorDirectionService {
 
         List<IndoorDirectionResponse.RoutePoint> leg1 = buildRoute(
                 startPlanId, new FloorPlanData.Point(origin.x, origin.y), new FloorPlanData.Point(bestStart.x, bestStart.y),
-                originRoomId, bestStart.id, avoidStairs
+                originRoomId, bestStart.id, strategy
         );
 
         List<IndoorDirectionResponse.RoutePoint> leg2 = buildRoute(
                 endPlanId, new FloorPlanData.Point(bestEnd.x, bestEnd.y), new FloorPlanData.Point(dest.x, dest.y),
-                bestEnd.id, destinationRoomId, avoidStairs
+                bestEnd.id, destinationRoomId, strategy
         );
 
         List<IndoorDirectionResponse.RoutePoint> fullRoute = new ArrayList<>(leg1);
@@ -181,7 +184,7 @@ public class IndoorDirectionService {
 
     private List<IndoorDirectionsController.PoiResponse> filterPois(
             List<IndoorDirectionsController.PoiResponse> all,
-            boolean avoidStairs
+            AccessibilityRoutingStrategy strategy
     ) {
         if (all == null || all.isEmpty()) return Collections.emptyList();
 
@@ -194,8 +197,8 @@ public class IndoorDirectionService {
             if (type.contains("elevator")) {
                 valid.add(p);
             }
-            // Stairs are only allowed if avoidStairs is false
-            else if (!avoidStairs && type.contains("stairs")) {
+            // Stairs are only allowed if strategy allows stairs
+            else if (strategy.allowsStairs() && type.contains("stairs")) {
                 valid.add(p);
             }
         }
@@ -205,7 +208,7 @@ public class IndoorDirectionService {
 
     private List<IndoorDirectionResponse.RoutePoint> calculateRoute(
             String buildingId, String originRoomId,
-            String destinationRoomId, String floor, boolean avoidStairs) {
+            String destinationRoomId, String floor, AccessibilityRoutingStrategy strategy) {
 
         String planId = convertBuildingIdForPathfinding(buildingId, floor);
 
@@ -218,7 +221,7 @@ public class IndoorDirectionService {
                 new FloorPlanData.Point(sCoord.x, sCoord.y),
                 new FloorPlanData.Point(eCoord.x, eCoord.y),
                 originRoomId, destinationRoomId,
-                avoidStairs);
+                strategy);
     }
 
 
@@ -562,7 +565,7 @@ public class IndoorDirectionService {
     private List<IndoorDirectionResponse.RoutePoint> buildRoute(
             String pathfindingBuildingId,
             FloorPlanData.Point originPoint, FloorPlanData.Point destPoint,
-            String originId, String destId, boolean avoidStairs) {
+            String originId, String destId, AccessibilityRoutingStrategy strategy) {
 
         pathfindingService.setBuilding(pathfindingBuildingId);
         PathfindingService.Waypoint startWp = pathfindingService.findNearestWaypoint(originPoint.getX(), originPoint.getY());
@@ -571,7 +574,7 @@ public class IndoorDirectionService {
         if (startWp == null || endWp == null) return new ArrayList<>();
 
         List<PathfindingService.Waypoint> waypointPath =
-                pathfindingService.findPathThroughWaypoints(startWp, endWp, avoidStairs);
+                pathfindingService.findPathThroughWaypoints(startWp, endWp, strategy);
 
         if (waypointPath.isEmpty()) return new ArrayList<>();
 
