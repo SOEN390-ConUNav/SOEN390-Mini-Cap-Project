@@ -16,6 +16,7 @@ public class IndoorDirectionService {
     private static final String KEYWORD_STAIRS_LOWER = "stairs";
     private static final String STR_ELEVATOR = "ELEVATOR";
     private static final String STR_ELEVATOR_LOWER = "elevator";
+    private static final String STR_HELPER = "helper";
     private static final String PREFIX_HALL = "Hall-";
     private static final String MSG_STAIRS_UP = "You will need to go up the stairs to reach the main floor.";
     private static final String MSG_STAIRS_DOWN = "You will need to go down the stairs to reach the exit level.";
@@ -102,7 +103,7 @@ public class IndoorDirectionService {
         String startPlanId = convertBuildingIdForPathfinding(buildingId, startFloor);
         String endPlanId = convertBuildingIdForPathfinding(buildingId, endFloor);
 
-        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, STR_HELPER);
         PathfindingService.Waypoint origin = resolvePoint(startPlanId, originRoomId);
         PathfindingService.Waypoint dest = resolvePoint(endPlanId, destinationRoomId);
 
@@ -529,7 +530,7 @@ public class IndoorDirectionService {
 
     private String convertBuildingIdForPathfinding(String buildingId, String floor) {
         if (buildingId == null || floor == null) return buildingId;
-        if ("H".equals(buildingId) || "Hall-".equals(buildingId)) {
+        if ("H".equals(buildingId) || PREFIX_HALL.equals(buildingId)) {
             return PREFIX_HALL + floor;
         }
         if (buildingId.startsWith(PREFIX_HALL)
@@ -560,7 +561,7 @@ public class IndoorDirectionService {
 
     public List<IndoorDirectionsController.RoomPointResponse> getRoomPoints(String bId, String f) {
         String pId = convertBuildingIdForPathfinding(bId, f);
-        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, STR_HELPER);
         Map<String, PathfindingService.Waypoint> coords = helper.getRoomCoordinateMap(pId);
         List<IndoorDirectionsController.RoomPointResponse> response = new ArrayList<>();
         if(coords != null) {
@@ -573,7 +574,7 @@ public class IndoorDirectionService {
 
     public List<IndoorDirectionsController.PoiResponse> getPointsOfInterest(String bId, String f) {
         String pId = convertBuildingIdForPathfinding(bId, f);
-        return new PathfindingService.Waypoint(0,0,"helper").getPoisForBuilding(pId);
+        return new PathfindingService.Waypoint(0,0,STR_HELPER).getPoisForBuilding(pId);
     }
 
     private List<IndoorDirectionResponse.RoutePoint> buildRoute(
@@ -608,7 +609,7 @@ public class IndoorDirectionService {
     private PathfindingService.Waypoint resolvePoint(String planId, String id) {
         if (id == null) return null;
 
-        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
+        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, STR_HELPER);
 
         // 1) Try rooms
         PathfindingService.Waypoint w = helper.getRoomCoordinate(planId, id);

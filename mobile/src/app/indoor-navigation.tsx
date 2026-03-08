@@ -237,8 +237,9 @@ export default function IndoorNavigation() {
       setRouteData(null);
       setUniversalRouteData(null);
     } finally {
-      if (requestId !== routeRequestIdRef.current) return;
-      setIsLoadingRoute(false);
+      if (requestId === routeRequestIdRef.current) {
+        setIsLoadingRoute(false);
+      }
     }
   }, [
     startRoom,
