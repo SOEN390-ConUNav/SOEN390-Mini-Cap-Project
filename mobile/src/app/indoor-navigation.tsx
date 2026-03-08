@@ -521,7 +521,7 @@ export default function IndoorNavigation() {
         Boolean(routeData.endFloor) &&
         routeData.startFloor !== routeData.endFloor && (
           <View style={styles.floorTransitionContainer}>
-            {currentFloor === routeData.startFloor ? (
+            {currentFloor === routeData.startFloor && (
               <TouchableOpacity
                 style={styles.transitionButton}
                 onPress={() => handleFloorChange(routeData.endFloor)}
@@ -530,7 +530,8 @@ export default function IndoorNavigation() {
                   Go to Floor {routeData.endFloor}
                 </Text>
               </TouchableOpacity>
-            ) : currentFloor === routeData.endFloor ? (
+            )}
+            {currentFloor === routeData.endFloor && (
               <TouchableOpacity
                 style={styles.transitionButton}
                 onPress={() => handleFloorChange(routeData.startFloor)}
@@ -539,7 +540,7 @@ export default function IndoorNavigation() {
                   Back to Floor {routeData.startFloor}
                 </Text>
               </TouchableOpacity>
-            ) : null}
+            )}
           </View>
         )}
 

@@ -81,7 +81,7 @@ public class UniversalRoutingService {
         IndoorDirectionResponse leg3 = indoorDirectionService.getIndoorDirections(
                 endBuilding, endEntranceId, endRoom, endGroundFloor, endFloor, avoidStairs);
 
-        String totalDuration = calculateTotalDuration(leg1.getDuration(), leg2.getDuration(), leg3.getDuration());
+        String totalDuration = calculateTotalDuration(leg2.getDuration());
 
         return new UniversalDirectionResponse(leg1, leg2, leg3, nextShuttle, totalDuration);
     }
@@ -104,7 +104,7 @@ public class UniversalRoutingService {
         return "No more shuttles today";
     }
 
-    private String calculateTotalDuration(String dur1, String dur2, String dur3) {
+    private String calculateTotalDuration(String dur2) {
         return "Approx " + dur2 + " + indoor walking time.";
     }
 }

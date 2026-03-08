@@ -203,9 +203,8 @@ public class IndoorDirectionService {
         for (IndoorDirectionsController.PoiResponse p : all) {
             String type = (p == null || p.type == null) ? "" : p.type.toLowerCase();
 
-            if (type.contains(STR_ELEVATOR_LOWER)) {
-                valid.add(p);
-            } else if (strategy.allowsStairs() && type.contains(KEYWORD_STAIRS_LOWER)) {
+            if (type.contains(STR_ELEVATOR_LOWER)
+                    || (strategy.allowsStairs() && type.contains(KEYWORD_STAIRS_LOWER))) {
                 valid.add(p);
             }
         }
@@ -359,7 +358,7 @@ public class IndoorDirectionService {
             IndoorManeuverType maneuver = decisionManeuvers.get(i);
 
             String instruction = buildMovementInstruction(
-                    maneuver, referenceLabel, floor, isFirst, afterTransition);
+                    maneuver, referenceLabel, isFirst, afterTransition);
 
             steps.add(new IndoorRouteStep(
                     instruction,
@@ -391,9 +390,16 @@ public class IndoorDirectionService {
         boolean goingUp = parseFloorNumber(destinationFloor) > parseFloorNumber(originFloor);
         boolean useElevator = STR_ELEVATOR.equals(usedTransition);
 
-        IndoorManeuverType maneuver = useElevator
-                ? (goingUp ? IndoorManeuverType.ELEVATOR_UP : IndoorManeuverType.ELEVATOR_DOWN)
-                : (goingUp ? IndoorManeuverType.STAIRS_UP : IndoorManeuverType.STAIRS_DOWN);
+        IndoorManeuverType maneuver;
+        if (useElevator && goingUp) {
+            maneuver = IndoorManeuverType.ELEVATOR_UP;
+        } else if (useElevator && !goingUp) {
+            maneuver = IndoorManeuverType.ELEVATOR_DOWN;
+        } else if (!useElevator && goingUp) {
+            maneuver = IndoorManeuverType.STAIRS_UP;
+        } else {
+            maneuver = IndoorManeuverType.STAIRS_DOWN;
+        }
 
         String instruction;
         if (useElevator) {
@@ -420,7 +426,6 @@ public class IndoorDirectionService {
     private String buildMovementInstruction(
             IndoorManeuverType maneuver,
             String referenceLabel,
-            String floor,
             boolean isFirstInstruction,
             boolean afterTransition
     ) {

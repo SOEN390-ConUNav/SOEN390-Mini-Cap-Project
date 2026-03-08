@@ -198,8 +198,11 @@ public class PathfindingService {
                 strategy.allowsStairs() ? graphs.get(currentBuildingId) : graphsNoStairs.get(currentBuildingId);
 
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
-            log.error("Graph missing or vertices not found for {} (allowsStairs={})",
-                    sanitize(currentBuildingId), strategy.allowsStairs());
+            if (log.isErrorEnabled()) {
+                String msg = String.format("Graph missing or vertices not found for %s (allowsStairs=%s)",
+                        sanitize(currentBuildingId), strategy.allowsStairs());
+                log.error(msg);
+            }
             return Collections.emptyList();
         }
 
@@ -207,8 +210,13 @@ public class PathfindingService {
                 new DijkstraShortestPath<>(graph).getPath(start, end);
 
         if (path == null) {
-            log.error("No path found between waypoints: {} -> {} (allowsStairs={})",
-                    sanitize(start.id), sanitize(end.id), strategy.allowsStairs());
+            if (log.isErrorEnabled()) {
+                String startId = sanitize(start.id);
+                String endId = sanitize(end.id);
+                String msg = String.format("No path found between waypoints: %s -> %s (allowsStairs=%s)",
+                        startId, endId, strategy.allowsStairs());
+                log.error(msg);
+            }
             return Collections.emptyList();
         }
 
