@@ -4,9 +4,9 @@ public enum BuildingLocation {
     H("SGW", "1455 De Maisonneuve Blvd W, Montreal, QC"),
     MB("SGW", "1450 Guy St, Montreal, QC"),
     LB("SGW", "1400 De Maisonneuve Blvd W, Montreal, QC"),
-    VL("LOY", "7141 Sherbrooke St W, Montreal, QC"),
-    CC("LOY", "7141 Sherbrooke St W, Montreal, QC"), // Adjust address if specific CC address differs
-    VE("LOY", "7141 Sherbrooke St W, Montreal, QC");
+    VL("LOY", Constants.LOYOLA_ADDRESS),
+    CC("LOY", Constants.LOYOLA_ADDRESS),
+    VE("LOY", Constants.LOYOLA_ADDRESS);
 
     public final String campus;
     public final String address;
@@ -23,5 +23,9 @@ public enum BuildingLocation {
             if (id.startsWith(b.name())) return b;
         }
         return H;
+    }
+
+    private static class Constants {
+        private static final String LOYOLA_ADDRESS = "7141 Sherbrooke St W, Montreal, QC";
     }
 }

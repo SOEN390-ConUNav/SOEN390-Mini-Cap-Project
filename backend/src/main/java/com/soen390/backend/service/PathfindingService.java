@@ -20,14 +20,14 @@ import java.util.*;
  * Indoor pathfinding service using JGraphT.
  *
  * Each floor is modeled as a weighted graph where:
- *   - Vertices = pre-defined waypoints loaded from JSON floor plan files
- *   - Edges    = valid walkable connections constrained to corridor-like movement
- *   - Weights  = Euclidean distance between waypoints
+ * - Vertices = pre-defined waypoints loaded from JSON floor plan files
+ * - Edges    = valid walkable connections constrained to corridor-like movement
+ * - Weights  = Euclidean distance between waypoints
  *
  */
 @Service
 public class PathfindingService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(PathfindingService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Map<String, List<Waypoint>> WAYPOINTS = new HashMap<>();
@@ -37,16 +37,15 @@ public class PathfindingService {
     private final Map<String, Graph<Waypoint, DefaultWeightedEdge>> graphsNoStairs = new HashMap<>();
 
     private static final String[] FLOOR_PLAN_IDS = {
-        "Hall-8", "Hall-9", "Hall-2", "Hall-1",
-        "VL-1", "VL-2", "VE-1","VE-2",
-        "LB-2", "LB-3", "LB-4", "LB-5",
-        "MB-S2", "MB-1", "CC-1"
+            "Hall-8", "Hall-9", "Hall-2", "Hall-1",
+            "VL-1", "VL-2", "VE-1","VE-2",
+            "LB-2", "LB-3", "LB-4", "LB-5",
+            "MB-S2", "MB-1", "CC-1"
     };
 
     static {
-        for (String buildingId : FLOOR_PLAN_IDS) {
-            loadBuildingFromJson(buildingId);
-        }
+        for (String buildingId : FLOOR_PLAN_IDS)
+            loadBuildingFromJson(buildingId); // Fix: Removed useless curly braces
     }
 
     /**
@@ -76,7 +75,7 @@ public class PathfindingService {
             }
 
 
-            JsonNode poisNode = root.get("pois"); // Assuming your JSON has a "pois" key
+            JsonNode poisNode = root.get("pois");
             if (poisNode != null && poisNode.isArray()) {
                 List<IndoorDirectionsController.PoiResponse> pois = new ArrayList<>();
                 for (JsonNode p : poisNode) {
@@ -128,7 +127,7 @@ public class PathfindingService {
         static BuildingConfig forBuilding(String buildingId) {
             BuildingConfig config = CONFIGS.get(buildingId);
             if (config != null) return config;
-           
+
             return new BuildingConfig(150.0, 20.0, 0, false);
         }
     }
@@ -156,14 +155,14 @@ public class PathfindingService {
         for (String id : WAYPOINTS.keySet()) {
             Graph<Waypoint, DefaultWeightedEdge> g = buildGraph(id);
             graphs.put(id, g);
-            graphsNoStairs.put(id, buildNoStairsGraph(g)); // <-- THIS is the missing “implementation”
+            graphsNoStairs.put(id, buildNoStairsGraph(g));
         }
     }
 
     public void setBuilding(String buildingId) {
         this.currentBuildingId = buildingId;
     }
-    
+
     public Waypoint findNearestWaypoint(double x, double y) {
         List<Waypoint> wps = WAYPOINTS.getOrDefault(currentBuildingId, List.of());
         Waypoint nearest = null;
@@ -178,7 +177,6 @@ public class PathfindingService {
         return nearest;
     }
 
-    /** Strip newlines and control characters to prevent log injection. */
     private static String sanitize(String input) {
         if (input == null) return "null";
         return input.replaceAll("[\\r\\n\\t]", "_");
@@ -241,11 +239,7 @@ public class PathfindingService {
         return graph;
     }
 
-    /**
-     * Add edges from a waypoint to valid neighbors.
-     * LB buildings use tiered alignment with max-neighbor limit;
-     * other buildings use basic horizontal/vertical alignment.
-     */
+
     record Candidate(Waypoint target, double dist, int priority) {}
 
     private void addEdgesFor(
@@ -323,7 +317,6 @@ public class PathfindingService {
         return classifyAxis(dy, dx, strict);
     }
 
-    /** Check if the minor axis is within tolerance and the major axis is dominant enough. */
     private static Alignment classifyAxis(double minor, double major, double strict) {
         if (minor <= strict && major > strict)                      return Alignment.PERFECT;
         if (minor <= 10 && major > minor * 3 && major > strict)    return Alignment.NEAR_PERFECT;
@@ -366,7 +359,7 @@ public class PathfindingService {
         }
     }
 
-    
+
     private Waypoint[] findAlignedBridge(
             Set<Waypoint> comp1, Set<Waypoint> comp2, BuildingConfig config, double maxBridge) {
 
@@ -397,7 +390,6 @@ public class PathfindingService {
         return dy <= config.alignThreshold || dx <= config.alignThreshold;
     }
 
-    /** Fallback: find the absolute closest pair of waypoints across two components. */
     private Waypoint[] findClosestBridge(Set<Waypoint> comp1, Set<Waypoint> comp2) {
         Waypoint best1 = null;
         Waypoint best2 = null;
@@ -415,12 +407,12 @@ public class PathfindingService {
         }
         return best1 != null ? new Waypoint[]{best1, best2} : null;
     }
-    
+
     public static class Waypoint {
         public final double x;
         public final double y;
         public final String id;
-        
+
         public Waypoint(double x, double y, String id) {
             this.x = x;
             this.y = y;

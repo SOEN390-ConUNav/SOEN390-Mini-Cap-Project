@@ -12,7 +12,10 @@ import java.util.*;
 @Service
 public class IndoorDirectionService {
 
-    private static final String KEYWORD_STAIRS = "stairs";
+    private static final String KEYWORD_STAIRS = "STAIRS";
+    private static final String KEYWORD_STAIRS_LOWER = "stairs";
+    private static final String STR_ELEVATOR = "ELEVATOR";
+    private static final String STR_ELEVATOR_LOWER = "elevator";
     private static final String PREFIX_HALL = "Hall-";
     private static final String MSG_STAIRS_UP = "You will need to go up the stairs to reach the main floor.";
     private static final String MSG_STAIRS_DOWN = "You will need to go down the stairs to reach the exit level.";
@@ -110,52 +113,11 @@ public class IndoorDirectionService {
 
         if (startConnectors.isEmpty() || endConnectors.isEmpty()) return new ArrayList<>();
 
-        IndoorDirectionsController.PoiResponse bestStart = null;
-        IndoorDirectionsController.PoiResponse bestEnd = null;
-        double minDistance = Double.MAX_VALUE;
-        boolean foundStairs = false;
+        IndoorDirectionsController.PoiResponse[] bestConnectors = findBestTransitionConnectors(origin, dest, startConnectors, endConnectors, avoidStairs);
+        if (bestConnectors == null) return new ArrayList<>();
 
-        // PRIORITY 1: Force Stairs (if the user didn't click avoid stairs)
-        if (!avoidStairs) {
-            for (var s : startConnectors) {
-                for (var e : endConnectors) {
-                    if (s.type != null && e.type != null &&
-                            s.type.toLowerCase().contains("stairs") && e.type.toLowerCase().contains("stairs")) {
-
-                        double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
-                        double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
-                        if (d1 + d2 < minDistance) {
-                            minDistance = d1 + d2;
-                            bestStart = s;
-                            bestEnd = e;
-                            foundStairs = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        // PRIORITY 2: Fallback to Elevators (if avoidStairs is true, OR if one floor was missing stairs)
-        if (!foundStairs) {
-            minDistance = Double.MAX_VALUE; // Reset distance tracker
-            for (var s : startConnectors) {
-                for (var e : endConnectors) {
-                    if (s.type != null && e.type != null &&
-                            s.type.toLowerCase().contains("elevator") && e.type.toLowerCase().contains("elevator")) {
-
-                        double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
-                        double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
-                        if (d1 + d2 < minDistance) {
-                            minDistance = d1 + d2;
-                            bestStart = s;
-                            bestEnd = e;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (bestStart == null || bestEnd == null) return new ArrayList<>();
+        IndoorDirectionsController.PoiResponse bestStart = bestConnectors[0];
+        IndoorDirectionsController.PoiResponse bestEnd = bestConnectors[1];
 
         List<IndoorDirectionResponse.RoutePoint> leg1 = buildRoute(
                 startPlanId, new FloorPlanData.Point(origin.x, origin.y), new FloorPlanData.Point(bestStart.x, bestStart.y),
@@ -168,7 +130,7 @@ public class IndoorDirectionService {
         );
 
         List<IndoorDirectionResponse.RoutePoint> fullRoute = new ArrayList<>(leg1);
-        String type = bestStart.type.toUpperCase().contains("ELEVATOR") ? "ELEVATOR" : "STAIRS";
+        String type = (bestStart.type != null && bestStart.type.toUpperCase().contains(STR_ELEVATOR)) ? STR_ELEVATOR : "STAIRS";
 
         fullRoute.add(new IndoorDirectionResponse.RoutePoint(bestStart.x, bestStart.y, "TRANSITION_" + type + "_TO_" + endFloor));
 
@@ -177,6 +139,52 @@ public class IndoorDirectionService {
         }
 
         return fullRoute;
+    }
+
+    private IndoorDirectionsController.PoiResponse[] findBestTransitionConnectors(
+            PathfindingService.Waypoint origin, PathfindingService.Waypoint dest,
+            List<IndoorDirectionsController.PoiResponse> startConnectors,
+            List<IndoorDirectionsController.PoiResponse> endConnectors,
+            boolean avoidStairs) {
+
+        IndoorDirectionsController.PoiResponse[] best = null;
+
+        if (!avoidStairs) {
+            best = getClosestConnectorPair(origin, dest, startConnectors, endConnectors, KEYWORD_STAIRS_LOWER);
+        }
+
+        if (best == null) {
+            best = getClosestConnectorPair(origin, dest, startConnectors, endConnectors, STR_ELEVATOR_LOWER);
+        }
+
+        return best;
+    }
+
+    private IndoorDirectionsController.PoiResponse[] getClosestConnectorPair(
+            PathfindingService.Waypoint origin, PathfindingService.Waypoint dest,
+            List<IndoorDirectionsController.PoiResponse> startConnectors,
+            List<IndoorDirectionsController.PoiResponse> endConnectors,
+            String type) {
+
+        IndoorDirectionsController.PoiResponse bestStart = null;
+        IndoorDirectionsController.PoiResponse bestEnd = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (var s : startConnectors) {
+            if (s.type == null || !s.type.toLowerCase().contains(type)) continue;
+            for (var e : endConnectors) {
+                if (e.type == null || !e.type.toLowerCase().contains(type)) continue;
+
+                double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
+                double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
+                if (d1 + d2 < minDistance) {
+                    minDistance = d1 + d2;
+                    bestStart = s;
+                    bestEnd = e;
+                }
+            }
+        }
+        return (bestStart != null && bestEnd != null) ? new IndoorDirectionsController.PoiResponse[]{bestStart, bestEnd} : null;
     }
 
     private List<IndoorDirectionsController.PoiResponse> filterPois(
@@ -190,18 +198,14 @@ public class IndoorDirectionService {
         for (IndoorDirectionsController.PoiResponse p : all) {
             String type = (p == null || p.type == null) ? "" : p.type.toLowerCase();
 
-            // Elevators are always allowed
-            if (type.contains("elevator")) {
+            if (type.contains(STR_ELEVATOR_LOWER)) {
                 valid.add(p);
-            }
-            // Stairs are only allowed if avoidStairs is false
-            else if (!avoidStairs && type.contains("stairs")) {
+            } else if (!avoidStairs && type.contains(KEYWORD_STAIRS_LOWER)) {
                 valid.add(p);
             }
         }
         return valid;
     }
-
 
     private List<IndoorDirectionResponse.RoutePoint> calculateRoute(
             String buildingId, String originRoomId,
@@ -220,7 +224,6 @@ public class IndoorDirectionService {
                 originRoomId, destinationRoomId,
                 avoidStairs);
     }
-
 
     private double calculatePreciseDistance(List<IndoorDirectionResponse.RoutePoint> pts) {
         if (pts == null || pts.size() < 2) return 0d;
@@ -297,6 +300,15 @@ public class IndoorDirectionService {
         decisionIndices.add(0);
         decisionManeuvers.add(IndoorManeuverType.STRAIGHT);
 
+        findDecisionPoints(routePoints, decisionIndices, decisionManeuvers);
+        createStepsFromDecisions(steps, routePoints, decisionIndices, decisionManeuvers, floor, referenceLabel, afterTransition);
+    }
+
+    private void findDecisionPoints(
+            List<IndoorDirectionResponse.RoutePoint> routePoints,
+            List<Integer> decisionIndices,
+            List<IndoorManeuverType> decisionManeuvers) {
+
         int anchorIdx = 0;
         for (int i = 1; i < routePoints.size() - 1; i++) {
             double segDist = sumSegmentDistance(routePoints, anchorIdx, i);
@@ -317,6 +329,16 @@ public class IndoorDirectionService {
                 anchorIdx = i;
             }
         }
+    }
+
+    private void createStepsFromDecisions(
+            List<IndoorRouteStep> steps,
+            List<IndoorDirectionResponse.RoutePoint> routePoints,
+            List<Integer> decisionIndices,
+            List<IndoorManeuverType> decisionManeuvers,
+            String floor,
+            String referenceLabel,
+            boolean afterTransition) {
 
         for (int i = 0; i < decisionIndices.size(); i++) {
             int segStart = decisionIndices.get(i);
@@ -362,7 +384,7 @@ public class IndoorDirectionService {
             String usedTransition
     ) {
         boolean goingUp = parseFloorNumber(destinationFloor) > parseFloorNumber(originFloor);
-        boolean useElevator = "ELEVATOR".equals(usedTransition);
+        boolean useElevator = STR_ELEVATOR.equals(usedTransition);
 
         IndoorManeuverType maneuver = useElevator
                 ? (goingUp ? IndoorManeuverType.ELEVATOR_UP : IndoorManeuverType.ELEVATOR_DOWN)
@@ -439,11 +461,6 @@ public class IndoorDirectionService {
         return distance;
     }
 
-    /**
-     * Uses the cross product to decide turn direction.
-     * SVG uses Y-down, so cross > 0 means clockwise on screen = turn RIGHT,
-     * cross < 0 means counter-clockwise on screen = turn LEFT.
-     */
     private IndoorManeuverType classifyTurnAtPoint(
             IndoorDirectionResponse.RoutePoint previous,
             IndoorDirectionResponse.RoutePoint current,
@@ -588,9 +605,6 @@ public class IndoorDirectionService {
         try { return Integer.parseInt(floor.replaceAll("[^0-9-]", "")); } catch (Exception e) { return 0; }
     }
 
-
-
-
     private PathfindingService.Waypoint resolvePoint(String planId, String id) {
         if (id == null) return null;
 
@@ -618,7 +632,7 @@ public class IndoorDirectionService {
             String label = rp.getLabel();
             if (label == null) continue;
 
-            if (label.startsWith("TRANSITION_ELEVATOR")) return "ELEVATOR";
+            if (label.startsWith("TRANSITION_ELEVATOR")) return STR_ELEVATOR;
             if (label.startsWith("TRANSITION_STAIRS"))   return "STAIRS";
         }
         return null;

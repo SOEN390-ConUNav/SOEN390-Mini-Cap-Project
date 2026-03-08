@@ -1,6 +1,5 @@
 package com.soen390.backend.object;
 
-import java.util.List;
 
 public class UniversalDirectionResponse {
     private IndoorDirectionResponse startIndoorRoute;
