@@ -291,10 +291,10 @@ public class GoogleCalendarService {
     String campus = NO_CAMPUS;
     String building = buildingLine;
 
-    int splitIdx = buildingLine.indexOf(" - ");
-    if (splitIdx >= 0) {
-      campus = buildingLine.substring(0, splitIdx).trim();
-      building = buildingLine.substring(splitIdx + 3).trim();
+    String[] parts = buildingLine.split("\\s*-\\s*", 2);
+    if (parts.length == 2) {
+      campus = parts[0].trim();
+      building = parts[1].trim();
     }
 
     if (campus.isEmpty()) campus = NO_CAMPUS;
