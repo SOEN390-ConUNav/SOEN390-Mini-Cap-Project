@@ -11,21 +11,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FloorPlanDataTest {
 
-
-
     @ParameterizedTest
     @CsvSource({
-        "Hall-8,  8",
-        "Hall-9,  9",
-        "Hall-1,  1",
-        "Hall-2,  2",
-        "VL-1,    1",
-        "VL-2,    2",
-        "LB-2,    2",
-        "LB-3,    3",
-        "LB-4,    4",
-        "LB-5,    5",
-        "MB-S2,   S2"
+            "Hall-8,  8",
+            "Hall-9,  9",
+            "Hall-1,  1",
+            "Hall-2,  2",
+            "VL-1,    1",
+            "VL-2,    2",
+            "LB-2,    2",
+            "LB-3,    3",
+            "LB-4,    4",
+            "LB-5,    5",
+            "MB-S2,   S2"
     })
     void constructor_loadsRoomsForEveryFloor(String buildingId, String floor) {
         FloorPlanData data = new FloorPlanData(buildingId, floor);
@@ -51,8 +49,6 @@ class FloorPlanDataTest {
         assertEquals("Hall-8", data.getBuildingId());
         assertEquals("8", data.getFloor());
     }
-
-  
 
     @Test
     void buildRoomEntranceGroups_groupsMultiEntranceRoom() {
@@ -88,8 +84,6 @@ class FloorPlanDataTest {
         assertFalse(ids.contains("LB-261-2"));
     }
 
-
-
     @Test
     void resolveToClosestEntrance_choosesNearerDoor() {
         FloorPlanData data = new FloorPlanData("LB-2", "2");
@@ -100,7 +94,6 @@ class FloorPlanDataTest {
                 room2.getX(), room2.getY());
         assertEquals("LB-261-2", closest);
 
-        
         closest = data.resolveToClosestEntrance("LB-261",
                 room1.getX(), room1.getY());
         assertEquals("LB-261-1", closest);
@@ -119,7 +112,6 @@ class FloorPlanDataTest {
         String result = data.resolveToClosestEntrance("DOES-NOT-EXIST", 0, 0);
         assertEquals("DOES-NOT-EXIST", result);
     }
-
 
     @Test
     void getPointsOfInterest_detectsBathroomsAndElevators() {
@@ -150,20 +142,16 @@ class FloorPlanDataTest {
         assertTrue(data.getPointsOfInterest().isEmpty());
     }
 
-  
-
     @Test
     void getPointsOfInterest_hall2_detectsStairsAndEntrances() {
         FloorPlanData data = new FloorPlanData("Hall-2", "2");
         var pois = data.getPointsOfInterest();
 
-        boolean hasStairsUp = pois.stream().anyMatch(p -> "stairs-up".equals(p.type));
-        boolean hasStairsDown = pois.stream().anyMatch(p -> "stairs-down".equals(p.type));
-        boolean hasEntrance = pois.stream().anyMatch(p -> "emergency-exit".equals(p.type));
+        boolean hasStairs = pois.stream().anyMatch(p -> "stairs".equals(p.type));
+        boolean hasElevator = pois.stream().anyMatch(p -> "elevator".equals(p.type));
 
-        assertTrue(hasStairsUp, "Hall-2 should have stairs-up POIs");
-        assertTrue(hasStairsDown, "Hall-2 should have stairs-down POIs");
-        assertTrue(hasEntrance, "Hall-2 should have entrance/exit POIs");
+        assertTrue(hasStairs, "Hall-2 should have stairs POIs");
+        assertTrue(hasElevator, "Hall-2 should have elevator POIs");
     }
 
     @Test
@@ -171,11 +159,11 @@ class FloorPlanDataTest {
         FloorPlanData data = new FloorPlanData("Hall-1", "1");
         var pois = data.getPointsOfInterest();
 
-        boolean hasMetro = pois.stream().anyMatch(p -> "entrance-exit".equals(p.type));
-        boolean hasEmergency = pois.stream().anyMatch(p -> "emergency-exit".equals(p.type));
+        boolean hasExit = pois.stream().anyMatch(p -> "exit".equals(p.type));
+        boolean hasStairs = pois.stream().anyMatch(p -> "stairs".equals(p.type));
 
-        assertTrue(hasMetro, "Hall-1 should have entrance-exit POIs");
-        assertTrue(hasEmergency, "Hall-1 should have emergency-exit POIs");
+        assertTrue(hasExit, "Hall-1 should have exit POIs");
+        assertTrue(hasStairs, "Hall-1 should have stairs POIs");
     }
 
     @Test
@@ -190,5 +178,4 @@ class FloorPlanDataTest {
         FloorPlanData.Point a = new FloorPlanData.Point(42, 42);
         assertEquals(0.0, a.distanceTo(a), 0.0001);
     }
-
 }
