@@ -116,7 +116,6 @@ class IndoorDirectionsControllerTest {
         mockMvc.perform(get("/api/directions/indoor")
                         .param("buildingId", "Hall-8")
                         .param("origin", "H8-843"))
-          
                 .andExpect(status().isBadRequest());
     }
 
@@ -157,8 +156,6 @@ class IndoorDirectionsControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error", containsString("Unknown building ID")));
     }
-
-
 
     @Test
     void getIndoorDirections_emptyRoute_returns404() throws Exception {
