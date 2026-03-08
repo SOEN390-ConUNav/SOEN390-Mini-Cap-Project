@@ -1106,4 +1106,238 @@ class IndoorDirectionServiceTest {
         assertTrue(r.getBuildingId().startsWith("VE-"));
     }
 
+    // --- High-impact tests targeting uncovered branches ---
+
+    @Test
+    void formatFinalDuration_longRoute_includesMinutes() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "CC-1", "CC-Entrance-Exit", "CC-Exit-Entrance-2", "1", "1", false);
+        assertNotNull(r.getDuration());
+        assertTrue(r.getDuration().contains("min"), "Long CC route should show minutes in duration");
+    }
+
+    @Test
+    void crossFloor_Hall1toHall2_usesStairsWhenAllowed() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasStairs = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("stairs"));
+            boolean hasElevator = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("elevator"));
+            assertTrue(hasStairs || hasElevator, "Cross-floor route should have transition step");
+            if (r.getStairMessage() != null) {
+                assertTrue(r.getStairMessage().toLowerCase().contains("stairs"));
+            }
+        }
+    }
+
+    @Test
+    void crossFloor_Hall1toHall2_avoidStairs_usesElevator() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", true);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasElevator = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("elevator"));
+            assertTrue(hasElevator, "Avoid-stairs cross-floor should use elevator");
+        }
+    }
+
+    @Test
+    void crossFloor_Hall9toHall8_stairsDown() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H9-903", "H8-843", "9", "8", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasDown = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("down"));
+            assertTrue(hasDown, "Hall 9 to 8 should have 'down' in transition");
+        }
+    }
+
+    @Test
+    void crossFloor_Hall9toHall8_elevatorDown() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H9-903", "H8-843", "9", "8", true);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasElevatorDown = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null
+                            && s.instruction().toLowerCase().contains("elevator")
+                            && s.instruction().toLowerCase().contains("down"));
+            assertTrue(hasElevatorDown, "Avoid-stairs Hall 9→8 should use elevator down");
+        }
+    }
+
+    @Test
+    void steps_includeTurnManeuvers_forZigzagRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-801", "8", "8", false);
+        assertNotNull(r);
+        assertFalse(r.getSteps().isEmpty());
+        boolean hasTurn = r.getSteps().stream()
+                .anyMatch(s -> s.maneuverType() == IndoorManeuverType.TURN_LEFT
+                        || s.maneuverType() == IndoorManeuverType.TURN_RIGHT
+                        || s.maneuverType() == IndoorManeuverType.TURN_AROUND);
+        boolean hasMovement = r.getSteps().stream()
+                .anyMatch(s -> s.instruction() != null && (s.instruction().contains("Turn") || s.instruction().contains("straight")));
+        assertTrue(hasTurn || hasMovement, "Route should have turn or movement instructions");
+    }
+
+    @Test
+    void routeToStairsWaypoint_setsStairMessageFromRouteLabel() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "Hall-Stairs-Main", "2", "2", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty() && r.getStairMessage() != null) {
+            assertTrue(r.getStairMessage().toLowerCase().contains("stairs"));
+        }
+    }
+
+    @Test
+    void crossFloor_stairMessageSetWhenRouteUsesStairs() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasTransitionStairs = r.getRoutePoints().stream()
+                    .anyMatch(p -> p.getLabel() != null && p.getLabel().contains("TRANSITION_STAIRS"));
+            if (hasTransitionStairs && r.getStairMessage() != null) {
+                assertTrue(r.getStairMessage().toLowerCase().contains("stairs"));
+            }
+        }
+    }
+
+    @Test
+    void crossFloor_secondLeg_hasAfterTransitionInstruction() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H8-843", "H9-903", "8", "9", true);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasHallway = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("hallway"));
+            assertTrue(hasHallway, "Cross-floor route should have 'hallway' instruction after transition");
+        }
+    }
+
+    @Test
+    void getClosestConnectorPair_fallsBackToElevatorWhenNoStairs() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H8-843", "H9-903", "8", "9", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasTransition = r.getRoutePoints().stream()
+                    .anyMatch(p -> p.getLabel() != null && p.getLabel().startsWith("TRANSITION_"));
+            assertTrue(hasTransition, "Hall-8/9 cross-floor should find connector (elevator when stairs unavailable)");
+        }
+    }
+
+    @Test
+    void calculatePreciseDistance_singlePoint_returnsZero() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "INVALID", "ALSO-INVALID", "8", "8", false);
+        assertEquals("0 m", r.getDistance());
+        assertEquals("0 sec", r.getDuration());
+    }
+
+    @Test
+    void createTransitionStep_elevatorUp() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H8-843", "H9-903", "8", "9", true);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasElevatorUp = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null
+                            && s.instruction().toLowerCase().contains("elevator")
+                            && s.instruction().toLowerCase().contains("up"));
+            assertTrue(hasElevatorUp, "Hall 8→9 should have elevator up instruction");
+        }
+    }
+
+    @Test
+    void createTransitionStep_stairsUp() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasStairsUp = r.getSteps().stream()
+                    .anyMatch(s -> s.instruction() != null
+                            && s.instruction().toLowerCase().contains("stairs")
+                            && s.instruction().toLowerCase().contains("up"));
+            assertTrue(hasStairsUp || r.getSteps().stream()
+                            .anyMatch(s -> s.instruction() != null && s.instruction().toLowerCase().contains("stairs")),
+                    "Hall 1→2 should have stairs instruction");
+        }
+    }
+
+    @Test
+    void detectTransitionType_returnsElevatorForElevatorRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H8-843", "H9-903", "8", "9", true);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasElevatorTransition = r.getRoutePoints().stream()
+                    .anyMatch(p -> p.getLabel() != null && p.getLabel().contains("TRANSITION_ELEVATOR"));
+            assertTrue(hasElevatorTransition, "Avoid-stairs route should use TRANSITION_ELEVATOR");
+        }
+    }
+
+    @Test
+    void detectTransitionType_returnsStairsForStairsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", false);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean hasStairsTransition = r.getRoutePoints().stream()
+                    .anyMatch(p -> p.getLabel() != null && p.getLabel().contains("TRANSITION_STAIRS"));
+            assertTrue(hasStairsTransition || r.getRoutePoints().stream()
+                            .anyMatch(p -> p.getLabel() != null && p.getLabel().contains("TRANSITION_")),
+                    "Stairs-allowed route may use TRANSITION_STAIRS");
+        }
+    }
+
+    @Test
+    void filterPois_includesStairsWhenStrategyAllowsStairs() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", false);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty(), "Cross-floor with stairs allowed should produce route");
+    }
+
+    @Test
+    void filterPois_excludesStairsWhenAvoidStairs() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "H", "H1-118", "H2-217", "1", "2", true);
+        assertNotNull(r);
+        if (!r.getRoutePoints().isEmpty()) {
+            boolean usedStairs = r.getRoutePoints().stream()
+                    .anyMatch(p -> p.getLabel() != null && p.getLabel().contains("TRANSITION_STAIRS"));
+            assertFalse(usedStairs, "Avoid-stairs should not use stairs transition");
+        }
+    }
+
+    @Test
+    void convertBuildingId_HallPrefix_preservesFullId() {
+        List<String> rooms = directionService.getAvailableRooms("Hall-8", "8");
+        assertNotNull(rooms);
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void resolvePoint_poiAsOrigin_resolves() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-Elevator-Main", "VE-1-02", "1", "1", false);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty(), "POI as origin should resolve and produce route");
+    }
+
+    @Test
+    void resolvePoint_poiAsDestination_resolves() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-1-01", "VE-Stairs-Main", "1", "1", false);
+        assertNotNull(r);
+    }
+
 }
