@@ -19,14 +19,12 @@ class PathfindingServiceTest {
         service = new PathfindingService();
     }
 
-
-
     @ParameterizedTest
     @ValueSource(strings = {
-        "Hall-8", "Hall-9", "Hall-1", "Hall-2",
-        "VL-1", "VL-2",
-        "LB-2", "LB-3", "LB-4", "LB-5",
-        "MB-S2"
+            "Hall-8", "Hall-9", "Hall-1", "Hall-2",
+            "VL-1", "VL-2",
+            "LB-2", "LB-3", "LB-4", "LB-5",
+            "MB-S2"
     })
     void waypointsExistForEveryBuilding(String buildingId) {
         List<Waypoint> wps = service.getWaypointsForBuilding(buildingId);
@@ -41,8 +39,6 @@ class PathfindingServiceTest {
         assertNotNull(wps);
         assertTrue(wps.isEmpty());
     }
-
-
 
     @Test
     void findNearestWaypoint_returnsClosestForHall8() {
@@ -62,8 +58,6 @@ class PathfindingServiceTest {
         assertNull(nearest);
     }
 
-
-
     @Test
     void findWaypointById_findsExistingWaypoint() {
         service.setBuilding("Hall-8");
@@ -79,7 +73,6 @@ class PathfindingServiceTest {
         assertNull(wp);
     }
 
-
     @Test
     void findPath_hall8_returnsNonEmptyPath() {
         service.setBuilding("Hall-8");
@@ -88,7 +81,7 @@ class PathfindingServiceTest {
         Waypoint start = wps.get(0);
         Waypoint end = wps.get(wps.size() - 1);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end, false);
         assertNotNull(path);
         assertFalse(path.isEmpty());
         assertEquals(start.id, path.get(0).id);
@@ -101,7 +94,7 @@ class PathfindingServiceTest {
         List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
         Waypoint wp = wps.get(0);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(wp, wp);
+        List<Waypoint> path = service.findPathThroughWaypoints(wp, wp, false);
         assertNotNull(path);
         assertEquals(1, path.size());
         assertEquals(wp.id, path.get(0).id);
@@ -110,22 +103,22 @@ class PathfindingServiceTest {
     @Test
     void findPath_returnsEmptyForNullInput() {
         service.setBuilding("Hall-8");
-        assertTrue(service.findPathThroughWaypoints(null, null).isEmpty());
+        assertTrue(service.findPathThroughWaypoints(null, null, false).isEmpty());
     }
 
     @Test
     void findPath_returnsEmptyWhenGraphMissing() {
         service.setBuilding("Unknown-99");
         Waypoint fake = new Waypoint(0, 0, "fake");
-        assertTrue(service.findPathThroughWaypoints(fake, fake).isEmpty());
+        assertTrue(service.findPathThroughWaypoints(fake, fake, false).isEmpty());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "Hall-8", "Hall-9", "Hall-1", "Hall-2",
-        "VL-1", "VL-2",
-        "LB-2", "LB-3", "LB-4", "LB-5",
-        "MB-S2"
+            "Hall-8", "Hall-9", "Hall-1", "Hall-2",
+            "VL-1", "VL-2",
+            "LB-2", "LB-3", "LB-4", "LB-5",
+            "MB-S2"
     })
     void graphIsConnected_pathExistsBetweenFirstAndLast(String buildingId) {
         service.setBuilding(buildingId);
@@ -135,12 +128,11 @@ class PathfindingServiceTest {
         Waypoint start = wps.get(0);
         Waypoint end = wps.get(wps.size() - 1);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end, false);
         assertNotNull(path,
                 buildingId + " graph should be connected — path must exist");
         assertTrue(path.size() >= 2);
     }
-
 
     @Test
     void waypoint_distanceTo_isCorrect() {
@@ -180,7 +172,6 @@ class PathfindingServiceTest {
         assertNotEquals(null, wp);
     }
 
-
     @Test
     void getAllWaypoints_returnsListForCurrentBuilding() {
         service.setBuilding("Hall-8");
@@ -196,11 +187,10 @@ class PathfindingServiceTest {
         Waypoint start = wps.get(0);
         Waypoint end = wps.get(wps.size() / 2);
 
-        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end, false);
         assertNotNull(path);
         assertFalse(path.isEmpty());
         assertEquals(start.id, path.get(0).id);
         assertEquals(end.id, path.get(path.size() - 1).id);
     }
-
 }

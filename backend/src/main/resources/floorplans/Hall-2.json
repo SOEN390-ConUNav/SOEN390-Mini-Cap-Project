@@ -120,15 +120,15 @@
     },
     {
       "id": "Hall-Stairs-Main",
-      "displayName": "Stairs",
-      "type": "stairs",
+      "displayName": "Stairs Up",
+      "type": "stairs-up",
       "x": 664.77802,
       "y": 691.93091
     },
     {
       "id": "H2-Stairs-Down-1",
-      "displayName": "Stairs",
-      "type": "stairs",
+      "displayName": "Stairs Down",
+      "type": "stairs-down",
       "x": 632.9436,
       "y": 948.47906
     }

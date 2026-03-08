@@ -269,8 +269,9 @@ export default function IndoorNavigation() {
       setRouteData(null);
       setUniversalRouteData(null);
     } finally {
-      if (requestId !== routeRequestIdRef.current) return;
-      setIsLoadingRoute(false);
+      if (requestId === routeRequestIdRef.current) {
+        setIsLoadingRoute(false);
+      }
     }
   }, [
     startRoom,
@@ -385,23 +386,25 @@ export default function IndoorNavigation() {
     (Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 0);
 
   const getDisplayedRoute = () => {
-    if (!routeData || !routeData.routePoints) return undefined;
+    const points = routeData?.routePoints;
+    if (!points || points.length === 0) return undefined;
 
-    const transitionIndex = routeData.routePoints.findIndex(
-      (p) => p.label && p.label.startsWith("TRANSITION_"),
+    const transitionIndex = points.findIndex((p) =>
+      p.label?.startsWith("TRANSITION_"),
     );
 
     if (transitionIndex === -1) {
-      return routeData.routePoints;
+      return points;
     }
 
-    const startFloor = routeData.startFloor;
-    const endFloor = routeData.endFloor;
+    const { startFloor, endFloor } = routeData;
 
     if (currentFloor === startFloor) {
-      return routeData.routePoints.slice(0, transitionIndex + 1);
-    } else if (currentFloor === endFloor) {
-      return routeData.routePoints.slice(transitionIndex + 1);
+      return points.slice(0, transitionIndex + 1);
+    }
+
+    if (currentFloor === endFloor) {
+      return points.slice(transitionIndex + 1);
     }
 
     return undefined;
@@ -412,6 +415,16 @@ export default function IndoorNavigation() {
   useEffect(() => {
     setActiveBuildingId(buildingId);
   }, [buildingId]);
+
+  let displayBuildingName = routeData?.buildingName || "Building";
+
+  if (!routeData?.buildingName) {
+    if (buildingId === "H") {
+      displayBuildingName = "Hall Building";
+    } else if (buildingId === "VL") {
+      displayBuildingName = "Vanier Library Building";
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -466,14 +479,7 @@ export default function IndoorNavigation() {
         endRoom={endRoom}
         isLoadingRoute={isLoadingRoute}
         statusBarHeight={statusBarHeight}
-        buildingName={
-          routeData?.buildingName ||
-          (buildingId === "H"
-            ? "Hall Building"
-            : buildingId === "VL"
-              ? "Vanier Library Building"
-              : "Building")
-        }
+        buildingName={displayBuildingName}
         floor={currentFloor}
         onStartPress={() => {
           setSelectingFor("start");

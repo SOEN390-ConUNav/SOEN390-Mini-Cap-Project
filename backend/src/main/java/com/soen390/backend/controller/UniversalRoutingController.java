@@ -17,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/api/directions/universal")
 public class UniversalRoutingController {
 
+    private static final String ERR_KEY = "error";
     private final UniversalRoutingService universalRoutingService;
 
     public UniversalRoutingController(UniversalRoutingService universalRoutingService) {
@@ -39,12 +40,12 @@ public class UniversalRoutingController {
                     endBuilding, endRoom, endFloor, avoidStairs);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERR_KEY, e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(ERR_KEY, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of(
-                    "error", e.getMessage() != null ? e.getMessage() : "Universal routing failed"));
+                    ERR_KEY, e.getMessage() != null ? e.getMessage() : "Universal routing failed"));
         }
     }
 }

@@ -102,7 +102,7 @@
     {
       "id": "H1-Maisonneuve-Entry",
       "displayName": "Main Exit",
-      "type": "exit",
+      "type": "entrance-exit",
       "x": 511.75034,
       "y": 1462.92462
     }

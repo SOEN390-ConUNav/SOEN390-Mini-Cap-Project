@@ -135,7 +135,10 @@ export default function DirectionsPanel({
           nestedScrollEnabled
         >
           {remainingSteps.map((step, index) => (
-            <StepRow key={`indoor-step-${index}`} step={step} />
+            <StepRow
+              key={`step-${step.instruction.replace(/\s+/g, "-")}-${index}`}
+              step={step}
+            />
           ))}
         </ScrollView>
       )}
