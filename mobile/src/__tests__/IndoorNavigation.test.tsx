@@ -113,6 +113,13 @@ jest.mock("../components/RoomListModal", () => {
         >
           <Text>Pick Second Room</Text>
         </Pressable>
+        {/* NEW BUTTON FOR CROSS-CAMPUS COVERAGE */}
+        <Pressable
+          testID="pick-room-universal"
+          onPress={() => props.onSelectRoom("VL-101")}
+        >
+          <Text>Pick VL Room</Text>
+        </Pressable>
       </View>
     );
   };
@@ -250,9 +257,11 @@ describe("IndoorNavigation", () => {
 
     const { getByTestId, getByText } = render(<IndoorNavigation />);
 
-    fireEvent.press(getByTestId("sim-poi-tap"));
     fireEvent.press(getByTestId("open-start"));
     fireEvent.press(getByTestId("pick-room-first"));
+
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-universal"));
 
     await waitFor(() => {
       expect(getUniversalDirections).toHaveBeenCalled();
@@ -351,7 +360,7 @@ describe("IndoorNavigation", () => {
     (getAvailableRooms as jest.Mock).mockImplementation((bId: string) => {
       if (bId === "CC" || String(bId).startsWith("CC"))
         return Promise.resolve(["CC-101"]);
-      return Promise.resolve(["H8-801", "H8-820"]);
+      return Promise.resolve(["H8-801", "H8-820", "VL-101"]);
     });
 
     (getUniversalDirections as jest.Mock).mockResolvedValue({
@@ -375,8 +384,9 @@ describe("IndoorNavigation", () => {
 
     fireEvent.press(getByTestId("open-start"));
     fireEvent.press(getByTestId("pick-room-first"));
+
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-universal"));
 
     await waitFor(() => {
       expect(getUniversalDirections).toHaveBeenCalled();
