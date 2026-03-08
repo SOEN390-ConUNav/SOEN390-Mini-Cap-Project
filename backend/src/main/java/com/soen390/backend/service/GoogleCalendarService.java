@@ -291,7 +291,7 @@ public class GoogleCalendarService {
     String campus = NO_CAMPUS;
     String building = buildingLine;
 
-    String[] parts = buildingLine.split("\\s*+-\\s*+", 2);
+    String[] parts = buildingLine.split("-", 2);
     if (parts.length == 2) {
       campus = parts[0].trim();
       building = parts[1].trim();
