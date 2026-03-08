@@ -33,7 +33,8 @@
     "MB-S2-Room30": { "x": 876.23755, "y": 933.50201 },
     "MB-S2-Room31": { "x": 922.59448, "y": 842.60602 },
     "MB-S2-Room32": { "x": 888.05402, "y": 757.16376 },
-    "Entrance-Exit": { "x": 52.719685, "y": 506.29077 }
+    "MBS2-Entrance-Exit": { "x": 52.719685, "y": 506.29077 },
+    "MB-Elevator-Main": { "x": 686.5, "y": 812 }
   },
   "waypoints": [
     { "id": "MBS2-AllowedPath1", "x": 111.80209, "y": 497.20117 },
@@ -67,5 +68,14 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
-  }
+  },
+  "pois": [
+    {
+      "id": "MB-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 686.5,
+      "y": 812
+    }
+  ]
 }

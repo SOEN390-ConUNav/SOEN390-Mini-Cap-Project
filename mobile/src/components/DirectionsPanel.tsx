@@ -1,137 +1,224 @@
 import React from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import BottomDrawer from "./BottomDrawer";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Platform,
-} from "react-native";
-import { IndoorDirectionResponse } from "../types/indoorDirections";
+  IndoorDirectionResponse,
+  IndoorRouteStep,
+  IndoorManeuverType,
+} from "../types/indoorDirections";
+
+const BURGUNDY = "#800020";
+const BURGUNDY_DARK = "#5a0016";
+const BURGUNDY_HIGHLIGHT = "rgba(255,255,255,0.12)";
 
 interface DirectionsPanelProps {
   routeData: IndoorDirectionResponse | null;
+  visible: boolean;
   onClose: () => void;
 }
 
-export default function DirectionsPanel({
-  routeData,
-  onClose,
-}: Readonly<DirectionsPanelProps>) {
-  if (!routeData?.steps?.length) {
-    return null;
+function getIndoorManeuverIcon(
+  maneuverType?: IndoorManeuverType,
+): keyof typeof Ionicons.glyphMap {
+  switch (maneuverType) {
+    case "TURN_LEFT":
+      return "arrow-undo";
+    case "TURN_RIGHT":
+      return "arrow-redo";
+    case "TURN_AROUND":
+      return "refresh";
+    case "ELEVATOR_UP":
+      return "arrow-up-circle";
+    case "ELEVATOR_DOWN":
+      return "arrow-down-circle";
+    case "STAIRS_UP":
+      return "trending-up";
+    case "STAIRS_DOWN":
+      return "trending-down";
+    case "ESCALATOR_UP":
+      return "trending-up";
+    case "ESCALATOR_DOWN":
+      return "trending-down";
+    case "ENTER_ROOM":
+      return "arrow-forward";
+    case "EXIT_ROOM":
+      return "arrow-back";
+    case "ENTER_BUILDING":
+      return "log-in";
+    case "EXIT_BUILDING":
+      return "log-out";
+    case "ENTER_FLOOR":
+      return "arrow-forward";
+    case "EXIT_FLOOR":
+      return "arrow-back";
+    case "STRAIGHT":
+    default:
+      return "arrow-up";
   }
+}
 
+function PrimaryStep({ step }: { readonly step: IndoorRouteStep }) {
   return (
-    <View style={styles.directionsPanel}>
-      <View style={styles.directionsHeader}>
-        <Text style={styles.directionsTitle}>Step-by-Step Directions</Text>
-        <TouchableOpacity
-          onPress={onClose}
-          style={styles.closeDirectionsButton}
-        >
-          <Text style={styles.closeDirectionsText}>✕</Text>
-        </TouchableOpacity>
+    <View style={styles.primaryCard}>
+      <View style={styles.primaryIconWrap}>
+        <Ionicons
+          name={getIndoorManeuverIcon(step.maneuverType)}
+          size={36}
+          color="#fff"
+        />
       </View>
-      <ScrollView style={styles.directionsList}>
-        {routeData.steps.map((step, index) => (
-          <View
-            key={`step-${step.instruction}-${step.floor ?? index}`}
-            style={styles.directionStep}
-          >
-            <View style={styles.directionStepNumber}>
-              <Text style={styles.directionStepNumberText}>{index + 1}</Text>
-            </View>
-            <View style={styles.directionStepContent}>
-              <Text style={styles.directionStepText}>{step.instruction}</Text>
-              {(step.distance || step.duration) && (
-                <Text style={styles.directionStepMeta}>
-                  {step.distance} • {step.duration}
-                </Text>
-              )}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      <View style={styles.primaryTextWrap}>
+        <Text style={styles.primaryInstruction} numberOfLines={2}>
+          {step.instruction}
+        </Text>
+        {step.distance ? (
+          <Text style={styles.primaryMeta}>{step.distance}</Text>
+        ) : null}
+      </View>
     </View>
   );
 }
 
+function StepRow({ step }: { readonly step: IndoorRouteStep }) {
+  return (
+    <View style={styles.stepRow}>
+      <View style={styles.stepIconWrap}>
+        <Ionicons
+          name={getIndoorManeuverIcon(step.maneuverType)}
+          size={20}
+          color="#fff"
+        />
+      </View>
+      <View style={styles.stepTextWrap}>
+        <Text style={styles.stepInstruction} numberOfLines={2}>
+          {step.instruction}
+        </Text>
+        {step.distance ? (
+          <Text style={styles.stepMeta}>{step.distance}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+export default function DirectionsPanel({
+  routeData,
+  visible,
+  onClose,
+}: Readonly<DirectionsPanelProps>) {
+  const steps = routeData?.steps;
+  if (!steps || steps.length === 0) return null;
+
+  const [firstStep, ...remainingSteps] = steps;
+
+  return (
+    <BottomDrawer
+      visible={visible}
+      snapPoints={["16%", "45%", "75%"]}
+      initialSnapIndex={1}
+      useModal={false}
+      enablePanDownToClose={false}
+      enableDynamicSizing={false}
+      backgroundColor={BURGUNDY}
+      handleMode="toggle"
+      handleColor="rgba(255,255,255,0.4)"
+      contentContainerStyle={styles.drawerContent}
+      onClose={onClose}
+    >
+      <PrimaryStep step={firstStep} />
+
+      {remainingSteps.length > 0 && (
+        <ScrollView
+          style={styles.stepList}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+        >
+          {remainingSteps.map((step, index) => (
+            <StepRow
+              key={`step-${step.instruction.replaceAll(/\s+/g, "-")}-${index}`}
+              step={step}
+            />
+          ))}
+        </ScrollView>
+      )}
+    </BottomDrawer>
+  );
+}
+
 const styles = StyleSheet.create({
-  directionsPanel: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "60%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 10,
-    paddingBottom: Platform.OS === "ios" ? 34 : 16,
+  drawerContent: {
+    paddingHorizontal: 4,
+    paddingTop: 0,
+    alignItems: "stretch",
   },
-  directionsHeader: {
+
+  primaryCard: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    backgroundColor: BURGUNDY_HIGHLIGHT,
+    marginHorizontal: 12,
+    marginBottom: 4,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 16,
   },
-  directionsTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#212121",
-  },
-  closeDirectionsButton: {
-    width: 32,
-    height: 32,
+  primaryIconWrap: {
+    width: 56,
+    height: 56,
     borderRadius: 16,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: BURGUNDY_DARK,
     alignItems: "center",
     justifyContent: "center",
   },
-  closeDirectionsText: {
-    fontSize: 18,
-    color: "#757575",
-    fontWeight: "600",
-  },
-  directionsList: {
-    padding: 16,
-  },
-  directionStep: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  directionStepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#8B1538",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  directionStepNumberText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  directionStepContent: {
+  primaryTextWrap: {
     flex: 1,
   },
-  directionStepText: {
+  primaryInstruction: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 26,
+  },
+  primaryMeta: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 13,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+
+  stepList: {
+    paddingHorizontal: 16,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.15)",
+    gap: 14,
+  },
+  stepIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: BURGUNDY_DARK,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepTextWrap: {
+    flex: 1,
+  },
+  stepInstruction: {
+    color: "#fff",
     fontSize: 15,
-    color: "#212121",
-    marginBottom: 4,
+    fontWeight: "500",
     lineHeight: 20,
   },
-  directionStepMeta: {
-    fontSize: 13,
-    color: "#757575",
+  stepMeta: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 12,
+    marginTop: 2,
   },
 });

@@ -99,9 +99,36 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
     const webViewRef = useRef<WebView>(null);
     const [svgHtml, setSvgHtml] = React.useState<string | null>(null);
     const [isWebViewReady, setIsWebViewReady] = React.useState(false);
+    const isWebViewReadyRef = React.useRef(false);
     const pendingRouteRef = React.useRef<RoutePoint[] | null>(null);
+    const floorVersionRef = React.useRef(0);
+    const loadedFloorRef = React.useRef<string | null>(null);
+
+    const markWebViewReady = React.useCallback(
+      (ready: boolean, floor?: string) => {
+        isWebViewReadyRef.current = ready;
+        if (floor !== undefined) loadedFloorRef.current = floor;
+        if (!ready) loadedFloorRef.current = null;
+        setIsWebViewReady(ready);
+      },
+      [],
+    );
 
     useEffect(() => {
+      const version = floorVersionRef.current + 1;
+      let cancelled = false;
+
+      floorVersionRef.current = version;
+      markWebViewReady(false);
+      pendingRouteRef.current = null;
+      setSvgHtml(null);
+
+      if (webViewRef.current) {
+        webViewRef.current.injectJavaScript(`
+          (function() { if (window.clearRoute) window.clearRoute(); true; })();
+        `);
+      }
+
       const loadSvg = async () => {
         try {
           const asset = getSvgAsset(buildingId, floorNumber);
@@ -111,15 +138,13 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           }
 
           const assetModule = await Asset.fromModule(asset).downloadAsync();
+          if (cancelled || version !== floorVersionRef.current) return;
           const uri = assetModule.localUri || assetModule.uri;
-
-          setSvgHtml(null);
-          setIsWebViewReady(false);
-          pendingRouteRef.current = null;
 
           const response = await fetch(uri);
           const svgText = await response.text();
-          const svgMatch = /<svg[\s\S]*<\/svg>/i.exec(svgText);
+          if (cancelled || version !== floorVersionRef.current) return;
+          const svgMatch = svgText.match(/<svg[\s\S]*<\/svg>/i);
 
           if (svgMatch) {
             let svgContent = svgMatch[0];
@@ -484,8 +509,9 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               </body>
             </html>
           `;
+            if (cancelled || version !== floorVersionRef.current) return;
             setSvgHtml(html);
-            setIsWebViewReady(false);
+            markWebViewReady(false);
           }
         } catch (e) {
           console.error("Error loading SVG:", e);
@@ -493,28 +519,28 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       };
 
       loadSvg();
-    }, [buildingId, floorNumber]);
+      return () => {
+        cancelled = true;
+      };
+    }, [buildingId, floorNumber, markWebViewReady]);
 
     const executeDrawRoute = React.useCallback(
-      (routePoints: RoutePoint[], retryCount = 0) => {
+      (routePoints: RoutePoint[], version: number, retryCount = 0) => {
+        if (version !== floorVersionRef.current) return;
+        if (!loadedFloorRef.current) return;
+
         if (!webViewRef.current) {
           if (retryCount < 3) {
             setTimeout(
-              () => executeDrawRoute(routePoints, retryCount + 1),
+              () => executeDrawRoute(routePoints, version, retryCount + 1),
               500,
             );
           }
           return;
         }
 
-        if (!isWebViewReady) {
+        if (!isWebViewReadyRef.current) {
           pendingRouteRef.current = routePoints;
-          if (retryCount === 0) {
-            setTimeout(() => {
-              if (webViewRef.current)
-                executeDrawRoute(routePoints, retryCount + 1);
-            }, 1000);
-          }
           return;
         }
 
@@ -539,26 +565,33 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       })();
     `);
       },
-      [isWebViewReady],
+      [],
     );
 
     React.useEffect(() => {
-      if (isWebViewReady) {
+      if (isWebViewReady && loadedFloorRef.current === floorNumber) {
+        const version = floorVersionRef.current;
         if (pendingRouteRef.current) {
           const pendingRoute = pendingRouteRef.current;
           pendingRouteRef.current = null;
           setTimeout(() => {
-            if (webViewRef.current && isWebViewReady)
-              executeDrawRoute(pendingRoute, 0);
+            if (
+              version === floorVersionRef.current &&
+              isWebViewReadyRef.current
+            )
+              executeDrawRoute(pendingRoute, version, 0);
           }, 300);
         } else if (propRoutePoints && propRoutePoints.length > 0) {
           setTimeout(() => {
-            if (webViewRef.current && isWebViewReady)
-              executeDrawRoute(propRoutePoints, 0);
+            if (
+              version === floorVersionRef.current &&
+              isWebViewReadyRef.current
+            )
+              executeDrawRoute(propRoutePoints, version, 0);
           }, 300);
         }
       }
-    }, [isWebViewReady, propRoutePoints]);
+    }, [isWebViewReady, propRoutePoints, executeDrawRoute, floorNumber]);
 
     React.useEffect(() => {
       if (!isWebViewReady || !webViewRef.current) return;
@@ -605,7 +638,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       ref,
       () => ({
         drawRoute: (routePoints: RoutePoint[]) => {
-          executeDrawRoute(routePoints);
+          executeDrawRoute(routePoints, floorVersionRef.current);
         },
         clearRoute: () => {
           if (!webViewRef.current) return;
@@ -685,6 +718,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
     return (
       <View style={styles.container}>
         <WebView
+          key={`${buildingId}-${floorNumber}`}
           ref={webViewRef}
           source={{ html: svgHtml }}
           style={styles.webView}
@@ -693,27 +727,28 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           scrollEnabled={true}
           javaScriptEnabled={true}
           onMessage={(event) => {
-            const raw = event.nativeEvent.data;
-            if (!raw?.startsWith("{")) return;
-            const data = JSON.parse(raw) as {
-              type: string;
-              poi?: unknown;
-              room?: unknown;
-              message?: string;
-            };
-            if (data.type === "webViewReady") {
-              setIsWebViewReady(true);
-              if (pendingRouteRef.current) {
-                const pendingRoute = pendingRouteRef.current;
-                pendingRouteRef.current = null;
-                setTimeout(() => executeDrawRoute(pendingRoute, 0), 100);
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === "webViewReady") {
+                markWebViewReady(true, floorNumber);
+                if (pendingRouteRef.current) {
+                  const pendingRoute = pendingRouteRef.current;
+                  const version = floorVersionRef.current;
+                  pendingRouteRef.current = null;
+                  setTimeout(
+                    () => executeDrawRoute(pendingRoute, version, 0),
+                    100,
+                  );
+                }
+              } else if (data.type === "poiTap" && onPoiTap && data.poi) {
+                onPoiTap(data.poi as PoiMarker);
+              } else if (data.type === "roomTap" && onRoomTap && data.room) {
+                onRoomTap(data.room as RoomMarkerData);
+              } else if (data.type === "routeDrawError") {
+                console.error("Route draw error:", data.message);
               }
-            } else if (data.type === "poiTap" && onPoiTap && data.poi) {
-              onPoiTap(data.poi as PoiMarker);
-            } else if (data.type === "roomTap" && onRoomTap && data.room) {
-              onRoomTap(data.room as RoomMarkerData);
-            } else if (data.type === "routeDrawError") {
-              console.error("Route draw error:", data.message);
+            } catch (e) {
+              // Ignore non-JSON messages
             }
           }}
           onError={(syntheticEvent) => {
@@ -721,12 +756,16 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           }}
           onLoadEnd={() => {
             setTimeout(() => {
-              if (!isWebViewReady) {
-                setIsWebViewReady(true);
+              if (!isWebViewReadyRef.current) {
+                markWebViewReady(true, floorNumber);
                 if (pendingRouteRef.current) {
                   const pendingRoute = pendingRouteRef.current;
+                  const version = floorVersionRef.current;
                   pendingRouteRef.current = null;
-                  setTimeout(() => executeDrawRoute(pendingRoute, 0), 100);
+                  setTimeout(
+                    () => executeDrawRoute(pendingRoute, version, 0),
+                    100,
+                  );
                 }
               }
             }, 500);
