@@ -81,6 +81,17 @@ describe("getIndoorDirections", () => {
     ).rejects.toThrow("Internal server error");
   });
 
+  it("uses Unknown error when response.text() rejects", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: () => Promise.reject(new Error("stream read failed")),
+    });
+    await expect(
+      getIndoorDirections("Hall-8", "H-831", "H-832"),
+    ).rejects.toThrow("Unknown error");
+  });
+
   it("wraps network errors with a helpful message", async () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(
       new Error("Network request failed"),
@@ -236,6 +247,17 @@ describe("getUniversalDirections", () => {
     await expect(
       getUniversalDirections("H", "H1-118-14", "1", "LB", "LB-204", "2", false),
     ).rejects.toThrow("Cannot connect to backend");
+  });
+
+  it("getUniversalDirections uses Unknown error when text() rejects", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      text: () => Promise.reject(new Error("stream error")),
+    });
+    await expect(
+      getUniversalDirections("H", "H1-118-14", "1", "LB", "LB-204", "2", false),
+    ).rejects.toThrow("Unknown error");
   });
 
   it("getUniversalDirections includes error text on non-ok response", async () => {

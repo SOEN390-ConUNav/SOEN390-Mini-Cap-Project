@@ -235,4 +235,64 @@ describe("DirectionsPanel", () => {
     );
     expect(getByText("Walk")).toBeTruthy();
   });
+
+  it("renders STAIRS_UP, STAIRS_DOWN, ESCALATOR_DOWN, ENTER_FLOOR, EXIT_FLOOR icons", () => {
+    const steps = [
+      {
+        instruction: "Stairs up",
+        distance: "0m",
+        duration: "0s",
+        floor: "8",
+        maneuverType: "STAIRS_UP" as const,
+      },
+      {
+        instruction: "Stairs down",
+        distance: "0m",
+        duration: "0s",
+        floor: "8",
+        maneuverType: "STAIRS_DOWN" as const,
+      },
+      {
+        instruction: "Escalator down",
+        distance: "0m",
+        duration: "0s",
+        floor: "8",
+        maneuverType: "ESCALATOR_DOWN" as const,
+      },
+      {
+        instruction: "Enter floor",
+        distance: "0m",
+        duration: "0s",
+        floor: "8",
+        maneuverType: "ENTER_FLOOR" as const,
+      },
+      {
+        instruction: "Exit floor",
+        distance: "0m",
+        duration: "0s",
+        floor: "8",
+        maneuverType: "EXIT_FLOOR" as const,
+      },
+      {
+        instruction: "Exit room",
+        distance: "0m",
+        duration: "0s",
+        floor: "8",
+        maneuverType: "EXIT_ROOM" as const,
+      },
+    ];
+    const { getByText } = render(
+      <DirectionsPanel
+        routeData={{ ...routeData, steps }}
+        visible={true}
+        onClose={mockOnClose}
+      />,
+    );
+    expect(getByText("Stairs up")).toBeTruthy();
+    expect(getByText("Stairs down")).toBeTruthy();
+    expect(getByText("Escalator down")).toBeTruthy();
+    expect(getByText("Enter floor")).toBeTruthy();
+    expect(getByText("Exit floor")).toBeTruthy();
+    expect(getByText("Exit room")).toBeTruthy();
+  });
 });

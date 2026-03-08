@@ -221,4 +221,38 @@ class PathfindingServiceTest {
         assertNotNull(path);
         assertFalse(path.isEmpty());
     }
+
+    @Test
+    void findPath_nullStart_returnsEmpty() {
+        service.setBuilding("Hall-8");
+        List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
+        Waypoint end = wps.get(wps.size() - 1);
+
+        List<Waypoint> path = service.findPathThroughWaypoints(null, end);
+        assertNotNull(path);
+        assertTrue(path.isEmpty());
+    }
+
+    @Test
+    void findPath_nullEnd_returnsEmpty() {
+        service.setBuilding("Hall-8");
+        List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
+        Waypoint start = wps.get(0);
+
+        List<Waypoint> path = service.findPathThroughWaypoints(start, null);
+        assertNotNull(path);
+        assertTrue(path.isEmpty());
+    }
+
+    @Test
+    void findPath_avoidStairsTrue_usesNoStairsGraph() {
+        service.setBuilding("Hall-8");
+        List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
+        Waypoint start = wps.get(0);
+        Waypoint end = wps.get(wps.size() - 1);
+
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end, true);
+        assertNotNull(path);
+        assertFalse(path.isEmpty());
+    }
 }

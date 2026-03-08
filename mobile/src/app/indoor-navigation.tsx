@@ -332,23 +332,25 @@ export default function IndoorNavigation() {
   const handlePoiTap = useCallback(
     (poi: PoiMarker) => {
       setEndRoom(poi.id);
+      setEndBuildingId(getBuildingFromRoom(poi.id, buildingId));
       if (!startRoom) {
         setSelectingFor("start");
         setShowRoomList(true);
       }
     },
-    [startRoom],
+    [startRoom, buildingId],
   );
 
   const handleRoomTap = useCallback(
     (room: RoomMarkerData) => {
       setEndRoom(room.id);
+      setEndBuildingId(getBuildingFromRoom(room.id, buildingId));
       if (!startRoom) {
         setSelectingFor("start");
         setShowRoomList(true);
       }
     },
-    [startRoom],
+    [startRoom, buildingId],
   );
 
   useEffect(() => {

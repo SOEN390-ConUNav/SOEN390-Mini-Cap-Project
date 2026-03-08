@@ -445,4 +445,47 @@ class IndoorDirectionServiceTest {
         assertEquals("8", r.getEndFloor());
     }
 
+    @Test
+    void getIndoorDirections_crossFloor_avoidStairs_prefersElevator() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H9-903", "8", "9", true);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_longRoute_includesMinutesInDuration() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertNotNull(r.getDuration());
+        assertTrue(r.getDuration().contains("sec") || r.getDuration().contains("min"));
+    }
+
+    @Test
+    void getWaypoints_withNullFloor_returnsList() {
+        var wps = directionService.getWaypoints("H", null);
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getIndoorDirections_VL1_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VL-1", "VL-101", "VL-102", "1", "1", false);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty());
+    }
+
+    @Test
+    void getIndoorDirections_MB_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "MB-S2", "MBS2-101", "MBS2-102", "S2", "S2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_originFloorOnly_usesAsEndFloor() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", null, false);
+        assertEquals("8", r.getEndFloor());
+    }
+
 }

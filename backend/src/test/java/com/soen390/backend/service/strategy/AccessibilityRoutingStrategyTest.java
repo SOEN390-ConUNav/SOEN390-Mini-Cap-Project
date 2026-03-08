@@ -31,4 +31,10 @@ class AccessibilityRoutingStrategyTest {
         AccessibilityRoutingStrategy strategy = AccessibilityRoutingStrategy.fromAvoidStairs(true);
         assertFalse(strategy.allowsStairs());
     }
+
+    @Test
+    void fromAvoidStairs_result_preferStairsForConnectors_matchesAllowsStairs() {
+        assertTrue(AccessibilityRoutingStrategy.fromAvoidStairs(false).preferStairsForConnectors());
+        assertFalse(AccessibilityRoutingStrategy.fromAvoidStairs(true).preferStairsForConnectors());
+    }
 }
