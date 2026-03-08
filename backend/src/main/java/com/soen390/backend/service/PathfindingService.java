@@ -65,13 +65,13 @@ public class PathfindingService {
             JsonNode roomsNode = root.get("rooms");
             if (roomsNode != null && roomsNode.isObject()) {
                 Map<String, Waypoint> roomMap = new HashMap<>();
-                roomsNode.fields().forEachRemaining(entry -> {
+                roomsNode.fields().forEachRemaining(entry ->
                     roomMap.put(entry.getKey(), new Waypoint(
                             entry.getValue().get("x").asDouble(),
                             entry.getValue().get("y").asDouble(),
                             entry.getKey()
-                    ));
-                });
+                    ))
+                );
                 ROOM_COORDINATES.put(buildingId, roomMap);
             }
 

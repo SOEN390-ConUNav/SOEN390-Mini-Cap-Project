@@ -316,21 +316,20 @@ public class IndoorDirectionService {
         int anchorIdx = 0;
         for (int i = 1; i < routePoints.size() - 1; i++) {
             double segDist = sumSegmentDistance(routePoints, anchorIdx, i);
-            if (segDist < MIN_SEGMENT_PX) continue;
+            if (segDist >= MIN_SEGMENT_PX) {
+                IndoorManeuverType turn = classifyTurnAtPoint(
+                        routePoints.get(anchorIdx),
+                        routePoints.get(i),
+                        routePoints.get(i + 1));
 
-            IndoorManeuverType turn = classifyTurnAtPoint(
-                    routePoints.get(anchorIdx),
-                    routePoints.get(i),
-                    routePoints.get(i + 1));
-
-            if (turn != IndoorManeuverType.STRAIGHT) {
-                if (!decisionManeuvers.isEmpty()
-                        && decisionManeuvers.get(decisionManeuvers.size() - 1) == turn) {
-                    continue;
+                boolean isNewDecision = turn != IndoorManeuverType.STRAIGHT
+                        && (decisionManeuvers.isEmpty()
+                                || decisionManeuvers.get(decisionManeuvers.size() - 1) != turn);
+                if (isNewDecision) {
+                    decisionIndices.add(i);
+                    decisionManeuvers.add(turn);
+                    anchorIdx = i;
                 }
-                decisionIndices.add(i);
-                decisionManeuvers.add(turn);
-                anchorIdx = i;
             }
         }
     }
@@ -393,7 +392,7 @@ public class IndoorDirectionService {
         IndoorManeuverType maneuver;
         if (useElevator && goingUp) {
             maneuver = IndoorManeuverType.ELEVATOR_UP;
-        } else if (useElevator && !goingUp) {
+        } else if (useElevator) {
             maneuver = IndoorManeuverType.ELEVATOR_DOWN;
         } else if (!useElevator && goingUp) {
             maneuver = IndoorManeuverType.STAIRS_UP;

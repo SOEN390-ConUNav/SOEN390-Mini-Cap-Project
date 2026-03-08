@@ -106,7 +106,7 @@ export default function DirectionsPanel({
   routeData,
   visible,
   onClose,
-}: DirectionsPanelProps) {
+}: Readonly<DirectionsPanelProps>) {
   const steps = routeData?.steps;
   if (!steps || steps.length === 0) return null;
 
@@ -136,7 +136,7 @@ export default function DirectionsPanel({
         >
           {remainingSteps.map((step, index) => (
             <StepRow
-              key={`step-${step.instruction.replace(/\s+/g, "-")}-${index}`}
+              key={`step-${step.instruction.replaceAll(/\s+/g, "-")}-${index}`}
               step={step}
             />
           ))}

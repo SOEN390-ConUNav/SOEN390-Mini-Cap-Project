@@ -148,7 +148,7 @@ export default function IndoorNavigation() {
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
     if (!roomId) return fallbackFloor;
     const parts = roomId.split("-");
-    const lastPart = parts.length > 1 ? parts[parts.length - 1] : roomId;
+    const lastPart = parts.at(-1) ?? roomId;
     if (
       lastPart.startsWith("S") &&
       lastPart.length >= 2 &&
@@ -157,9 +157,9 @@ export default function IndoorNavigation() {
     ) {
       return lastPart.slice(0, 2);
     }
-    for (let i = 0; i < lastPart.length; i++) {
-      if (lastPart[i] >= "0" && lastPart[i] <= "9") {
-        return lastPart[i];
+    for (const char of lastPart) {
+      if (char >= "0" && char <= "9") {
+        return char;
       }
     }
     return fallbackFloor;
@@ -312,7 +312,10 @@ export default function IndoorNavigation() {
       try {
         const points = await getRoomPoints(activeBuildingId, currentFloor);
         setRoomPoints(points);
-      } catch (error) {}
+      } catch (error) {
+        console.error("Failed to load room points:", error);
+        setRoomPoints([]);
+      }
     };
     loadRoomPoints();
   }, [activeBuildingId, currentFloor]);
