@@ -20,6 +20,11 @@ public class IndoorDirectionService {
     private static final String MSG_STAIRS_DOWN_GENERIC = "You will need to go down the stairs.";
     private static final String MSG_STAIRS_INVOLVED = "This route involves stairs.";
 
+    private static final double PIXELS_TO_METERS = 0.06d;
+    private static final double TURN_THRESHOLD_DEG = 70d;
+    private static final double UTURN_THRESHOLD_DEG = 150d;
+    private static final double MIN_SEGMENT_PX = 12d;
+
     private final PathfindingService pathfindingService;
 
     public IndoorDirectionService(PathfindingService pathfindingService) {
@@ -63,7 +68,8 @@ public class IndoorDirectionService {
         String duration = formatFinalDuration(exactDistance);
 
         String usedTransition = detectTransitionType(routePoints);
-        List<IndoorRouteStep> steps = generateRealSteps(destination, startFloor, endFloor, usedTransition);
+        List<IndoorRouteStep> steps = generateRealSteps(
+                origin, destination, routePoints, startFloor, endFloor, usedTransition);
 
         IndoorDirectionResponse.BuildingInfo buildingInfo = new IndoorDirectionResponse.BuildingInfo(
                 buildingName, buildingId, startFloor, endFloor);
@@ -202,7 +208,6 @@ public class IndoorDirectionService {
             String destinationRoomId, String floor, boolean avoidStairs) {
 
         String planId = convertBuildingIdForPathfinding(buildingId, floor);
-        PathfindingService.Waypoint helper = new PathfindingService.Waypoint(0, 0, "helper");
 
         PathfindingService.Waypoint sCoord = resolvePoint(planId, originRoomId);
         PathfindingService.Waypoint eCoord = resolvePoint(planId, destinationRoomId);
@@ -241,40 +246,229 @@ public class IndoorDirectionService {
     }
 
     private List<IndoorRouteStep> generateRealSteps(
+            String origin,
             String destination,
+            List<IndoorDirectionResponse.RoutePoint> routePoints,
             String originFloor,
             String destinationFloor,
             String usedTransition
     ) {
         List<IndoorRouteStep> steps = new ArrayList<>();
-        steps.add(new IndoorRouteStep("Follow the path", "0 m", "0 sec",
-                IndoorManeuverType.STRAIGHT, originFloor, null, null));
+        if (routePoints == null || routePoints.size() < 2) return steps;
 
-        if (!originFloor.equals(destinationFloor)) {
-            boolean goingUp = parseFloorNumber(destinationFloor) > parseFloorNumber(originFloor);
+        int transitionIndex = findTransitionIndex(routePoints);
 
-            IndoorManeuverType maneuver;
-            if ("ELEVATOR".equals(usedTransition)) {
-                maneuver = goingUp ? IndoorManeuverType.ELEVATOR_UP : IndoorManeuverType.ELEVATOR_DOWN;
-            } else {
-                maneuver = goingUp ? IndoorManeuverType.STAIRS_UP : IndoorManeuverType.STAIRS_DOWN;
-            }
+        if (transitionIndex >= 0) {
+            List<IndoorDirectionResponse.RoutePoint> firstLeg = new ArrayList<>(routePoints.subList(0, transitionIndex));
+            List<IndoorDirectionResponse.RoutePoint> secondLeg = new ArrayList<>(routePoints.subList(
+                    Math.min(transitionIndex + 1, routePoints.size() - 1), routePoints.size()));
 
-            steps.add(new IndoorRouteStep(
-                    "Transition to floor " + destinationFloor,
-                    "0 m",
-                    "30 sec",
-                    maneuver,
-                    originFloor,
-                    null,
-                    null
-            ));
+            addMovementSteps(steps, firstLeg, originFloor, origin, false);
+            steps.add(createTransitionStep(originFloor, destinationFloor, usedTransition));
+            addMovementSteps(steps, secondLeg, destinationFloor, destination, true);
+        } else {
+            addMovementSteps(steps, routePoints, originFloor, origin, false);
         }
 
-        steps.add(new IndoorRouteStep("Arrive at " + destination, "0 m", "0 sec",
-                IndoorManeuverType.ENTER_ROOM, destinationFloor, destination, null));
+        steps.add(new IndoorRouteStep(
+                "Arrive at " + destination,
+                "0 m",
+                "0 sec",
+                IndoorManeuverType.ENTER_ROOM,
+                destinationFloor,
+                destination,
+                null
+        ));
 
         return steps;
+    }
+
+    private void addMovementSteps(
+            List<IndoorRouteStep> steps,
+            List<IndoorDirectionResponse.RoutePoint> routePoints,
+            String floor,
+            String referenceLabel,
+            boolean afterTransition
+    ) {
+        if (routePoints == null || routePoints.size() < 2) return;
+
+        List<Integer> decisionIndices = new ArrayList<>();
+        List<IndoorManeuverType> decisionManeuvers = new ArrayList<>();
+        decisionIndices.add(0);
+        decisionManeuvers.add(IndoorManeuverType.STRAIGHT);
+
+        int anchorIdx = 0;
+        for (int i = 1; i < routePoints.size() - 1; i++) {
+            double segDist = sumSegmentDistance(routePoints, anchorIdx, i);
+            if (segDist < MIN_SEGMENT_PX) continue;
+
+            IndoorManeuverType turn = classifyTurnAtPoint(
+                    routePoints.get(anchorIdx),
+                    routePoints.get(i),
+                    routePoints.get(i + 1));
+
+            if (turn != IndoorManeuverType.STRAIGHT) {
+                if (!decisionManeuvers.isEmpty()
+                        && decisionManeuvers.get(decisionManeuvers.size() - 1) == turn) {
+                    continue;
+                }
+                decisionIndices.add(i);
+                decisionManeuvers.add(turn);
+                anchorIdx = i;
+            }
+        }
+
+        for (int i = 0; i < decisionIndices.size(); i++) {
+            int segStart = decisionIndices.get(i);
+            int segEnd = (i + 1 < decisionIndices.size())
+                    ? decisionIndices.get(i + 1)
+                    : routePoints.size() - 1;
+
+            double pxDist = sumSegmentDistance(routePoints, segStart, segEnd);
+            if (pxDist <= 0.5d) continue;
+
+            double meters = pxDist * PIXELS_TO_METERS;
+            boolean isFirst = (i == 0);
+            IndoorManeuverType maneuver = decisionManeuvers.get(i);
+
+            String instruction = buildMovementInstruction(
+                    maneuver, referenceLabel, floor, isFirst, afterTransition);
+
+            steps.add(new IndoorRouteStep(
+                    instruction,
+                    formatFinalDistance(meters),
+                    formatFinalDuration(meters),
+                    maneuver, floor, null, null));
+        }
+
+        if (steps.isEmpty()) {
+            double totalPx = sumSegmentDistance(routePoints, 0, routePoints.size() - 1);
+            if (totalPx > 0.5d) {
+                double meters = totalPx * PIXELS_TO_METERS;
+                steps.add(new IndoorRouteStep(
+                        afterTransition
+                                ? "Walk straight down the hallway"
+                                : "Walk straight to " + referenceLabel,
+                        formatFinalDistance(meters),
+                        formatFinalDuration(meters),
+                        IndoorManeuverType.STRAIGHT, floor, null, null));
+            }
+        }
+    }
+
+    private IndoorRouteStep createTransitionStep(
+            String originFloor,
+            String destinationFloor,
+            String usedTransition
+    ) {
+        boolean goingUp = parseFloorNumber(destinationFloor) > parseFloorNumber(originFloor);
+        boolean useElevator = "ELEVATOR".equals(usedTransition);
+
+        IndoorManeuverType maneuver = useElevator
+                ? (goingUp ? IndoorManeuverType.ELEVATOR_UP : IndoorManeuverType.ELEVATOR_DOWN)
+                : (goingUp ? IndoorManeuverType.STAIRS_UP : IndoorManeuverType.STAIRS_DOWN);
+
+        String instruction;
+        if (useElevator) {
+            instruction = goingUp
+                    ? "Take the elevator up to floor " + destinationFloor
+                    : "Take the elevator down to floor " + destinationFloor;
+        } else {
+            instruction = goingUp
+                    ? "Take the stairs up to floor " + destinationFloor
+                    : "Take the stairs down to floor " + destinationFloor;
+        }
+
+        return new IndoorRouteStep(
+                instruction,
+                "0 m",
+                "30 sec",
+                maneuver,
+                originFloor,
+                null,
+                null
+        );
+    }
+
+    private String buildMovementInstruction(
+            IndoorManeuverType maneuver,
+            String referenceLabel,
+            String floor,
+            boolean isFirstInstruction,
+            boolean afterTransition
+    ) {
+        if (isFirstInstruction) {
+            if (afterTransition) {
+                return "Walk straight down the hallway";
+            }
+            return "Walk straight to " + referenceLabel;
+        }
+
+        return switch (maneuver) {
+            case TURN_LEFT -> "Turn left and continue";
+            case TURN_RIGHT -> "Turn right and continue";
+            case TURN_AROUND -> "Turn around";
+            default -> "Walk straight";
+        };
+    }
+
+    private int findTransitionIndex(List<IndoorDirectionResponse.RoutePoint> routePoints) {
+        if (routePoints == null) return -1;
+        for (int i = 0; i < routePoints.size(); i++) {
+            IndoorDirectionResponse.RoutePoint point = routePoints.get(i);
+            if (point.getLabel() != null && point.getLabel().startsWith("TRANSITION_")) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private double sumSegmentDistance(
+            List<IndoorDirectionResponse.RoutePoint> routePoints,
+            int startSegment,
+            int endSegmentExclusive
+    ) {
+        double distance = 0d;
+        for (int i = startSegment; i < endSegmentExclusive; i++) {
+            IndoorDirectionResponse.RoutePoint start = routePoints.get(i);
+            IndoorDirectionResponse.RoutePoint end = routePoints.get(i + 1);
+            double dx = end.getX() - start.getX();
+            double dy = end.getY() - start.getY();
+            distance += Math.sqrt((dx * dx) + (dy * dy));
+        }
+        return distance;
+    }
+
+    /**
+     * Uses the cross product to decide turn direction.
+     * SVG uses Y-down, so cross > 0 means clockwise on screen = turn RIGHT,
+     * cross < 0 means counter-clockwise on screen = turn LEFT.
+     */
+    private IndoorManeuverType classifyTurnAtPoint(
+            IndoorDirectionResponse.RoutePoint previous,
+            IndoorDirectionResponse.RoutePoint current,
+            IndoorDirectionResponse.RoutePoint next
+    ) {
+        double ax = current.getX() - previous.getX();
+        double ay = current.getY() - previous.getY();
+        double bx = next.getX() - current.getX();
+        double by = next.getY() - current.getY();
+
+        double lenA = Math.sqrt(ax * ax + ay * ay);
+        double lenB = Math.sqrt(bx * bx + by * by);
+        if (lenA < 0.001d || lenB < 0.001d) return IndoorManeuverType.STRAIGHT;
+
+        double dot = ax * bx + ay * by;
+        double cosAngle = Math.max(-1d, Math.min(1d, dot / (lenA * lenB)));
+        double angleDeg = Math.toDegrees(Math.acos(cosAngle));
+
+        if (angleDeg < TURN_THRESHOLD_DEG) return IndoorManeuverType.STRAIGHT;
+
+        double cross = ax * by - ay * bx;
+
+        if (angleDeg >= UTURN_THRESHOLD_DEG) return IndoorManeuverType.TURN_AROUND;
+        if (cross > 0) return IndoorManeuverType.TURN_RIGHT;
+        return IndoorManeuverType.TURN_LEFT;
     }
 
     private String detectStairMessage(String buildingId, String origin, String destination, String floor) {

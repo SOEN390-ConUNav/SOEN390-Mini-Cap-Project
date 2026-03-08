@@ -91,19 +91,26 @@ export default function IndoorNavigation() {
     "origin" | "outdoor" | "destination"
   >("origin");
   const [activeBuildingId, setActiveBuildingId] = useState<string>(buildingId);
+  const routeRequestIdRef = useRef(0);
 
   const handleClearRoute = useCallback(() => {
     mapViewRef.current?.clearRoute();
+  }, []);
+
+  const invalidatePendingRouteRequests = useCallback(() => {
+    routeRequestIdRef.current += 1;
   }, []);
 
   const prevBuildingRef = useRef(buildingId);
   useEffect(() => {
     if (prevBuildingRef.current !== buildingId) {
       prevBuildingRef.current = buildingId;
+      invalidatePendingRouteRequests();
       setStartRoom("");
       setEndRoom("");
       setSearchQuery("");
       setRouteData(null);
+      setUniversalRouteData(null);
       setShowRouteDetails(false);
       setShowRoomList(false);
       setSelectingFor(null);
@@ -111,10 +118,13 @@ export default function IndoorNavigation() {
       const newDefault = getDefaultFloor(buildingId);
       setCurrentFloor(newDefault);
     }
-  }, [buildingId, handleClearRoute]);
+  }, [buildingId, handleClearRoute, invalidatePendingRouteRequests]);
 
   const handleFloorChange = useCallback(
     (newFloor: string) => {
+      invalidatePendingRouteRequests();
+      mapViewRef.current?.clearRoute();
+
       setCurrentFloor(newFloor);
       router.setParams({ floor: newFloor });
 
@@ -123,11 +133,10 @@ export default function IndoorNavigation() {
           return currentData;
         }
 
-        handleClearRoute();
         return null;
       });
     },
-    [router, handleClearRoute],
+    [invalidatePendingRouteRequests, router],
   );
 
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
@@ -173,6 +182,8 @@ export default function IndoorNavigation() {
   const fetchRoute = useCallback(async () => {
     if (!startRoom || !endRoom || startRoom === endRoom) return;
 
+    const requestId = routeRequestIdRef.current + 1;
+    routeRequestIdRef.current = requestId;
     setIsLoadingRoute(true);
 
     try {
@@ -189,9 +200,10 @@ export default function IndoorNavigation() {
           avoidStairs,
         );
 
+        if (requestId !== routeRequestIdRef.current) return;
+
         if (response.routePoints && response.routePoints.length > 0) {
-          if (mapViewRef.current)
-            mapViewRef.current.drawRoute(response.routePoints);
+          mapViewRef.current?.clearRoute();
           setRouteData(response);
           setUniversalRouteData(null);
         } else {
@@ -209,20 +221,23 @@ export default function IndoorNavigation() {
           avoidStairs,
         );
 
+        if (requestId !== routeRequestIdRef.current) return;
+
         if (response.startIndoorRoute) {
+          mapViewRef.current?.clearRoute();
           setUniversalRouteData(response);
           setRouteData(response.startIndoorRoute);
           setRoutePhase("origin");
-          if (mapViewRef.current)
-            mapViewRef.current.drawRoute(response.startIndoorRoute.routePoints);
         }
       }
     } catch (error: any) {
-      console.error("Routing error:", error);
+      if (requestId !== routeRequestIdRef.current) return;
+      console.warn("Routing error:", error);
       handleClearRoute();
       setRouteData(null);
       setUniversalRouteData(null);
     } finally {
+      if (requestId !== routeRequestIdRef.current) return;
       setIsLoadingRoute(false);
     }
   }, [
@@ -308,10 +323,19 @@ export default function IndoorNavigation() {
     if (startRoom && endRoom && startRoom !== endRoom) {
       fetchRoute();
     } else {
+      invalidatePendingRouteRequests();
       handleClearRoute();
       setRouteData(null);
+      setUniversalRouteData(null);
+      setIsLoadingRoute(false);
     }
-  }, [startRoom, endRoom, fetchRoute, handleClearRoute]);
+  }, [
+    startRoom,
+    endRoom,
+    fetchRoute,
+    handleClearRoute,
+    invalidatePendingRouteRequests,
+  ]);
 
   const filteredRooms = availableRooms.filter((room) =>
     room.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -447,12 +471,7 @@ export default function IndoorNavigation() {
         </Text>
         <Switch
           value={avoidStairs}
-          onValueChange={(value) => {
-            setAvoidStairs(value);
-            if (startRoom && endRoom) {
-              setTimeout(fetchRoute, 50);
-            }
-          }}
+          onValueChange={setAvoidStairs}
           trackColor={{ false: "#ccc", true: "#8B1538" }}
           thumbColor={avoidStairs ? "#fff" : "#f4f3f4"}
         />
@@ -526,23 +545,24 @@ export default function IndoorNavigation() {
         </View>
       )}
 
-      <BottomPanel
-        startRoom={startRoom}
-        endRoom={endRoom}
-        routeData={routeData}
-        isLoadingRoute={isLoadingRoute}
-        showDirections={showRouteDetails}
-        onToggleDirections={() => {
-          setShowRouteDetails(!showRouteDetails);
-        }}
-      />
-
-      {showRouteDetails && (
-        <DirectionsPanel
+      {!showRouteDetails && (
+        <BottomPanel
+          startRoom={startRoom}
+          endRoom={endRoom}
           routeData={routeData}
-          onClose={() => setShowRouteDetails(false)}
+          isLoadingRoute={isLoadingRoute}
+          showDirections={showRouteDetails}
+          onToggleDirections={() => {
+            setShowRouteDetails(true);
+          }}
         />
       )}
+
+      <DirectionsPanel
+        routeData={routeData}
+        visible={showRouteDetails}
+        onClose={() => setShowRouteDetails(false)}
+      />
 
       <RoomListModal
         visible={showRoomList}

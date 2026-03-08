@@ -1,12 +1,17 @@
 package com.soen390.backend.controller;
 
+import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
+import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
 import com.soen390.backend.object.UniversalDirectionResponse;
 import com.soen390.backend.service.UniversalRoutingService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/directions/universal")
@@ -19,7 +24,7 @@ public class UniversalRoutingController {
     }
 
     @GetMapping
-    public ResponseEntity<UniversalDirectionResponse> getUniversalRoute(
+    public ResponseEntity<Object> getUniversalRoute(
             @RequestParam String startBuilding,
             @RequestParam String startRoom,
             @RequestParam String startFloor,
@@ -33,8 +38,13 @@ public class UniversalRoutingController {
                     startBuilding, startRoom, startFloor,
                     endBuilding, endRoom, endFloor, avoidStairs);
             return ResponseEntity.ok(response);
+        } catch (GoogleMapsDirectionEmptyException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (GoogleMapsDirectionsApiException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", e.getMessage() != null ? e.getMessage() : "Universal routing failed"));
         }
     }
 }

@@ -225,7 +225,9 @@ export const getUniversalDirections = async (
   endFloor: string,
   avoidStairs: boolean,
 ): Promise<UniversalDirectionResponse> => {
-  const BASE_URL = "http://10.0.2.2:8080/api/directions";
+  if (!API_BASE_URL) {
+    throw new Error("API_BASE_URL is not defined");
+  }
 
   const queryParams = new URLSearchParams({
     startBuilding,
@@ -237,11 +239,24 @@ export const getUniversalDirections = async (
     avoidStairs: avoidStairs.toString(),
   });
 
-  const response = await fetch(
-    `${BASE_URL}/universal?${queryParams.toString()}`,
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch universal directions");
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/directions/universal?${queryParams.toString()}`,
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      throw new Error(`Backend error (${response.status}): ${errorText}`);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    if (
+      error.message?.includes("Network request failed") ||
+      error.message?.includes("Failed to fetch")
+    ) {
+      throw new Error(`Cannot connect to backend at ${API_BASE_URL}.`);
+    }
+    throw error;
   }
-  return response.json();
 };

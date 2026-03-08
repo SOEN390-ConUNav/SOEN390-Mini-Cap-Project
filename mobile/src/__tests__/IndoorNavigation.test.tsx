@@ -1,47 +1,56 @@
-import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import IndoorNavigation from '../app/indoor-navigation';
+import React from "react";
+import { fireEvent, render, waitFor, act } from "@testing-library/react-native";
+import { Switch } from "react-native";
+import IndoorNavigation from "../app/indoor-navigation";
 import {
   getAvailableRooms,
   getIndoorDirections,
   getPointsOfInterest,
   getRoomPoints,
-} from '../api/indoorDirectionsApi';
+  getUniversalDirections,
+} from "../api/indoorDirectionsApi";
 
 const mockSetParams = jest.fn();
 const mockDrawRoute = jest.fn();
 const mockClearRoute = jest.fn();
 
 let mockParams: { buildingId?: string; floor?: string } = {
-  buildingId: 'H',
-  floor: '8',
+  buildingId: "H",
+  floor: "8",
 };
 
-jest.mock('expo-router', () => ({
+jest.mock("expo-router", () => ({
   useRouter: () => ({
     setParams: mockSetParams,
   }),
   useLocalSearchParams: () => mockParams,
 }));
 
-jest.mock('../api/indoorDirectionsApi', () => ({
+jest.mock("../api/indoorDirectionsApi", () => ({
   getIndoorDirections: jest.fn(),
   getAvailableRooms: jest.fn(),
   getRoomPoints: jest.fn(),
   getPointsOfInterest: jest.fn(),
+  getUniversalDirections: jest.fn(),
 }));
 
-jest.mock('../components/FloorPlanWebView', () => {
-  const ReactLocal = require('react');
-  const { View } = require('react-native');
+jest.mock("../components/FloorPlanWebView", () => {
+  const ReactLocal = require("react");
+  const { View, Text } = require("react-native");
 
-  const MockFloorPlan = ReactLocal.forwardRef((_props: any, ref: any) => {
+  const MockFloorPlan = ReactLocal.forwardRef((props: any, ref: any) => {
     ReactLocal.useImperativeHandle(ref, () => ({
       drawRoute: mockDrawRoute,
       clearRoute: mockClearRoute,
     }));
 
-    return <View testID="floor-plan-webview" />;
+    return (
+      <View testID="floor-plan-webview">
+        <Text testID="route-point-count">
+          {String(props.routePoints?.length ?? 0)}
+        </Text>
+      </View>
+    );
   });
 
   return {
@@ -50,8 +59,8 @@ jest.mock('../components/FloorPlanWebView', () => {
   };
 });
 
-jest.mock('../components/IndoorSearchBar', () => {
-  const { View, Text, Pressable } = require('react-native');
+jest.mock("../components/IndoorSearchBar", () => {
+  const { View, Text, Pressable } = require("react-native");
   return (props: any) => (
     <View>
       <Text testID="start-room-value">{props.startRoom}</Text>
@@ -75,8 +84,8 @@ jest.mock('../components/IndoorSearchBar', () => {
   );
 });
 
-jest.mock('../components/RoomListModal', () => {
-  const { View, Text, Pressable } = require('react-native');
+jest.mock("../components/RoomListModal", () => {
+  const { View, Text, Pressable } = require("react-native");
   return (props: any) => {
     if (!props.visible) return null;
 
@@ -85,13 +94,13 @@ jest.mock('../components/RoomListModal', () => {
         <Text testID="selecting-for">{props.selectingFor}</Text>
         <Pressable
           testID="pick-room-first"
-          onPress={() => props.onSelectRoom(props.filteredRooms[0] || 'H-801')}
+          onPress={() => props.onSelectRoom(props.filteredRooms[0] || "H-801")}
         >
           <Text>Pick First Room</Text>
         </Pressable>
         <Pressable
           testID="pick-room-second"
-          onPress={() => props.onSelectRoom(props.filteredRooms[1] || 'H-820')}
+          onPress={() => props.onSelectRoom(props.filteredRooms[1] || "H-820")}
         >
           <Text>Pick Second Room</Text>
         </Pressable>
@@ -100,20 +109,17 @@ jest.mock('../components/RoomListModal', () => {
   };
 });
 
-jest.mock('../components/FloorSelector', () => {
-  const { Pressable, Text } = require('react-native');
+jest.mock("../components/FloorSelector", () => {
+  const { Pressable, Text } = require("react-native");
   return (props: any) => (
-    <Pressable
-      testID="change-floor"
-      onPress={() => props.onFloorSelect('9')}
-    >
+    <Pressable testID="change-floor" onPress={() => props.onFloorSelect("9")}>
       <Text>Change Floor</Text>
     </Pressable>
   );
 });
 
-jest.mock('../components/BottomPanel', () => {
-  const { View, Text, Pressable } = require('react-native');
+jest.mock("../components/BottomPanel", () => {
+  const { View, Text, Pressable } = require("react-native");
   return (props: any) => (
     <View>
       <Text testID="bottom-start">{props.startRoom}</Text>
@@ -125,79 +131,92 @@ jest.mock('../components/BottomPanel', () => {
   );
 });
 
-jest.mock('../components/DirectionsPanel', () => {
-  const { Text } = require('react-native');
-  return (props: any) => (
-    <Text testID="directions-panel">
-      Steps: {props.routeData?.steps?.length ?? 0}
-    </Text>
-  );
+jest.mock("../components/DirectionsPanel", () => {
+  const { Text } = require("react-native");
+  return (props: any) => {
+    if (!props.visible) return null;
+    return (
+      <Text testID="directions-panel">
+        Steps: {props.routeData?.steps?.length ?? 0}
+      </Text>
+    );
+  };
 });
 
-describe('IndoorNavigation', () => {
+describe("IndoorNavigation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockParams = { buildingId: 'H', floor: '8' };
+    mockParams = { buildingId: "H", floor: "8" };
 
-    (getAvailableRooms as jest.Mock).mockResolvedValue(['H-801', 'H-820']);
-    (getRoomPoints as jest.Mock).mockResolvedValue([{ id: 'H-801', x: 1, y: 2 }]);
-    (getPointsOfInterest as jest.Mock).mockResolvedValue([
-      { id: 'POI-1', x: 4, y: 5, displayName: 'Cafe', type: 'food' },
+    (getAvailableRooms as jest.Mock).mockResolvedValue(["H-801", "H-820"]);
+    (getRoomPoints as jest.Mock).mockResolvedValue([
+      { id: "H-801", x: 1, y: 2 },
     ]);
+    (getPointsOfInterest as jest.Mock).mockResolvedValue([
+      { id: "POI-1", x: 4, y: 5, displayName: "Cafe", type: "food" },
+    ]);
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: null,
+      outdoorRoute: null,
+      endIndoorRoute: null,
+      nextShuttleTime: null,
+      totalDuration: "0 min",
+    });
   });
 
-  it('loads indoor data and draws a route after selecting start and end rooms', async () => {
+  it("loads indoor data and draws a route after selecting start and end rooms", async () => {
     (getIndoorDirections as jest.Mock).mockResolvedValue({
-      distance: '25m',
-      duration: '2 min',
-      buildingName: 'Hall Building',
-      buildingId: 'Hall-8',
-      startFloor: '8',
-      endFloor: '8',
-      steps: [{ instruction: 'Go straight', distance: '10m', duration: '30s' }],
-      polyline: '',
+      distance: "25m",
+      duration: "2 min",
+      buildingName: "Hall Building",
+      buildingId: "Hall-8",
+      startFloor: "8",
+      endFloor: "8",
+      steps: [{ instruction: "Go straight", distance: "10m", duration: "30s" }],
+      polyline: "",
       routePoints: [{ x: 10, y: 20 }],
-      stairMessage: 'Use stairs between sections',
+      stairMessage: "Use stairs between sections",
     });
 
     const { getByTestId, getByText } = render(<IndoorNavigation />);
 
     await waitFor(() => {
-      expect(getAvailableRooms).toHaveBeenCalledWith('H', '8');
-      expect(getRoomPoints).toHaveBeenCalledWith('H', '8');
-      expect(getPointsOfInterest).toHaveBeenCalledWith('H', '8');
+      expect(getAvailableRooms).toHaveBeenCalledWith("H", "8");
+      expect(getRoomPoints).toHaveBeenCalledWith("H", "8");
+      expect(getPointsOfInterest).toHaveBeenCalledWith("H", "8");
     });
 
-    fireEvent.press(getByTestId('open-start'));
-    fireEvent.press(getByTestId('pick-room-first'));
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
 
-    fireEvent.press(getByTestId('open-end'));
-    fireEvent.press(getByTestId('pick-room-second'));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
 
     await waitFor(() => {
       expect(getIndoorDirections).toHaveBeenCalledWith(
-        'Hall-8',
-        'H-801',
-        'H-820',
-        '8',
-        '8',
+        "H",
+        "H-801",
+        "H-820",
+        "8",
+        "8",
+        false,
       );
-      expect(mockDrawRoute).toHaveBeenCalledWith([{ x: 10, y: 20 }]);
     });
 
-    expect(getByText('🚶 Use stairs between sections')).toBeTruthy();
+    expect(getByTestId("route-point-count").props.children).toBe("1");
+    expect(getByText("🚶 Use stairs between sections")).toBeTruthy();
   });
 
-  it('changes floor, clears route, and updates route params', async () => {
+  it("changes floor, clears route, and updates route params", async () => {
     (getIndoorDirections as jest.Mock).mockResolvedValue({
-      distance: '10m',
-      duration: '1 min',
-      buildingName: 'Hall Building',
-      buildingId: 'Hall-9',
-      startFloor: '9',
-      endFloor: '9',
+      distance: "10m",
+      duration: "1 min",
+      buildingName: "Hall Building",
+      buildingId: "Hall-9",
+      startFloor: "9",
+      endFloor: "9",
       steps: [],
-      polyline: '',
+      polyline: "",
       routePoints: [],
       stairMessage: null,
     });
@@ -205,14 +224,161 @@ describe('IndoorNavigation', () => {
     const { getByTestId } = render(<IndoorNavigation />);
 
     await waitFor(() => {
-      expect(getAvailableRooms).toHaveBeenCalledWith('H', '8');
+      expect(getAvailableRooms).toHaveBeenCalledWith("H", "8");
     });
 
-    fireEvent.press(getByTestId('change-floor'));
+    fireEvent.press(getByTestId("change-floor"));
 
     await waitFor(() => {
-      expect(mockSetParams).toHaveBeenCalledWith({ floor: '9' });
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
       expect(mockClearRoute).toHaveBeenCalled();
     });
+  });
+
+  it("refetches the route once with the latest avoid-stairs value", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "25m",
+      duration: "2 min",
+      buildingName: "Hall Building",
+      buildingId: "Hall-8",
+      startFloor: "8",
+      endFloor: "8",
+      steps: [],
+      polyline: "",
+      routePoints: [
+        { x: 10, y: 20 },
+        { x: 20, y: 30 },
+      ],
+      stairMessage: null,
+    });
+
+    const { getByTestId, UNSAFE_getByType } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledTimes(1);
+      expect(getIndoorDirections).toHaveBeenLastCalledWith(
+        "H",
+        "H-801",
+        "H-820",
+        "8",
+        "8",
+        false,
+      );
+    });
+
+    fireEvent(UNSAFE_getByType(Switch), "valueChange", true);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledTimes(2);
+      expect(getIndoorDirections).toHaveBeenLastCalledWith(
+        "H",
+        "H-801",
+        "H-820",
+        "8",
+        "8",
+        true,
+      );
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    });
+
+    expect(getIndoorDirections).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores older route responses after avoid-stairs is toggled", async () => {
+    let resolveInitialRoute!: (value: any) => void;
+    let resolveAccessibleRoute!: (value: any) => void;
+
+    const initialRoutePromise = new Promise((resolve) => {
+      resolveInitialRoute = resolve;
+    });
+    const accessibleRoutePromise = new Promise((resolve) => {
+      resolveAccessibleRoute = resolve;
+    });
+
+    (getIndoorDirections as jest.Mock)
+      .mockImplementationOnce(() => initialRoutePromise)
+      .mockImplementationOnce(() => accessibleRoutePromise);
+
+    const { getByTestId, getByText, queryByText, UNSAFE_getByType } = render(
+      <IndoorNavigation />,
+    );
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent(UNSAFE_getByType(Switch), "valueChange", true);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledTimes(2);
+      expect(getIndoorDirections).toHaveBeenLastCalledWith(
+        "H",
+        "H-801",
+        "H-820",
+        "8",
+        "8",
+        true,
+      );
+    });
+
+    await act(async () => {
+      resolveAccessibleRoute({
+        distance: "20m",
+        duration: "2 min",
+        buildingName: "Hall Building",
+        buildingId: "Hall-8",
+        startFloor: "8",
+        endFloor: "8",
+        steps: [],
+        polyline: "",
+        routePoints: [
+          { x: 10, y: 20 },
+          { x: 30, y: 40 },
+        ],
+        stairMessage: "Accessible route",
+      });
+    });
+
+    await waitFor(() => {
+      expect(getByText("🚶 Accessible route")).toBeTruthy();
+    });
+
+    await act(async () => {
+      resolveInitialRoute({
+        distance: "25m",
+        duration: "2 min",
+        buildingName: "Hall Building",
+        buildingId: "Hall-8",
+        startFloor: "8",
+        endFloor: "8",
+        steps: [],
+        polyline: "",
+        routePoints: [
+          { x: 10, y: 20 },
+          { x: 20, y: 30 },
+        ],
+        stairMessage: "Use stairs between sections",
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getByText("🚶 Accessible route")).toBeTruthy();
+    expect(queryByText("🚶 Use stairs between sections")).toBeNull();
   });
 });

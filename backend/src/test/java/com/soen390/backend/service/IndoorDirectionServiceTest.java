@@ -24,7 +24,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_hall8_returnsRoutePoints() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-8", "H8-843", "H8-807", "8", "8");
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
 
         assertNotNull(response);
         assertEquals("Hall Building", response.getBuildingName());
@@ -34,18 +34,32 @@ class IndoorDirectionServiceTest {
     }
 
     @Test
-    void getIndoorDirections_returnsPlaceholderDistanceDuration() {
+    void getIndoorDirections_returnsComputedDistanceDuration() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-8", "H8-843", "H8-807", "8", "8");
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
 
-        assertEquals("—", response.getDistance());
-        assertEquals("—", response.getDuration());
+        assertNotEquals("—", response.getDistance());
+        assertNotEquals("—", response.getDuration());
+        assertFalse(response.getDistance().isBlank());
+        assertFalse(response.getDuration().isBlank());
+    }
+
+    @Test
+    void getIndoorDirections_generatesRealStepInstructions() {
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+
+        assertFalse(response.getSteps().isEmpty());
+        assertNotEquals("Follow the path", response.getSteps().get(0).instruction());
+        assertTrue(response.getSteps().get(0).instruction().startsWith("Walk straight to "));
+        assertEquals(IndoorManeuverType.ENTER_ROOM,
+                response.getSteps().get(response.getSteps().size() - 1).maneuverType());
     }
 
     @Test
     void getIndoorDirections_hall9_returnsNonEmptyRoute() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-9", "H9-903", "H9-967", "9", "9");
+                "Hall-9", "H9-903", "H9-967", "9", "9", false);
 
         assertNotNull(response);
         assertFalse(response.getRoutePoints().isEmpty());
@@ -54,7 +68,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_lb2_returnsNonEmptyRoute() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "LB-2", "LB-204", "LB-259", "2", "2");
+                "LB-2", "LB-204", "LB-259", "2", "2", false);
 
         assertNotNull(response);
         assertFalse(response.getRoutePoints().isEmpty());
@@ -63,7 +77,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_invalidRooms_returnsEmptyRoute() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-8", "INVALID-ROOM", "ALSO-INVALID", "8", "8");
+                "Hall-8", "INVALID-ROOM", "ALSO-INVALID", "8", "8", false);
 
         assertNotNull(response);
         assertTrue(response.getRoutePoints().isEmpty());
@@ -72,7 +86,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_nullFloor_defaultsToOne() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-8", "H8-843", "H8-807", null, null);
+                "Hall-8", "H8-843", "H8-807", null, null, false);
 
         assertNotNull(response);
         assertEquals("1", response.getStartFloor());
@@ -84,7 +98,7 @@ class IndoorDirectionServiceTest {
     @Test
     void stairMessage_entranceToRoom_goUp() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "Maisonneuve-Entrance", "H2-217", "2", "2");
+                "Hall-2", "Maisonneuve-Entrance", "H2-217", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().toLowerCase().contains("up"));
@@ -93,7 +107,7 @@ class IndoorDirectionServiceTest {
     @Test
     void stairMessage_roomToEntrance_goDown() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "H2-217", "Bishop-Entrance", "2", "2");
+                "Hall-2", "H2-217", "Bishop-Entrance", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().toLowerCase().contains("down"));
@@ -102,7 +116,7 @@ class IndoorDirectionServiceTest {
     @Test
     void stairMessage_roomToRoom_noStairMessage() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-8", "H8-843", "H8-807", "8", "8");
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
 
         assertNull(response.getStairMessage());
     }
@@ -110,7 +124,7 @@ class IndoorDirectionServiceTest {
     @Test
     void stairMessage_stairsUp_detected() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "H2-217", "Stairs-Up-1", "2", "2");
+                "Hall-2", "H2-217", "Stairs-Up-1", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().toLowerCase().contains("stairs"));
@@ -121,9 +135,9 @@ class IndoorDirectionServiceTest {
     @Test
     void routeNormalization_AtoB_sameAsBtoA_forHall8() {
         IndoorDirectionResponse ab = directionService.getIndoorDirections(
-                "Hall-8", "H8-843", "H8-807", "8", "8");
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
         IndoorDirectionResponse ba = directionService.getIndoorDirections(
-                "Hall-8", "H8-807", "H8-843", "8", "8");
+                "Hall-8", "H8-807", "H8-843", "8", "8", false);
 
         List<IndoorDirectionResponse.RoutePoint> routeAB = ab.getRoutePoints();
         List<IndoorDirectionResponse.RoutePoint> routeBA = ba.getRoutePoints();
@@ -141,9 +155,9 @@ class IndoorDirectionServiceTest {
     @Test
     void routeNormalization_disabled_forHall2() {
         IndoorDirectionResponse ab = directionService.getIndoorDirections(
-                "Hall-2", "Maisonneuve-Entrance", "H2-217", "2", "2");
+                "Hall-2", "Maisonneuve-Entrance", "H2-217", "2", "2", false);
         IndoorDirectionResponse ba = directionService.getIndoorDirections(
-                "Hall-2", "H2-217", "Maisonneuve-Entrance", "2", "2");
+                "Hall-2", "H2-217", "Maisonneuve-Entrance", "2", "2", false);
 
         assertNotNull(ab.getRoutePoints());
         assertNotNull(ba.getRoutePoints());
@@ -242,17 +256,17 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_buildingNames_coveredForAllPrefixes() {
         assertEquals("Vanier Library Building",
-                directionService.getIndoorDirections("VL-1", "VL-101", "VL-102", "1", "1").getBuildingName());
+                directionService.getIndoorDirections("VL-1", "VL-101", "VL-102", "1", "1", false).getBuildingName());
         assertEquals("Webster Library Building",
-                directionService.getIndoorDirections("LB-2", "LB-204", "LB-259", "2", "2").getBuildingName());
+                directionService.getIndoorDirections("LB-2", "LB-204", "LB-259", "2", "2", false).getBuildingName());
         assertEquals("John Molson School of Business",
-                directionService.getIndoorDirections("MB-S2", "MBS2-101", "MBS2-102", "S2", "S2").getBuildingName());
+                directionService.getIndoorDirections("MB-S2", "MBS2-101", "MBS2-102", "S2", "S2", false).getBuildingName());
     }
 
     @Test
     void stairMessage_stairsDown_detected() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "H2-217", "Stairs-Down-1", "2", "2");
+                "Hall-2", "H2-217", "Stairs-Down-1", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().toLowerCase().contains("stairs"));
@@ -261,7 +275,7 @@ class IndoorDirectionServiceTest {
     @Test
     void stairMessage_genericStairs_detected() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "LB-2", "LB-204", "Arrival-Stairs", "2", "2");
+                "LB-2", "LB-204", "Arrival-Stairs", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().toLowerCase().contains("stairs"));
@@ -272,7 +286,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getBuildingName_unknownPrefix_returnsDefault() {
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "XX-1", "room1", "room2", "1", "1");
+                "XX-1", "room1", "room2", "1", "1", false);
 
         assertEquals("Building XX-1", response.getBuildingName());
     }
@@ -291,7 +305,7 @@ class IndoorDirectionServiceTest {
     void stairMessage_H_buildingId_floor2_entranceOrigin_goUp() {
  
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "H", "McKay-Entrance", "H2-217", "2", "2");
+                "H", "McKay-Entrance", "H2-217", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().contains("up"),
@@ -302,7 +316,7 @@ class IndoorDirectionServiceTest {
     void stairMessage_hallEntrance_nonFloor2_noEntranceMessage() {
 
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-8", "McKay-Entrance", "H8-807", "8", "8");
+                "Hall-8", "McKay-Entrance", "H8-807", "8", "8", false);
 
         if (response.getStairMessage() != null) {
             assertFalse(response.getStairMessage().contains("main floor"),
@@ -316,7 +330,7 @@ class IndoorDirectionServiceTest {
     void stairMessage_undergroundEntrance_asOrigin_goUp() {
      
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "Underground-Entrance", "H2-217", "2", "2");
+                "Hall-2", "Underground-Entrance", "H2-217", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().contains("up"),
@@ -327,7 +341,7 @@ class IndoorDirectionServiceTest {
     void stairMessage_roomToMcKayEntrance_goDown() {
  
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "H2-217", "McKay-Entrance", "2", "2");
+                "Hall-2", "H2-217", "McKay-Entrance", "2", "2", false);
 
         assertNotNull(response.getStairMessage());
         assertTrue(response.getStairMessage().contains("down"),
@@ -338,7 +352,7 @@ class IndoorDirectionServiceTest {
     void stairMessage_bothEntrances_noEntranceMessage() {
     
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "Hall-2", "Maisonneuve-Entrance", "Bishop-Entrance", "2", "2");
+                "Hall-2", "Maisonneuve-Entrance", "Bishop-Entrance", "2", "2", false);
 
       
         if (response.getStairMessage() != null) {
@@ -353,7 +367,7 @@ class IndoorDirectionServiceTest {
     void stairMessage_nonHallBuilding_entranceNames_noEntranceMessage() {
 
         IndoorDirectionResponse response = directionService.getIndoorDirections(
-                "LB-2", "Maisonneuve-Entrance", "LB-204", "2", "2");
+                "LB-2", "Maisonneuve-Entrance", "LB-204", "2", "2", false);
 
 
         if (response.getStairMessage() != null) {
