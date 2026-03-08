@@ -18,17 +18,17 @@
     "H1-110":    { "x": 522.14917, "y": 1197.75412 },
     "H1-110-2":  { "x": 266.07758, "y": 1198.40402 },
     "H1-109s":   { "x": 131.54250, "y": 1028.12282 },
-    "Elevator":  { "x": 926.97113, "y": 1126.11672 },
-    "Bathroom-Men": { "x": 695.02002, "y": 1009.62702 },
-    "Bathroom-Women": { "x": 697.05622, "y": 965.33992 },
-    "Emergency-Exit": { "x": 1325.65465, "y": 1004.72742 },
-    "Maisonneuve-Entry": { "x": 511.75034, "y": 1462.92462 },
-    "Disability-Entrance": { "x": 558.54517, "y": 1457.07522 },
-    "Metro-Entry": { "x": 1074.26885, "y": 1470.20732 },
-    "Metro-Exit": { "x": 1078.08735, "y": 1438.70412 },
-    "Bishop-Exit": { "x": 1277.60735, "y": 1330.82972 },
-    "Stairs-Underground": { "x": 1235.60325, "y": 1227.72852 },
-    "Art-Showcase": { "x": 685.28107, "y": 1476.57302 }
+    "Hall-Elevator-Main": { "x": 926.97113, "y": 1126.11672 },
+    "H1-Bathroom-Men": { "x": 695.02002, "y": 1009.62702 },
+    "H1-Bathroom-Women": { "x": 697.05622, "y": 965.33992 },
+    "H1-Emergency-Exit": { "x": 1325.65465, "y": 1004.72742 },
+    "H1-Maisonneuve-Entry": { "x": 511.75034, "y": 1462.92462 },
+    "H1-Disability-Entrance": { "x": 558.54517, "y": 1457.07522 },
+    "H1-Metro-Entry": { "x": 1074.26885, "y": 1470.20732 },
+    "H1-Metro-Exit": { "x": 1078.08735, "y": 1438.70412 },
+    "H1-Bishop-Exit": { "x": 1277.60735, "y": 1330.82972 },
+    "Hall-Stairs-Main": { "x": 1235.60325, "y": 1227.72852 },
+    "H1-Art-Showcase": { "x": 685.28107, "y": 1476.57302 }
   },
   "waypoints": [
     { "id": "H1-AllowedPath1", "x": 1156.36795, "y": 1440.61342 },
@@ -83,5 +83,27 @@
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
-  }
-}
+  },
+  "pois": [
+    {
+      "id": "Hall-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 926.97113,
+      "y": 1126.11672
+    },
+    {
+      "id": "Hall-Stairs-Main",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 1235.60325,
+      "y": 1227.72852
+    },
+    {
+      "id": "H1-Maisonneuve-Entry",
+      "displayName": "Main Exit",
+      "type": "entrance-exit",
+      "x": 511.75034,
+      "y": 1462.92462
+    }
+  ]}

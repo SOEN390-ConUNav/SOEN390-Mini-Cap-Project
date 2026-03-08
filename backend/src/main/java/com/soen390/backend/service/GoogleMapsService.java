@@ -100,7 +100,7 @@ public class GoogleMapsService {
             throw new GoogleMapsDirectionEmptyException("Directions not found. Please check your start and end locations.");
         }
         if (!status.equals("OK")) {
-            throw new GoogleMapsDirectionsApiException("Unexpected error");
+            throw new GoogleMapsDirectionsApiException("Google Maps directions request failed with status: " + status);
         }
     }
 

@@ -33,7 +33,8 @@ public class IndoorDirectionsController {
             @RequestParam String origin,
             @RequestParam String destination,
             @RequestParam(required = false) String originFloor,
-            @RequestParam(required = false) String destinationFloor) {
+            @RequestParam(required = false) String destinationFloor,
+            @RequestParam(required = false, defaultValue = "false") boolean avoidStairs) {
 
         validateNotBlank(buildingId, PARAM_BUILDING_ID);
         validateNotBlank(origin, "origin");
@@ -52,12 +53,12 @@ public class IndoorDirectionsController {
         }
 
         IndoorDirectionResponse response = indoorDirectionService.getIndoorDirections(
-                safeBuildingId, safeOrigin, safeDestination, safeOriginFloor, safeDestFloor);
+                safeBuildingId, safeOrigin, safeDestination, safeOriginFloor, safeDestFloor, avoidStairs);
 
         if (response.getRoutePoints() == null || response.getRoutePoints().isEmpty()) {
             throw new IndoorResourceNotFoundException(
                     "No route found from '" + safeOrigin + "' to '" + safeDestination
-                    + "' in building '" + safeBuildingId + "'.");
+                            + "' in building '" + safeBuildingId + "'.");
         }
 
         return response;

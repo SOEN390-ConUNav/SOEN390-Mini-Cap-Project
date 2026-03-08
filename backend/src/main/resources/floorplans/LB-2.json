@@ -16,28 +16,28 @@
     "LB-245-2": { "x": 867.30133, "y": 826.11493 },
     "LB-231-231.25": { "x": 228.61418, "y": 629.13666 },
     "LB-204-2": { "x": 735.38556, "y": 500.20544 },
-    "Bathroom-Men-1":   { "x": 244.73058, "y": 318.14975 },
-    "Bathroom-Men-2":   { "x": 893.56506, "y": 270.39746 },
-    "Bathroom-Women-1": { "x": 244.73058, "y": 395.74725 },
-    "Bathroom-Women-2": { "x": 879.23938, "y": 757.47101 },
-    "Elevator-1": { "x": 334.26617, "y": 422.01102 },
-    "Elevator-2": { "x": 383.80917, "y": 650.02832 },
-    "Stairs-Down-1": { "x": 174.80748, "y": 500.772 },
-    "Stairs-Up-1":   { "x": 176.86403, "y": 528.53552 },
-    "Emergency-Exit-1": { "x": 201.1566, "y": 393.35965 },
-    "Emergency-Exit-2": { "x": 910.87531, "y": 684.05182 },
-    "Emergency-Exit-3": { "x": 904.90625, "y": 339.63831 },
-    "Emergency-Exit-4": { "x": 365.90207, "y": 987.27899 },
-    "Emergency-Exit-5": { "x": 198.76898, "y": 609.43884 },
-    "Bookshelves-1": { "x": 452.45312, "y": 728.22272 },
-    "Bookshelves-2": { "x": 397.53796, "y": 717.47845 },
-    "Bookshelves-3": { "x": 313.97144, "y": 840.44061 },
-    "Bookshelves-4": { "x": 462.00357, "y": 905.50317 },
-    "Bookshelves-5": { "x": 602.87292, "y": 749.11432 },
-    "Bookshelves-6": { "x": 718.07532, "y": 735.98248 },
-    "Bookshelves-7": { "x": 747.92053, "y": 654.80353 },
-    "Bookshelves-8": { "x": 713.89703, "y": 385.00299 },
-    "Bookshelves-9": { "x": 710.91248, "y": 291.88599 }
+    "LB2-Bathroom-Men-1":   { "x": 244.73058, "y": 318.14975 },
+    "LB2-Bathroom-Men-2":   { "x": 893.56506, "y": 270.39746 },
+    "LB2-Bathroom-Women-1": { "x": 244.73058, "y": 395.74725 },
+    "LB2-Bathroom-Women-2": { "x": 879.23938, "y": 757.47101 },
+    "LB2-Elevator-1": { "x": 334.26617, "y": 422.01102 },
+    "LB-Elevator-Main": { "x": 383.80917, "y": 650.02832 },
+    "LB2-Stairs-Down-1": { "x": 174.80748, "y": 500.772 },
+    "LB-Stairs-Main":   { "x": 176.86403, "y": 528.53552 },
+    "LB2-Emergency-Exit-1": { "x": 201.1566, "y": 393.35965 },
+    "LB2-Emergency-Exit-2": { "x": 910.87531, "y": 684.05182 },
+    "LB2-Emergency-Exit-3": { "x": 904.90625, "y": 339.63831 },
+    "LB2-Emergency-Exit-4": { "x": 365.90207, "y": 987.27899 },
+    "LB2-Emergency-Exit-5": { "x": 198.76898, "y": 609.43884 },
+    "LB2-Bookshelves-1": { "x": 452.45312, "y": 728.22272 },
+    "LB2-Bookshelves-2": { "x": 397.53796, "y": 717.47845 },
+    "LB2-Bookshelves-3": { "x": 313.97144, "y": 840.44061 },
+    "LB2-Bookshelves-4": { "x": 462.00357, "y": 905.50317 },
+    "LB2-Bookshelves-5": { "x": 602.87292, "y": 749.11432 },
+    "LB2-Bookshelves-6": { "x": 718.07532, "y": 735.98248 },
+    "LB2-Bookshelves-7": { "x": 747.92053, "y": 654.80353 },
+    "LB2-Bookshelves-8": { "x": 713.89703, "y": 385.00299 },
+    "LB2-Bookshelves-9": { "x": 710.91248, "y": 291.88599 }
   },
   "waypoints": [
     { "id": "LB2-AllowedPath1", "x": 176.86403, "y": 457.58429 },
@@ -93,6 +93,29 @@
     "searchRadius": 400.0,
     "alignThreshold": 6.0,
     "maxNeighbors": 4,
-    "strictAlignment": true
-  }
+    "strictAlignment": false
+  },
+  "pois": [
+    {
+      "id": "LB-Elevator-Main",
+      "displayName": "Elevator",
+      "type": "elevator",
+      "x": 383.80917,
+      "y": 650.02832
+    },
+    {
+      "id": "LB-Stairs-Main",
+      "displayName": "Stairs",
+      "type": "stairs",
+      "x": 176.86403,
+      "y": 528.53552
+    },
+    {
+      "id": "LB2-Emergency-Exit-1",
+      "displayName": "Exit to Street",
+      "type": "exit",
+      "x": 201.1566,
+      "y": 393.35965
+    }
+  ]
 }
