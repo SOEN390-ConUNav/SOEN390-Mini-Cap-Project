@@ -253,6 +253,71 @@ describe("FloorPlanWebView Component", () => {
     expect(ref.current?.hideRoomMarkers).toBeDefined();
   });
 
+  it("handles WebView onError without crashing", async () => {
+    const { getByTestId } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    const webView = getByTestId("mock-webview");
+    expect(webView.props.onError).toBeDefined();
+    act(() => {
+      webView.props.onError?.({ nativeEvent: {} });
+    });
+  });
+
+  it("handles routeDrawn message without crashing", async () => {
+    const { getByTestId } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: {
+          data: JSON.stringify({
+            type: "routeDrawn",
+            success: true,
+            pointCount: 2,
+          }),
+        },
+      });
+    });
+  });
+
+  it("renders with empty poiData to trigger hidePois branch", async () => {
+    const { getByTestId } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" poiData={[]} />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
+      });
+    });
+    await waitFor(() => {}, { timeout: 500 });
+  });
+
+  it("ignores non-JSON onMessage without crashing", async () => {
+    const { getByTestId } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onMessage({
+        nativeEvent: { data: "not valid json" },
+      });
+    });
+  });
+
+  it("onLoadEnd triggers markWebViewReady when not yet ready", async () => {
+    const { getByTestId } = render(
+      <FloorPlanWebView buildingId="H" floorNumber="8" />,
+    );
+    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
+    act(() => {
+      getByTestId("mock-webview").props.onLoadEnd?.();
+    });
+  });
+
   it("showPois and hidePois are callable via ref", async () => {
     const ref = createRef<FloorPlanWebViewRef>();
     const { getByTestId } = render(
