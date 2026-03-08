@@ -1,6 +1,6 @@
 package com.soen390.backend.service.strategy;
 
-public final class StairsAvoidedStrategy implements AccessibilityRoutingStrategy {
+public class StairsAvoidedStrategy implements AccessibilityRoutingStrategy {
 
     public static final StairsAvoidedStrategy INSTANCE = new StairsAvoidedStrategy();
 
