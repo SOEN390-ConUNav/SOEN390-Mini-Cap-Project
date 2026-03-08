@@ -13,7 +13,6 @@ import java.util.*;
 @Service
 public class IndoorDirectionService {
 
-    private static final String PLACEHOLDER_DASH = "—";
     private static final String KEYWORD_STAIRS = "stairs";
     private static final String TRANSITION_TYPE_STAIRS = "STAIRS";
     private static final String KEYWORD_STAIRS_LOWER = "stairs";
