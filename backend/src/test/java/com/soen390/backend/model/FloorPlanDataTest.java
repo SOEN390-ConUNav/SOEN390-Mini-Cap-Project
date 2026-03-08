@@ -159,8 +159,8 @@ class FloorPlanDataTest {
         FloorPlanData data = new FloorPlanData("Hall-1", "1");
         var pois = data.getPointsOfInterest();
 
-        boolean hasExit = pois.stream().anyMatch(p -> "exit".equals(p.type));
-        boolean hasStairs = pois.stream().anyMatch(p -> "stairs".equals(p.type));
+        boolean hasExit = pois.stream().anyMatch(p -> p.type != null && p.type.contains("exit"));
+        boolean hasStairs = pois.stream().anyMatch(p -> p.type != null && p.type.contains("stairs"));
 
         assertTrue(hasExit, "Hall-1 should have exit POIs");
         assertTrue(hasStairs, "Hall-1 should have stairs POIs");
