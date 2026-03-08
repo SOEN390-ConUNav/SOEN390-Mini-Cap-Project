@@ -125,19 +125,19 @@ public class IndoorDirectionService {
         IndoorDirectionsController.PoiResponse bestEnd = bestConnectors[1];
 
         List<IndoorDirectionResponse.RoutePoint> leg1 = buildRoute(
-                startPlanId, new FloorPlanData.Point(origin.x, origin.y), new FloorPlanData.Point(bestStart.x, bestStart.y),
-                originRoomId, bestStart.id, strategy
+                startPlanId, new FloorPlanData.Point(origin.x, origin.y), new FloorPlanData.Point(bestStart.getX(), bestStart.getY()),
+                originRoomId, bestStart.getId(), strategy
         );
 
         List<IndoorDirectionResponse.RoutePoint> leg2 = buildRoute(
-                endPlanId, new FloorPlanData.Point(bestEnd.x, bestEnd.y), new FloorPlanData.Point(dest.x, dest.y),
-                bestEnd.id, destinationRoomId, strategy
+                endPlanId, new FloorPlanData.Point(bestEnd.getX(), bestEnd.getY()), new FloorPlanData.Point(dest.x, dest.y),
+                bestEnd.getId(), destinationRoomId, strategy
         );
 
         List<IndoorDirectionResponse.RoutePoint> fullRoute = new ArrayList<>(leg1);
-        String type = (bestStart.type != null && bestStart.type.toUpperCase().contains(STR_ELEVATOR)) ? STR_ELEVATOR : TRANSITION_TYPE_STAIRS;
+        String type = (bestStart.getType() != null && bestStart.getType().toUpperCase().contains(STR_ELEVATOR)) ? STR_ELEVATOR : TRANSITION_TYPE_STAIRS;
 
-        fullRoute.add(new IndoorDirectionResponse.RoutePoint(bestStart.x, bestStart.y, "TRANSITION_" + type + "_TO_" + endFloor));
+        fullRoute.add(new IndoorDirectionResponse.RoutePoint(bestStart.getX(), bestStart.getY(), "TRANSITION_" + type + "_TO_" + endFloor));
 
         if (!leg2.isEmpty()) {
             fullRoute.addAll(leg2);
@@ -176,12 +176,12 @@ public class IndoorDirectionService {
         double minDistance = Double.MAX_VALUE;
 
         for (var s : startConnectors) {
-            if (s.type == null || !s.type.toLowerCase().contains(type)) continue;
+            if (s.getType() == null || !s.getType().toLowerCase().contains(type)) continue;
             for (var e : endConnectors) {
-                if (e.type == null || !e.type.toLowerCase().contains(type)) continue;
+                if (e.getType() == null || !e.getType().toLowerCase().contains(type)) continue;
 
-                double d1 = Math.hypot(s.x - origin.x, s.y - origin.y);
-                double d2 = Math.hypot(dest.x - e.x, dest.y - e.y);
+                double d1 = Math.hypot(s.getX() - origin.x, s.getY() - origin.y);
+                double d2 = Math.hypot(dest.x - e.getX(), dest.y - e.getY());
                 if (d1 + d2 < minDistance) {
                     minDistance = d1 + d2;
                     bestStart = s;
@@ -201,7 +201,7 @@ public class IndoorDirectionService {
         List<IndoorDirectionsController.PoiResponse> valid = new ArrayList<>();
 
         for (IndoorDirectionsController.PoiResponse p : all) {
-            String type = (p == null || p.type == null) ? "" : p.type.toLowerCase();
+            String type = (p == null || p.getType() == null) ? "" : p.getType().toLowerCase();
 
             if (type.contains(STR_ELEVATOR_LOWER)
                     || (strategy.allowsStairs() && type.contains(KEYWORD_STAIRS_LOWER))) {
@@ -558,7 +558,7 @@ public class IndoorDirectionService {
     }
 
     public List<String> getAvailableRooms(String bId, String f) {
-        return new ArrayList<>(getRoomPoints(bId, f).stream().map(r -> r.id).toList());
+        return new ArrayList<>(getRoomPoints(bId, f).stream().map(r -> r.getId()).toList());
     }
 
     public List<IndoorDirectionsController.WaypointResponse> getWaypoints(String bId, String f) {
@@ -626,8 +626,8 @@ public class IndoorDirectionService {
         // 2) Try POIs
         List<IndoorDirectionsController.PoiResponse> pois = helper.getPoisForBuilding(planId);
         for (IndoorDirectionsController.PoiResponse p : pois) {
-            if (p != null && p.id != null && p.id.equals(id)) {
-                return new PathfindingService.Waypoint(p.x, p.y, p.id);
+            if (p != null && p.getId() != null && p.getId().equals(id)) {
+                return new PathfindingService.Waypoint(p.getX(), p.getY(), p.getId());
             }
         }
 

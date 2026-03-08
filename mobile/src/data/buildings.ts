@@ -257,7 +257,7 @@ export const BUILDINGS: Building[] = [
     marker: { latitude: 45.45896275540376, longitude: -73.63859033366037 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
-      { latitude: 45.458847992641245, longitude: -73.6390114404858 },
+      { latitude: 45.45884799264124, longitude: -73.6390114404858 },
       { latitude: 45.45931080497647, longitude: -73.63866007109642 },
       { latitude: 45.459141483831075, longitude: -73.63820141334384 },
       { latitude: 45.45921297504337, longitude: -73.63812899369869 },
@@ -342,7 +342,7 @@ export const BUILDINGS: Building[] = [
       { latitude: 45.458376979344756, longitude: -73.63976643191464 },
       { latitude: 45.45791554777998, longitude: -73.64012276408482 },
       { latitude: 45.4577972313859, longitude: -73.63982968614602 },
-      { latitude: 45.4582527481411, longitude: -73.639448052283294 },
+      { latitude: 45.4582527481411, longitude: -73.63944805228329 },
     ],
 
     openingHours: { label: "Mon-Fri 10:00-16:00" },
@@ -360,7 +360,7 @@ export const BUILDINGS: Building[] = [
     id: "CC",
     name: "Central Building",
     aliases: ["CC", "Central", "Central Building"],
-    marker: { latitude: 45.45828550714655, longitude: -73.640346666505855 },
+    marker: { latitude: 45.45828550714655, longitude: -73.64034666650586 },
     addressLines: ["7141 Sherbrooke St. W."],
     polygon: [
       { latitude: 45.45852087193103, longitude: -73.6406895128955 },

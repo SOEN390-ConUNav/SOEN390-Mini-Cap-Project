@@ -113,7 +113,9 @@ public class FloorPlanData {
             // Verify the floor matches what's in the JSON
             JsonNode floorNode = root.get("floor");
             if (floorNode != null && !floorNode.asText().equals(this.floor)) {
-                log.warn("Floor mismatch: requested {} but JSON has {} in {}", sanitize(this.floor), floorNode.asText(), safePath);
+                if (log.isWarnEnabled()) {
+                    log.warn("Floor mismatch: requested {} but JSON has {} in {}", sanitize(this.floor), floorNode.asText(), safePath);
+                }
                 return;
             }
 

@@ -164,12 +164,12 @@ public class IndoorDirectionsController {
     }
     
     public static class PoiResponse {
-        public double x;
-        public double y;
-        public String id;    // this id is to be able to differentiate between the different same name POIs     
-        public String displayName; 
-        public String type;       
-        
+        private final double x;
+        private final double y;
+        private final String id;    // this id is to be able to differentiate between the different same name POIs
+        private final String displayName;
+        private final String type;
+
         public PoiResponse(double x, double y, String id, String displayName, String type) {
             this.x = x;
             this.y = y;
@@ -177,29 +177,43 @@ public class IndoorDirectionsController {
             this.displayName = displayName;
             this.type = type;
         }
+
+        public double getX() { return x; }
+        public double getY() { return y; }
+        public String getId() { return id; }
+        public String getDisplayName() { return displayName; }
+        public String getType() { return type; }
     }
 
     public static class WaypointResponse {
-        public double x;
-        public double y;
-        public String id;
-        
+        private final double x;
+        private final double y;
+        private final String id;
+
         public WaypointResponse(double x, double y, String id) {
             this.x = x;
             this.y = y;
             this.id = id;
         }
+
+        public double getX() { return x; }
+        public double getY() { return y; }
+        public String getId() { return id; }
     }
-    
+
     public static class RoomPointResponse {
-        public double x;
-        public double y;
-        public String id;
-        
+        private final double x;
+        private final double y;
+        private final String id;
+
         public RoomPointResponse(double x, double y, String id) {
             this.x = x;
             this.y = y;
             this.id = id;
         }
+
+        public double getX() { return x; }
+        public double getY() { return y; }
+        public String getId() { return id; }
     }
 }

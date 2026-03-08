@@ -27,12 +27,12 @@ public class GoogleSessionService {
 
   public GoogleTokenSession require(String sessionId) {
     if (sessionId == null || sessionId.isBlank()) {
-        throw new RuntimeException("Missing sessionId.");
+        throw new IllegalArgumentException("Missing sessionId.");
     }
 
     GoogleTokenSession session = sessions.get(sessionId);
     if (session == null) {
-        throw new RuntimeException("Invalid sessionId (no stored Google session).");
+        throw new IllegalStateException("Invalid sessionId (no stored Google session).");
     }
 
     return session;

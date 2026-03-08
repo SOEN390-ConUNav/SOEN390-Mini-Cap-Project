@@ -1,7 +1,6 @@
 package com.soen390.backend.object;
 
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 
 public record DefaultErrorResponse(
         String timestamp,

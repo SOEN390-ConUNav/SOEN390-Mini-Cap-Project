@@ -199,9 +199,7 @@ public class PathfindingService {
 
         if (graph == null || !graph.containsVertex(start) || !graph.containsVertex(end)) {
             if (log.isErrorEnabled()) {
-                String msg = String.format("Graph missing or vertices not found for %s (allowsStairs=%s)",
-                        sanitize(currentBuildingId), strategy.allowsStairs());
-                log.error(msg);
+                log.error("Graph missing or vertices not found for {}", sanitize(currentBuildingId));
             }
             return Collections.emptyList();
         }
@@ -211,11 +209,7 @@ public class PathfindingService {
 
         if (path == null) {
             if (log.isErrorEnabled()) {
-                String startId = sanitize(start.id);
-                String endId = sanitize(end.id);
-                String msg = String.format("No path found between waypoints: %s -> %s (allowsStairs=%s)",
-                        startId, endId, strategy.allowsStairs());
-                log.error(msg);
+                log.error("No path found between waypoints: {} -> {}", sanitize(start.id), sanitize(end.id));
             }
             return Collections.emptyList();
         }
@@ -317,11 +311,12 @@ public class PathfindingService {
         int added = 0;
         for (Candidate c : candidates) {
             if (added >= limit) break;
-            if (graph.containsEdge(wp, c.target)) continue;
-            DefaultWeightedEdge edge = graph.addEdge(wp, c.target);
-            if (edge != null) {
-                graph.setEdgeWeight(edge, c.dist);
-                added++;
+            if (!graph.containsEdge(wp, c.target)) {
+                DefaultWeightedEdge edge = graph.addEdge(wp, c.target);
+                if (edge != null) {
+                    graph.setEdgeWeight(edge, c.dist);
+                    added++;
+                }
             }
         }
     }

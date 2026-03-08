@@ -195,8 +195,8 @@ class IndoorDirectionServiceTest {
     void getRoomPoints_eachPointHasPositiveCoords() {
         var roomPoints = directionService.getRoomPoints("H", "8");
         for (var rp : roomPoints) {
-            assertTrue(rp.x > 0, rp.id + " x should be > 0");
-            assertTrue(rp.y > 0, rp.id + " y should be > 0");
+            assertTrue(rp.getX() > 0, rp.getId() + " x should be > 0");
+            assertTrue(rp.getY() > 0, rp.getId() + " y should be > 0");
         }
     }
 
@@ -210,8 +210,8 @@ class IndoorDirectionServiceTest {
     void getPointsOfInterest_eachHasTypeAndDisplayName() {
         var pois = directionService.getPointsOfInterest("LB", "2");
         for (var poi : pois) {
-            assertNotNull(poi.type, poi.id + " should have a type");
-            assertNotNull(poi.displayName, poi.id + " should have a displayName");
+            assertNotNull(poi.getType(), poi.getId() + " should have a type");
+            assertNotNull(poi.getDisplayName(), poi.getId() + " should have a displayName");
         }
     }
 

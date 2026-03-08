@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.MultiValueMap;
@@ -56,7 +57,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         String sessionId = googleOAuthService.exchangeServerAuthCode("test-auth-code");
@@ -84,7 +85,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         String sessionId = googleOAuthService.exchangeServerAuthCode("test-auth-code");
@@ -111,7 +112,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         Instant before = Instant.now();
@@ -134,7 +135,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -163,7 +164,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -182,7 +183,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -198,7 +199,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Unauthorized",
                 "{\"error\":\"invalid_grant\"}".getBytes(), null));
 
@@ -224,7 +225,7 @@ public class GoogleOAuthServiceTest {
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
                 requestCaptor.capture(),
-                eq(Map.class)
+                any(ParameterizedTypeReference.class)
         )).thenReturn(responseEntity);
 
         googleOAuthService.exchangeServerAuthCode("my-auth-code");

@@ -2,6 +2,7 @@ package com.soen390.backend.service;
 
 import com.soen390.backend.object.GoogleTokenSession;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -52,19 +53,19 @@ public class GoogleOAuthService {
     HttpEntity<MultiValueMap<String, String>> req = new HttpEntity<>(form, headers);
 
     try {
-      ResponseEntity<Map> res = restTemplate.exchange(tokenUrl, HttpMethod.POST, req, Map.class);
+      ResponseEntity<Map<String, Object>> res = restTemplate.exchange(tokenUrl, HttpMethod.POST, req, new ParameterizedTypeReference<Map<String, Object>>() {});
 
       if (!res.getStatusCode().is2xxSuccessful() || res.getBody() == null) {
-        throw new RuntimeException("Google token exchange failed (empty response).");
+        throw new IllegalStateException("Google token exchange failed (empty response).");
       }
 
-      Map body = res.getBody();
+      Map<String, Object> body = res.getBody();
       String accessToken = (String) body.get("access_token");
       String refreshToken = (String) body.get("refresh_token"); // may be null
       Number expiresIn = (Number) body.get("expires_in");       // seconds
 
       if (accessToken == null || accessToken.isBlank()) {
-        throw new RuntimeException("Google token exchange failed: missing access_token.");
+        throw new IllegalStateException("Google token exchange failed: missing access_token.");
       }
 
       Instant expiresAt = Instant.now().plusSeconds(expiresIn != null ? expiresIn.longValue() : 3600);
@@ -75,7 +76,7 @@ public class GoogleOAuthService {
 
     } catch (HttpStatusCodeException e) {
       String googleBody = e.getResponseBodyAsString();
-      throw new RuntimeException("Google token exchange failed: " + googleBody, e);
+      throw new IllegalStateException("Google token exchange failed: " + googleBody, e);
     }
   }
 }
