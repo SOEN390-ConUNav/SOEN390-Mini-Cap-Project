@@ -1,6 +1,7 @@
 package com.soen390.backend.service;
 
 import com.soen390.backend.service.PathfindingService.Waypoint;
+import com.soen390.backend.service.strategy.AccessibilityRoutingStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -192,5 +193,32 @@ class PathfindingServiceTest {
         assertFalse(path.isEmpty());
         assertEquals(start.id, path.get(0).id);
         assertEquals(end.id, path.get(path.size() - 1).id);
+    }
+
+    @Test
+    void findPath_withAccessibilityStrategy_avoidStairs_returnsPath() {
+        // Covers 3-arg overload with AccessibilityRoutingStrategy
+        service.setBuilding("Hall-8");
+        List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
+        Waypoint start = wps.get(0);
+        Waypoint end = wps.get(wps.size() - 1);
+        AccessibilityRoutingStrategy strategy = AccessibilityRoutingStrategy.fromAvoidStairs(true);
+
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end, strategy);
+        assertNotNull(path);
+        assertFalse(path.isEmpty());
+    }
+
+    @Test
+    void findPath_twoArgOverload_delegatesToThreeArg() {
+        // Covers 2-arg findPathThroughWaypoints overload
+        service.setBuilding("Hall-8");
+        List<Waypoint> wps = service.getWaypointsForBuilding("Hall-8");
+        Waypoint start = wps.get(0);
+        Waypoint end = wps.get(wps.size() - 1);
+
+        List<Waypoint> path = service.findPathThroughWaypoints(start, end);
+        assertNotNull(path);
+        assertFalse(path.isEmpty());
     }
 }

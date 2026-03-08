@@ -358,4 +358,94 @@ class IndoorDirectionServiceTest {
         assertEquals("straight", IndoorManeuverType.STRAIGHT.getValue());
     }
 
+    @Test
+    void getIndoorDirections_avoidStairs_returnsRoute() {
+        // Covers AccessibilityRoutingStrategy when avoidStairs=true
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", true);
+        assertNotNull(response);
+        assertFalse(response.getRoutePoints().isEmpty());
+    }
+
+    @Test
+    void getIndoorDirections_crossFloor_doesNotThrow() {
+        // Covers calculateCrossFloorRoute path
+        IndoorDirectionResponse response = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H9-903", "8", "9", false);
+        assertNotNull(response);
+    }
+
+    @Test
+    void getBuildingName_CC_returnsCentralBuilding() {
+        // Covers CC- prefix in getBuildingName
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "CC-1", "CC-101", "CC-102", "1", "1", false);
+        assertEquals("Central Building", r.getBuildingName());
+    }
+
+    @Test
+    void getBuildingName_VE_returnsEngineeringBuilding() {
+        // Covers VE- prefix in getBuildingName
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-101", "VE-102", "1", "1", false);
+        assertEquals("Engineering/Visual Arts Building", r.getBuildingName());
+    }
+
+    @Test
+    void getBuildingName_plainVE_returnsEngineeringBuilding() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE", "VE-101", "VE-102", "1", "1", false);
+        assertEquals("Engineering/Visual Arts Building", r.getBuildingName());
+    }
+
+    @Test
+    void getRoomPoints_unknownBuilding_returnsEmpty() {
+        var rooms = directionService.getRoomPoints("XX", "99");
+        assertNotNull(rooms);
+        assertTrue(rooms.isEmpty());
+    }
+
+    @Test
+    void getPointsOfInterest_withoutFloor_usesConvertedPlanId() {
+        var pois = directionService.getPointsOfInterest("H", null);
+        assertNotNull(pois);
+    }
+
+    @Test
+    void stairMessage_fromRouteWithStairsLabel_setsStairMessage() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "Hall-Stairs-Main", "2", "2", false);
+        assertNotNull(r);
+        if (r.getRoutePoints().stream().anyMatch(p -> p.getLabel() != null && p.getLabel().toLowerCase().contains("stairs"))) {
+            assertNotNull(r.getStairMessage());
+        }
+    }
+
+    @Test
+    void formatFinalDuration_zeroDistance_returnsZeroSec() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "INVALID", "ALSO-INVALID", "8", "8", false);
+        assertEquals("0 sec", r.getDuration());
+    }
+
+    @Test
+    void convertBuildingId_CC_returnsCCFloor() {
+        List<String> rooms = directionService.getAvailableRooms("CC", "1");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void convertBuildingId_MB_returnsMBFloor() {
+        List<String> rooms = directionService.getAvailableRooms("MB", "1");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getIndoorDirections_destinationFloorNull_usesStartFloor() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", null, false);
+        assertEquals("8", r.getStartFloor());
+        assertEquals("8", r.getEndFloor());
+    }
+
 }

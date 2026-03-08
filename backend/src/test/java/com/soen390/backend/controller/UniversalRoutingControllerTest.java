@@ -96,4 +96,22 @@ class UniversalRoutingControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("Unexpected server crash"));
     }
+
+    @Test
+    void getUniversalRoute_exceptionWithNullMessage_returnsFallbackMessage() throws Exception {
+        // Covers e.getMessage() == null fallback
+        when(universalRoutingService.getCompleteRoute(
+                anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenThrow(new RuntimeException());
+
+        mockMvc.perform(get("/api/directions/universal")
+                        .param("startBuilding", "H")
+                        .param("startRoom", "H-1")
+                        .param("startFloor", "1")
+                        .param("endBuilding", "VL")
+                        .param("endRoom", "VL-1")
+                        .param("endFloor", "1"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("Universal routing failed"));
+    }
 }

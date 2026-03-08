@@ -147,4 +147,12 @@ class UniversalRoutingServiceTest {
         verify(indoorDirectionService).getIndoorDirections(
                 eq("MB"), eq("r1"), eq("MB1-Emergency-Exit-1"), eq("1"), eq("1"), anyBoolean());
     }
+
+    @Test
+    void getCompleteRoute_unknownBuildingPrefix_usesMainEntrance() {
+        // Covers getBuildingEntranceId fallback for unknown prefix
+        universalRoutingService.getCompleteRoute("XX", "r1", "1", "H", "r2", "1", false);
+        verify(indoorDirectionService).getIndoorDirections(
+                eq("XX"), eq("r1"), eq("main-entrance"), eq("1"), eq("1"), anyBoolean());
+    }
 }
