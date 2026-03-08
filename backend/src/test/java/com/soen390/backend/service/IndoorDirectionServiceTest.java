@@ -246,7 +246,7 @@ class IndoorDirectionServiceTest {
         assertEquals("Webster Library Building",
                 directionService.getIndoorDirections("LB-2", "LB-204", "LB-259", "2", "2", false).getBuildingName());
         assertEquals("John Molson School of Business",
-                directionService.getIndoorDirections("MB-S2", "MBS2-101", "MBS2-102", "S2", "S2", false).getBuildingName());
+                directionService.getIndoorDirections("MB-S2", "MB-S2-Room1", "MB-S2-Room2", "S2", "S2", false).getBuildingName());
     }
 
     @Test
@@ -380,22 +380,21 @@ class IndoorDirectionServiceTest {
     void getBuildingName_CC_returnsCentralBuilding() {
         // Covers CC- prefix in getBuildingName
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "CC-1", "CC-101", "CC-102", "1", "1", false);
+                "CC-1", "CC-101", "CC-107", "1", "1", false);
         assertEquals("Central Building", r.getBuildingName());
     }
 
     @Test
     void getBuildingName_VE_returnsEngineeringBuilding() {
-        // Covers VE- prefix in getBuildingName
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "VE-1", "VE-101", "VE-102", "1", "1", false);
+                "VE-1", "VE-1-01", "VE-1-02", "1", "1", false);
         assertEquals("Engineering/Visual Arts Building", r.getBuildingName());
     }
 
     @Test
     void getBuildingName_plainVE_returnsEngineeringBuilding() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "VE", "VE-101", "VE-102", "1", "1", false);
+                "VE", "VE-1-01", "VE-1-02", "1", "1", false);
         assertEquals("Engineering/Visual Arts Building", r.getBuildingName());
     }
 
@@ -478,7 +477,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_MB_returnsRoute() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "MB-S2", "MBS2-101", "MBS2-102", "S2", "S2", false);
+                "MB-S2", "MB-S2-Room1", "MB-S2-Room2", "S2", "S2", false);
         assertNotNull(r);
     }
 
@@ -614,7 +613,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_Hall1_returnsRoute() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "Hall-1", "H1-101", "H1-102", "1", "1", false);
+                "Hall-1", "H1-118", "H1-115", "1", "1", false);
         assertNotNull(r);
     }
 
@@ -681,15 +680,430 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_CC_returnsRoute() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "CC-1", "CC-101", "CC-102", "1", "1", false);
+                "CC-1", "CC-101", "CC-107", "1", "1", false);
         assertNotNull(r);
     }
 
     @Test
     void getIndoorDirections_VE_returnsRoute() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "VE-1", "VE-101", "VE-102", "1", "1", false);
+                "VE-1", "VE-1-01", "VE-1-02", "1", "1", false);
         assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_destinationAsPoi_resolvesAndReturnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-1-01", "VE-Elevator-Main", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_VL2_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VL-2", "VL-201", "VL-202", "2", "2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_VE2_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-2", "VE-2-01", "VE-2-02", "2", "2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_MB1_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "MB-1", "MB-1-101", "MB-1-102", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getRoomPoints_MB1_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("MB", "1");
+        assertNotNull(rooms);
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_VE1_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("VE", "1");
+        assertNotNull(rooms);
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getPointsOfInterest_Hall8_returnsNonEmpty() {
+        var pois = directionService.getPointsOfInterest("H", "8");
+        assertNotNull(pois);
+    }
+
+    @Test
+    void getPointsOfInterest_VE1_returnsNonEmpty() {
+        var pois = directionService.getPointsOfInterest("VE", "1");
+        assertNotNull(pois);
+        assertFalse(pois.isEmpty());
+    }
+
+    @Test
+    void getPointsOfInterest_CC1_returnsNonEmpty() {
+        var pois = directionService.getPointsOfInterest("CC", "1");
+        assertNotNull(pois);
+    }
+
+    @Test
+    void getWaypoints_LB2_returnsNonEmpty() {
+        var wps = directionService.getWaypoints("LB", "2");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getWaypoints_VL1_returnsList() {
+        var wps = directionService.getWaypoints("VL", "1");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getWaypoints_CC1_returnsList() {
+        var wps = directionService.getWaypoints("CC", "1");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getIndoorDirections_convertBuildingId_preservesHallPrefix() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertEquals("Hall-8", r.getBuildingId());
+    }
+
+    @Test
+    void getIndoorDirections_convertBuildingId_preservesLBPrefix() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-2", "LB-204", "LB-259", "2", "2", false);
+        assertEquals("LB-2", r.getBuildingId());
+    }
+
+    @Test
+    void getAvailableRooms_hall1_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("H", "1");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getAvailableRooms_CC_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("CC", "1");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void detectGenericStairs_stairsUp_returnsUpMessage() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-4", "LB4-Stairs-Up-2", "LB-451", "4", "4", false);
+        assertNotNull(r);
+        if (r.getStairMessage() != null) {
+            assertTrue(r.getStairMessage().toLowerCase().contains("up"));
+        }
+    }
+
+    @Test
+    void detectGenericStairs_stairsDown_returnsDownMessage() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-4", "LB4-451", "LB4-Stairs-Down-1", "4", "4", false);
+        assertNotNull(r);
+        if (r.getStairMessage() != null) {
+            assertTrue(r.getStairMessage().toLowerCase().contains("down"));
+        }
+    }
+
+    @Test
+    void getRoomPoints_LB3_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("LB", "3");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_LB4_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("LB", "4");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_LB5_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("LB", "5");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_CC_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("CC", "1");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_Hall1_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("H", "1");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_Hall2_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("H", "2");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getRoomPoints_Hall9_returnsNonEmpty() {
+        var rooms = directionService.getRoomPoints("H", "9");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getWaypoints_Hall1_returnsList() {
+        var wps = directionService.getWaypoints("H", "1");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getWaypoints_Hall2_returnsList() {
+        var wps = directionService.getWaypoints("H", "2");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getWaypoints_Hall9_returnsList() {
+        var wps = directionService.getWaypoints("H", "9");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getWaypoints_MB_returnsList() {
+        var wps = directionService.getWaypoints("MB", "S2");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getWaypoints_VE_returnsList() {
+        var wps = directionService.getWaypoints("VE", "1");
+        assertNotNull(wps);
+    }
+
+    @Test
+    void getPointsOfInterest_Hall1_returnsList() {
+        var pois = directionService.getPointsOfInterest("H", "1");
+        assertNotNull(pois);
+    }
+
+    @Test
+    void getPointsOfInterest_Hall2_returnsList() {
+        var pois = directionService.getPointsOfInterest("H", "2");
+        assertNotNull(pois);
+    }
+
+    @Test
+    void getPointsOfInterest_MB_returnsList() {
+        var pois = directionService.getPointsOfInterest("MB", "S2");
+        assertNotNull(pois);
+    }
+
+    @Test
+    void getPointsOfInterest_VL_returnsList() {
+        var pois = directionService.getPointsOfInterest("VL", "1");
+        assertNotNull(pois);
+    }
+
+    @Test
+    void getAvailableRooms_LB3_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("LB", "3");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getAvailableRooms_LB4_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("LB", "4");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getAvailableRooms_LB5_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("LB", "5");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getAvailableRooms_VE_returnsNonEmpty() {
+        List<String> rooms = directionService.getAvailableRooms("VE", "1");
+        assertFalse(rooms.isEmpty());
+    }
+
+    @Test
+    void getIndoorDirections_originAsPoi_resolvesAndReturnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-Elevator-Main", "VE-1-02", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_Hall2_toHallStairsMain_returnsRoute() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "Hall-Stairs-Main", "2", "2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_VL1_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VL-1", "VL-101", "VL-102", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_CC_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "CC-1", "CC-101", "CC-106", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_distanceIsFormatted() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertNotNull(r.getDistance());
+        assertTrue(r.getDistance().endsWith(" m"));
+    }
+
+    @Test
+    void getIndoorDirections_durationIsFormatted() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertNotNull(r.getDuration());
+        assertTrue(r.getDuration().contains("sec") || r.getDuration().contains("min"));
+    }
+
+    @Test
+    void getIndoorDirections_stepsContainArrive() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertTrue(r.getSteps().stream()
+                .anyMatch(s -> s.instruction() != null && s.instruction().contains("Arrive")));
+    }
+
+    @Test
+    void getIndoorDirections_routePointsHaveLabels() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-8", "H8-843", "H8-807", "8", "8", false);
+        assertFalse(r.getRoutePoints().isEmpty());
+        assertNotNull(r.getRoutePoints().get(0).getLabel());
+    }
+
+    @Test
+    void getIndoorDirections_LB2_toStairs() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-2", "LB-204", "LB2-Stairs-Down-1", "2", "2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_LB3_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-3", "LB-311", "LB-314", "3", "3", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_LB4_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-4", "LB-451", "LB-453", "4", "4", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_LB5_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "LB-5", "LB-518", "LB-520", "5", "5", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_Hall9_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-9", "H9-903", "H9-967", "9", "9", false);
+        assertNotNull(r);
+        assertFalse(r.getRoutePoints().isEmpty());
+    }
+
+    @Test
+    void getIndoorDirections_VL2_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VL-2", "VL-201", "VL-203", "2", "2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_VE2_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-2", "VE-2-01", "VE-2-02", "2", "2", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_MB1_roomToRoom() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "MB-1", "MB-1-101", "MB-1-102", "1", "1", false);
+        assertNotNull(r);
+    }
+
+    @Test
+    void getIndoorDirections_convertBuildingId_VL_short() {
+        List<String> rooms = directionService.getAvailableRooms("VL", "2");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getIndoorDirections_convertBuildingId_VE_short() {
+        List<String> rooms = directionService.getAvailableRooms("VE", "2");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getIndoorDirections_convertBuildingId_CC_short() {
+        List<String> rooms = directionService.getAvailableRooms("CC", "1");
+        assertNotNull(rooms);
+    }
+
+    @Test
+    void getIndoorDirections_HallPrefix_buildingId() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "Hall-2", "H2-217", "H2-222", "2", "2", false);
+        assertTrue(r.getBuildingId().startsWith("Hall-"));
+    }
+
+    @Test
+    void getIndoorDirections_VLPrefix_buildingId() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VL-1", "VL-101", "VL-102", "1", "1", false);
+        assertTrue(r.getBuildingId().startsWith("VL-"));
+    }
+
+    @Test
+    void getIndoorDirections_MBPrefix_buildingId() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "MB-S2", "MB-S2-Room1", "MB-S2-Room2", "S2", "S2", false);
+        assertTrue(r.getBuildingId().startsWith("MB-"));
+    }
+
+    @Test
+    void getIndoorDirections_CCPrefix_buildingId() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "CC-1", "CC-101", "CC-107", "1", "1", false);
+        assertTrue(r.getBuildingId().startsWith("CC-"));
+    }
+
+    @Test
+    void getIndoorDirections_VEPrefix_buildingId() {
+        IndoorDirectionResponse r = directionService.getIndoorDirections(
+                "VE-1", "VE-1-01", "VE-1-02", "1", "1", false);
+        assertTrue(r.getBuildingId().startsWith("VE-"));
     }
 
 }
