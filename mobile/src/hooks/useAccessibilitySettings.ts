@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  getCachedAccessibilityPrefs,
+  setCachedAccessibilityPrefs,
+} from "../services/accessibilitySettingsCache";
 
 type FontSizeOption = "small" | "medium" | "large";
 type FontWeightOption = "light" | "regular" | "bold";
@@ -20,10 +23,8 @@ interface AccessibilitySettingsState {
   hydrateFromStorage: () => Promise<void>;
 }
 
-const STORAGE_KEY = "accessibilitySettings.v1";
-
-export const useAccessibilitySettingsStore =
-  create<AccessibilitySettingsState>((set, get) => ({
+export const useAccessibilitySettingsStore = create<AccessibilitySettingsState>(
+  (set, get) => ({
     colorBlindMode: false,
     highContrastMode: false,
     reduceMotion: false,
@@ -74,18 +75,16 @@ export const useAccessibilitySettingsStore =
     },
     hydrateFromStorage: async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
+        const cached = await getCachedAccessibilityPrefs();
+        if (!cached) return;
         set((state) => ({
           ...state,
-          ...parsed,
+          ...cached,
         }));
-      } catch {
-        // ignore hydration failures
-      }
+      } catch {}
     },
-  }));
+  }),
+);
 
 async function persist(state: AccessibilitySettingsState) {
   const {
@@ -96,21 +95,14 @@ async function persist(state: AccessibilitySettingsState) {
     fontSize,
     fontWeight,
   } = state;
-  try {
-    await AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        colorBlindMode,
-        highContrastMode,
-        reduceMotion,
-        wheelchairUser,
-        fontSize,
-        fontWeight,
-      }),
-    );
-  } catch {
-    // best-effort persistence
-  }
+  await setCachedAccessibilityPrefs({
+    colorBlindMode,
+    highContrastMode,
+    reduceMotion,
+    wheelchairUser,
+    fontSize,
+    fontWeight,
+  });
 }
 
 export function useAccessibilitySettings() {
@@ -154,5 +146,3 @@ export function getFontWeightValue(
       return "500";
   }
 }
-
-
