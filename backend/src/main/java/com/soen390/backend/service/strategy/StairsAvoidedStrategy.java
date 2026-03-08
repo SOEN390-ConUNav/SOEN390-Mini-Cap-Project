@@ -1,7 +1,15 @@
 package com.soen390.backend.service.strategy;
 
-public enum StairsAvoidedStrategy implements AccessibilityRoutingStrategy {
-    INSTANCE;
+public final class StairsAvoidedStrategy implements AccessibilityRoutingStrategy {
+
+    public static final StairsAvoidedStrategy INSTANCE = new StairsAvoidedStrategy();
+
+    private StairsAvoidedStrategy() {
+    }
+
+    public static StairsAvoidedStrategy getInstance() {
+        return INSTANCE;
+    }
 
     @Override
     public boolean allowsStairs() {

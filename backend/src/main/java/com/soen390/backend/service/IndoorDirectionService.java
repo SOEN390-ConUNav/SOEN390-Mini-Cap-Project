@@ -394,7 +394,7 @@ public class IndoorDirectionService {
             maneuver = IndoorManeuverType.ELEVATOR_UP;
         } else if (useElevator) {
             maneuver = IndoorManeuverType.ELEVATOR_DOWN;
-        } else if (!useElevator && goingUp) {
+        } else if (goingUp) {
             maneuver = IndoorManeuverType.STAIRS_UP;
         } else {
             maneuver = IndoorManeuverType.STAIRS_DOWN;
