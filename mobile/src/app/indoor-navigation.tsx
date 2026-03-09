@@ -40,6 +40,10 @@ import {
   getAvailableFloors,
 } from "../utils/buildingIndoorMaps";
 
+const MAX_DURATION_REGEX_INPUT_LENGTH = 128;
+const DURATION_HOUR_REGEX = /\b([0-9]{1,3})[ \t]{0,4}hours?\b/i;
+const DURATION_MINUTE_REGEX = /\b([0-9]{1,3})[ \t]{0,4}mins?\b/i;
+
 function getRoomPromisesForBuildings(buildings: BuildingId[]) {
   return buildings.flatMap((bId) =>
     getAvailableFloors(bId).map((floorNum) => getAvailableRooms(bId, floorNum)),
@@ -196,9 +200,12 @@ export default function IndoorNavigation() {
   };
 
   const parseDurationMinutes = (value: string): number => {
-    const normalized = value.trim().toLowerCase();
-    const hourMatch = normalized.match(/(\d+)\s*hour/);
-    const minMatch = normalized.match(/(\d+)\s*min/);
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .slice(0, MAX_DURATION_REGEX_INPUT_LENGTH);
+    const hourMatch = DURATION_HOUR_REGEX.exec(normalized);
+    const minMatch = DURATION_MINUTE_REGEX.exec(normalized);
     const hours = hourMatch ? Number(hourMatch[1]) : 0;
     const mins = minMatch ? Number(minMatch[1]) : 0;
     const total = hours * 60 + mins;
