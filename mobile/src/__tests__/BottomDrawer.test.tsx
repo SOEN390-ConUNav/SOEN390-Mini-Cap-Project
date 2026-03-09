@@ -4,50 +4,54 @@ import { Text } from "react-native";
 import BottomDrawer from "../components/BottomDrawer";
 
 // ─── Mock BottomSheetModal / BottomSheetView ─────────────
-jest.mock("@gorhom/bottom-sheet", () => {
-  const React = require("react");
-  const { View } = require("react-native");
-  const nonModalRefState = {
-    snapToIndex: jest.fn(),
-    close: jest.fn(),
-  };
+jest.mock(
+  "@gorhom/bottom-sheet",
+  () => {
+    const React = require("react");
+    const { View } = require("react-native");
+    const nonModalRefState = {
+      snapToIndex: jest.fn(),
+      close: jest.fn(),
+    };
 
-  return {
-    __esModule: true,
-    __nonModalRefState: nonModalRefState,
-    default: React.forwardRef(
-      ({ children, onClose, onChange, handleComponent }: any, ref: any) => {
-        React.useImperativeHandle(ref, () => nonModalRefState);
-        return (
-          <View testID="bottom-sheet" onClose={onClose} onChange={onChange}>
-            {handleComponent?.()}
-            {children}
-          </View>
-        );
-      },
-    ),
-    BottomSheetModal: React.forwardRef(
-      ({ children, onDismiss, handleComponent }: any, ref: any) => {
-        // simulate imperative handle
-        React.useImperativeHandle(ref, () => ({
-          present: jest.fn(),
-          dismiss: jest.fn(),
-          snapToIndex: jest.fn(),
-        }));
+    return {
+      __esModule: true,
+      __nonModalRefState: nonModalRefState,
+      default: React.forwardRef(
+        ({ children, onClose, onChange, handleComponent }: any, ref: any) => {
+          React.useImperativeHandle(ref, () => nonModalRefState);
+          return (
+            <View testID="bottom-sheet" onClose={onClose} onChange={onChange}>
+              {handleComponent?.()}
+              {children}
+            </View>
+          );
+        },
+      ),
+      BottomSheetModal: React.forwardRef(
+        ({ children, onDismiss, handleComponent }: any, ref: any) => {
+          // simulate imperative handle
+          React.useImperativeHandle(ref, () => ({
+            present: jest.fn(),
+            dismiss: jest.fn(),
+            snapToIndex: jest.fn(),
+          }));
 
-        return (
-          <View testID="bottom-sheet-modal" onDismiss={onDismiss}>
-            {handleComponent?.()}
-            {children}
-          </View>
-        );
-      },
-    ),
-    BottomSheetView: ({ children, style }: any) => (
-      <View style={style}>{children}</View>
-    ),
-  };
-});
+          return (
+            <View testID="bottom-sheet-modal" onDismiss={onDismiss}>
+              {handleComponent?.()}
+              {children}
+            </View>
+          );
+        },
+      ),
+      BottomSheetView: ({ children, style }: any) => (
+        <View style={style}>{children}</View>
+      ),
+    };
+  },
+  { virtual: true },
+);
 
 describe("BottomDrawer", () => {
   const onClose = jest.fn();
