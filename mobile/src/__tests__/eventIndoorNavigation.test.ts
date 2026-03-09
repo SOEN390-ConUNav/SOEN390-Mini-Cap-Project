@@ -329,4 +329,118 @@ describe("eventIndoorNavigation", () => {
       startRoom: "MB-Elevator-Main-A",
     });
   });
+
+  it("falls back to the merged location/details lookup for building matching", async () => {
+    (findBuildingFromLocationText as jest.Mock)
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce({ id: "H" });
+    (getAvailableFloors as jest.Mock).mockReturnValue(["9"]);
+    (getAvailableRooms as jest.Mock).mockResolvedValue([
+      "H9-937",
+      "Hall-Elevator-Main",
+    ]);
+
+    const target = await buildEventIndoorTarget({
+      locationText: "Hall",
+      detailsText: "Classroom: H9-937",
+    });
+
+    expect(target).toEqual({
+      buildingId: "H",
+      floor: "9",
+      startFloor: "9",
+      floorSupported: true,
+      destinationRoom: "H9-937",
+      startRoom: "Hall-Elevator-Main",
+    });
+    expect(findBuildingFromLocationText).toHaveBeenCalledTimes(3);
+    expect(findBuildingFromLocationText).toHaveBeenNthCalledWith(
+      3,
+      "Hall Classroom: H9-937",
+    );
+  });
+
+  it("returns null start room when destination is the only room on the floor", async () => {
+    (findBuildingFromLocationText as jest.Mock).mockReturnValue({ id: "H" });
+    (getAvailableFloors as jest.Mock).mockReturnValue(["9"]);
+    (getAvailableRooms as jest.Mock).mockResolvedValue(["H9-937"]);
+
+    const target = await buildEventIndoorTarget({
+      locationText: "Hall Building",
+      detailsText: "Classroom: H9-937",
+    });
+
+    expect(target).toEqual({
+      buildingId: "H",
+      floor: "9",
+      startFloor: "9",
+      floorSupported: true,
+      destinationRoom: "H9-937",
+      startRoom: null,
+    });
+  });
+
+  it("handles non-array room payloads from the API gracefully", async () => {
+    (findBuildingFromLocationText as jest.Mock).mockReturnValue({ id: "H" });
+    (getAvailableFloors as jest.Mock).mockReturnValue(["9"]);
+    (getAvailableRooms as jest.Mock).mockResolvedValue("unexpected");
+
+    const target = await buildEventIndoorTarget({
+      locationText: "Hall Building",
+      detailsText: "Classroom: H9-937",
+    });
+
+    expect(target).toEqual({
+      buildingId: "H",
+      floor: "9",
+      startFloor: "9",
+      floorSupported: true,
+      destinationRoom: "H9-937",
+      startRoom: null,
+    });
+  });
+
+  it("returns unsupported with null destination when only an unsupported explicit floor is provided", async () => {
+    (findBuildingFromLocationText as jest.Mock).mockReturnValue({ id: "H" });
+    (getAvailableFloors as jest.Mock).mockReturnValue(["1", "2"]);
+    (getAvailableRooms as jest.Mock).mockResolvedValue([]);
+
+    const target = await buildEventIndoorTarget({
+      locationText: "Hall Building",
+      detailsText: "Floor: 9",
+    });
+
+    expect(target).toEqual({
+      buildingId: "H",
+      floor: "9",
+      startFloor: null,
+      floorSupported: false,
+      destinationRoom: null,
+      startRoom: null,
+    });
+  });
+
+  it("falls back to generic start-room scoring when MB basement has no elevators", async () => {
+    (findBuildingFromLocationText as jest.Mock).mockReturnValue({ id: "MB" });
+    (getAvailableFloors as jest.Mock).mockReturnValue(["S2"]);
+    (getAvailableRooms as jest.Mock).mockResolvedValue([
+      "MB-S2-330",
+      "MB-S2-Exit",
+    ]);
+
+    const target = await buildEventIndoorTarget({
+      locationText: "John Molson School of Business Rm S2.330",
+      detailsText: "Rm S2.330",
+    });
+
+    expect(target).toEqual({
+      buildingId: "MB",
+      floor: "S2",
+      startFloor: "S2",
+      floorSupported: true,
+      destinationRoom: "MB-S2-330",
+      startRoom: "MB-S2-Exit",
+    });
+  });
 });
