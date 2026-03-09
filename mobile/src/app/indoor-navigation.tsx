@@ -41,8 +41,11 @@ import {
 } from "../utils/buildingIndoorMaps";
 
 const MAX_DURATION_REGEX_INPUT_LENGTH = 128;
-const DURATION_HOUR_REGEX = /\b([0-9]{1,3})[ \t]{0,4}hours?\b/i;
-const DURATION_MINUTE_REGEX = /\b([0-9]{1,3})[ \t]{0,4}mins?\b/i;
+const MAX_DISTANCE_REGEX_INPUT_LENGTH = 64;
+const DISTANCE_KM_REGEX = /^(\d+(?:\.\d+)?)[ \t]{0,4}km$/i;
+const DISTANCE_METER_REGEX = /^(\d+(?:\.\d+)?)[ \t]{0,4}m$/i;
+const DURATION_HOUR_REGEX = /\b(\d{1,3})[ \t]{0,4}hours?\b/i;
+const DURATION_MINUTE_REGEX = /\b(\d{1,3})[ \t]{0,4}mins?\b/i;
 
 function getRoomPromisesForBuildings(buildings: BuildingId[]) {
   return buildings.flatMap((bId) =>
@@ -191,11 +194,11 @@ export default function IndoorNavigation() {
   };
 
   const parseDistanceMeters = (value: string): number => {
-    const normalized = value.trim().toLowerCase();
-    const kmMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*km$/);
-    if (kmMatch) return Number(kmMatch[1]) * 1000;
-    const meterMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*m$/);
-    if (meterMatch) return Number(meterMatch[1]);
+    const normalized = value.trim().slice(0, MAX_DISTANCE_REGEX_INPUT_LENGTH);
+    const kmMatch = DISTANCE_KM_REGEX.exec(normalized);
+    if (kmMatch?.[1]) return Number(kmMatch[1]) * 1000;
+    const meterMatch = DISTANCE_METER_REGEX.exec(normalized);
+    if (meterMatch?.[1]) return Number(meterMatch[1]);
     return 0;
   };
 
@@ -261,7 +264,7 @@ export default function IndoorNavigation() {
 
         const normalizedKey = room
           .toUpperCase()
-          .replace(/\s+/g, "")
+          .replaceAll(/\s+/g, "")
           .replace(/^[A-Z]{1,4}-?S?\d+-?/, "")
           .replace(/^[A-Z]{1,4}-/, "");
 
@@ -305,7 +308,7 @@ export default function IndoorNavigation() {
       return false;
     }
 
-    const lastLabel = points[points.length - 1]?.label ?? "";
+    const lastLabel = points.at(-1)?.label ?? "";
     if (lastLabel.toUpperCase() !== destinationRoomId.toUpperCase()) {
       return false;
     }
@@ -422,8 +425,7 @@ export default function IndoorNavigation() {
   ): IndoorDirectionResponse => {
     const firstPoints = legOne.routePoints ?? [];
     const secondPoints = legTwo.routePoints ?? [];
-    const transitionSource =
-      firstPoints[firstPoints.length - 1] ?? secondPoints[0] ?? null;
+    const transitionSource = firstPoints.at(-1) ?? secondPoints[0] ?? null;
 
     const mergedPoints = [...firstPoints];
     if (transitionSource) {
@@ -443,17 +445,18 @@ export default function IndoorNavigation() {
       parseDurationMinutes(legTwo.duration);
 
     const isAscending = floorToLevel(toFloor) >= floorToLevel(fromFloor);
+    let transitionManeuverType: IndoorRouteStep["maneuverType"];
+    if (avoidStairsRouting) {
+      transitionManeuverType = isAscending ? "ELEVATOR_UP" : "ELEVATOR_DOWN";
+    } else {
+      transitionManeuverType = isAscending ? "STAIRS_UP" : "STAIRS_DOWN";
+    }
+
     const transitionStep: IndoorRouteStep = {
       instruction: `Take ${avoidStairsRouting ? "the elevator" : "the stairs/elevator"} to floor ${toFloor}.`,
       distance: "0 m",
       duration: "1 min",
-      maneuverType: avoidStairsRouting
-        ? isAscending
-          ? "ELEVATOR_UP"
-          : "ELEVATOR_DOWN"
-        : isAscending
-          ? "STAIRS_UP"
-          : "STAIRS_DOWN",
+      maneuverType: transitionManeuverType,
       floor: toFloor,
     };
 
