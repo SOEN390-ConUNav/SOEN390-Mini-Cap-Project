@@ -1,5 +1,6 @@
 import { calculateETA } from "../utils/navigationUtils";
 import { checkAndGetViableShuttleDestination } from "../utils/navigationUtils";
+import { parseDistanceMeters } from "../utils/navigationUtils";
 import * as geolib from "geolib";
 import { BUILDINGS } from "../data/buildings";
 
@@ -52,6 +53,24 @@ describe("calculateETA", () => {
   it("handles minute overflow correctly", () => {
     const result = calculateETA("120 mins");
     expect(result).toBe("14:00"); // 12:00 + 2 hours
+  });
+});
+
+describe("parseDistanceMeters", () => {
+  it("parses meters with and without spaces", () => {
+    expect(parseDistanceMeters("250 m")).toBe(250);
+    expect(parseDistanceMeters("250m")).toBe(250);
+  });
+
+  it("parses kilometers and converts to meters", () => {
+    expect(parseDistanceMeters("1.5 km")).toBe(1500);
+    expect(parseDistanceMeters("1.5km")).toBe(1500);
+  });
+
+  it("returns null for unsupported formats", () => {
+    expect(parseDistanceMeters("about 300m")).toBeNull();
+    expect(parseDistanceMeters("")).toBeNull();
+    expect(parseDistanceMeters("N/A")).toBeNull();
   });
 });
 

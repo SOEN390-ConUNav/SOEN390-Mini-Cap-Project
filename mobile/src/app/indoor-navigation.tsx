@@ -39,6 +39,7 @@ import {
   getDefaultFloor,
   getAvailableFloors,
 } from "../utils/buildingIndoorMaps";
+import { parseDistanceMeters } from "../utils/navigationUtils";
 
 const MAX_DURATION_REGEX_INPUT_LENGTH = 128;
 const DURATION_HOUR_REGEX = /\b([0-9]{1,3})[ \t]{0,4}hours?\b/i;
@@ -188,15 +189,6 @@ export default function IndoorNavigation() {
     if (upperRoom.startsWith("VE")) return "VE";
     if (upperRoom.startsWith("CC")) return "CC";
     return fallbackBuilding;
-  };
-
-  const parseDistanceMeters = (value: string): number => {
-    const normalized = value.trim().toLowerCase();
-    const kmMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*km$/);
-    if (kmMatch) return Number(kmMatch[1]) * 1000;
-    const meterMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*m$/);
-    if (meterMatch) return Number(meterMatch[1]);
-    return 0;
   };
 
   const parseDurationMinutes = (value: string): number => {
@@ -436,8 +428,8 @@ export default function IndoorNavigation() {
     mergedPoints.push(...secondPoints);
 
     const totalMeters =
-      parseDistanceMeters(legOne.distance) +
-      parseDistanceMeters(legTwo.distance);
+      (parseDistanceMeters(legOne.distance) ?? 0) +
+      (parseDistanceMeters(legTwo.distance) ?? 0);
     const totalMinutes =
       parseDurationMinutes(legOne.duration) +
       parseDurationMinutes(legTwo.duration);

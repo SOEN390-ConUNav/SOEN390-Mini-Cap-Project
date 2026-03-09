@@ -42,6 +42,7 @@ import { NamedCoordinate, TRANSPORT_MODE_API_MAP } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 import { haversineDistance } from "../../utils/locationUtils";
+import { parseDistanceMeters } from "../../utils/navigationUtils";
 import {
   buildEventIndoorTarget,
   EventDirectionsRequest,
@@ -241,18 +242,7 @@ export default function HomePageIndex() {
     return decodeLast(activeRoute?.polyline);
   }, [activeRoute]);
 
-  const parseDistanceMeters = (value: string): number | null => {
-    if (!value) return null;
-    const normalized = value.trim().toLowerCase();
-    const kmMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*km$/);
-    if (kmMatch) return Number(kmMatch[1]) * 1000;
-    const meterMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*m$/);
-    if (meterMatch) return Number(meterMatch[1]);
-    return null;
-  };
-  // ───────────────────────────────────────────────────────────────────────
-
-  // When navigation starts, clear UI clutter + zoom to user ──────
+  // When navigation starts, clear UI clutter + zoom to user
   useEffect(() => {
     if (!isNavigating) return;
     setShowBuildingPopup(false);
