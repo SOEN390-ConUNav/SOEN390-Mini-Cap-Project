@@ -27,14 +27,19 @@ const MAX_REGEX_MATCHES = 200;
 const MAX_REGEX_CAPTURE_LENGTH = 48;
 const CLASSROOM_KEYWORD_REGEX = /\b(?:classroom|room|rm)\b/i;
 const CLASSROOM_VALUE_REGEX =
-  /^[ \t]{0,6}[:#-]?[ \t]{0,6}([A-Z0-9][A-Z0-9 .\-\/]{0,119})/i;
+  /^[ \t]{0,6}[:#-]?[ \t]{0,6}([A-Z0-9][A-Z0-9 ./-]{0,119})/i;
 const FLOOR_LINE_REGEX =
   /\b(?:floor|flr|niveau)\b[ \t]{0,6}[:#-]?[ \t]{0,6}(S?\d{1,2})\b/i;
 const ROOM_MARKER_REGEX =
   /\b(?:RM|ROOM)\b[ \t]{0,6}[:#-]?[ \t]{0,6}([A-Z0-9][A-Z0-9.\-/]{0,23})\b/gi;
 const PREFIXED_ROOM_REGEX =
   /\b([A-Z]{1,3}[ \t]{0,3}-?[ \t]{0,3}S?\d[A-Z0-9.\-/]{0,15})\b/gi;
-const ROOM_NUMBER_REGEX = /\b(S\d[.\-]?\d{2,4}|\d{3,4})\b/gi;
+const ROOM_NUMBER_REGEX = /\b(S\d[-.]?\d{2,4}|\d{3,4})\b/gi;
+const SUB_FLOOR_REGEX = /S(\d)/;
+const DOTTED_FLOOR_REGEX = /\b(\d)\.\d{2,4}\b/;
+const EXPLICIT_FLOOR_REGEX = /^[A-Z]{1,3}-?(\d)-/;
+const ROOM_DIGITS_REGEX = /(\d{3,4})/;
+const ROOM_AFTER_SUB_FLOOR_REGEX = /S\d[-.]?(\d{2,4})/;
 
 const safeRegexInput = (value: string): string =>
   value.length > MAX_REGEX_INPUT_LENGTH
@@ -44,17 +49,17 @@ const safeRegexInput = (value: string): string =>
 const normalizeRoom = (value: string): string =>
   value
     .toUpperCase()
-    .replace(/[\u2013\u2014]/g, "-")
-    .replace(/\s+/g, "")
+    .replaceAll(/[\u2013\u2014]/g, "-")
+    .replaceAll(/\s+/g, "")
     .trim();
 
 const compactRoom = (value: string): string =>
-  normalizeRoom(value).replace(/[^A-Z0-9]/g, "");
+  normalizeRoom(value).replaceAll(/[^A-Z0-9]/g, "");
 
 const getRoomSuffix = (value: string): string => {
   const normalized = normalizeRoom(value);
   const lastSegment = normalized.split("-").at(-1) ?? normalized;
-  return lastSegment.replace(/[^A-Z0-9.]/g, "");
+  return lastSegment.replaceAll(/[^A-Z0-9.]/g, "");
 };
 
 const inferFloorFromCandidate = (
@@ -63,16 +68,16 @@ const inferFloorFromCandidate = (
 ): string | null => {
   const normalized = normalizeRoom(candidate);
 
-  const subFloor = normalized.match(/S(\d)/);
+  const subFloor = SUB_FLOOR_REGEX.exec(normalized);
   if (subFloor?.[1]) return `S${subFloor[1]}`;
 
-  const dottedFloor = normalized.match(/\b(\d)\.\d{2,4}\b/);
+  const dottedFloor = DOTTED_FLOOR_REGEX.exec(normalized);
   if (dottedFloor?.[1]) return dottedFloor[1];
 
-  const explicit = normalized.match(/^[A-Z]{1,3}-?(\d)-/);
+  const explicit = EXPLICIT_FLOOR_REGEX.exec(normalized);
   if (explicit?.[1]) return explicit[1];
 
-  const digits = normalized.match(/(\d{3,4})/);
+  const digits = ROOM_DIGITS_REGEX.exec(normalized);
   if (digits?.[1]) {
     const first = digits[1][0];
     if (buildingId === "H") return first;
@@ -89,15 +94,15 @@ const tokenizeForMatch = (value: string): Set<string> => {
   const tokens = new Set<string>();
 
   if (compact.length >= 2) tokens.add(compact);
-  if (suffix.length >= 2) tokens.add(suffix.replace(/\./g, ""));
+  if (suffix.length >= 2) tokens.add(suffix.replaceAll(/\./g, ""));
 
-  const digitsOnly = compact.replace(/\D/g, "");
+  const digitsOnly = compact.replaceAll(/\D/g, "");
   if (digitsOnly.length >= 3) tokens.add(digitsOnly);
 
-  const numbered = normalized.match(/(\d{3,4})/);
+  const numbered = ROOM_DIGITS_REGEX.exec(normalized);
   if (numbered?.[1]) tokens.add(numbered[1]);
 
-  const roomAfterSubFloor = normalized.match(/S\d[.\-]?(\d{2,4})/);
+  const roomAfterSubFloor = ROOM_AFTER_SUB_FLOOR_REGEX.exec(normalized);
   if (roomAfterSubFloor?.[1]) tokens.add(roomAfterSubFloor[1]);
 
   return tokens;
@@ -126,8 +131,11 @@ const scoreRoomMatch = (
     score = Math.max(score, 1150);
   }
 
-  const suffixCandidate = getRoomSuffix(normalizedCandidate).replace(/\./g, "");
-  const suffixRoom = getRoomSuffix(normalizedRoom).replace(/\./g, "");
+  const suffixCandidate = getRoomSuffix(normalizedCandidate).replaceAll(
+    /\./g,
+    "",
+  );
+  const suffixRoom = getRoomSuffix(normalizedRoom).replaceAll(/\./g, "");
   if (suffixCandidate.length >= 2 && suffixCandidate === suffixRoom) {
     score = Math.max(score, 1050);
   }
@@ -169,8 +177,8 @@ const scoreRoomMatch = (
 const pushCandidate = (set: Set<string>, value: string | undefined | null) => {
   if (!value) return;
   const normalized = normalizeRoom(value)
-    .replace(/^RM[-:]?/, "")
-    .replace(/^ROOM[-:]?/, "");
+    .replaceAll(/^RM[-:]?/g, "")
+    .replaceAll(/^ROOM[-:]?/g, "");
   if (normalized.length >= 2) {
     set.add(normalized);
   }
