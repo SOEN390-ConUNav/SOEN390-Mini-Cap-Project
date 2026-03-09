@@ -2,10 +2,6 @@ import { getDistance, isPointWithinRadius } from "geolib";
 import { BUILDINGS } from "../data/buildings";
 import { Coordinate } from "../type";
 
-const MAX_DISTANCE_REGEX_INPUT_LENGTH = 128;
-const DISTANCE_KM_REGEX = /^([0-9]{1,6}(?:\.[0-9]{1,3})?)[ \t]{0,4}km$/i;
-const DISTANCE_METER_REGEX = /^([0-9]{1,6}(?:\.[0-9]{1,3})?)[ \t]{0,4}m$/i;
-
 export function calculateETA(duration: string) {
   if (!duration || duration === "N/A") return "--:--";
 
@@ -34,23 +30,6 @@ export function calculateETA(duration: string) {
     minute: "2-digit",
     hour12: false,
   });
-}
-
-export function parseDistanceMeters(value: string): number | null {
-  if (!value) return null;
-
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .slice(0, MAX_DISTANCE_REGEX_INPUT_LENGTH);
-
-  const kmMatch = DISTANCE_KM_REGEX.exec(normalized);
-  if (kmMatch?.[1]) return Number(kmMatch[1]) * 1000;
-
-  const meterMatch = DISTANCE_METER_REGEX.exec(normalized);
-  if (meterMatch?.[1]) return Number(meterMatch[1]);
-
-  return null;
 }
 
 //FUNCTIONS AND VARIABLES TO CHECK IF SHUTTLE IS A VIABLE MODE OF TRANSPORT

@@ -75,8 +75,6 @@ describe("SearchPanel", () => {
   };
 
   beforeEach(() => {
-    // Prevent fake timers leaked from other suites from breaking waitFor/findBy in CI.
-    jest.useRealTimers();
     jest.clearAllMocks();
     cacheService.clearMemoryNamespace("nearby_places");
 
@@ -136,7 +134,7 @@ describe("SearchPanel", () => {
     storeState.permissionStatus = "denied";
     storeState.currentLocation = null;
 
-    const { findByText } = render(
+    const { queryByText } = render(
       <SearchPanel
         visible
         onSelectLocation={onSelectLocation}
@@ -146,11 +144,9 @@ describe("SearchPanel", () => {
 
     await waitFor(() => {
       expect(mockGetSearchHistory).toHaveBeenCalledTimes(1);
+      expect(queryByText("Recent Searches")).toBeTruthy();
+      expect(queryByText("Library")).toBeTruthy();
     });
-    expect(
-      await findByText("Recent Searches", {}, { timeout: 10_000 }),
-    ).toBeTruthy();
-    expect(await findByText("Library", {}, { timeout: 10_000 })).toBeTruthy();
   });
 
   it("does not search when query is blank", async () => {
