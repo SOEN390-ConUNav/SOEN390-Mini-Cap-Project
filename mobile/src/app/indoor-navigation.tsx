@@ -19,7 +19,10 @@ import {
   PoiItem,
   getUniversalDirections,
 } from "../api/indoorDirectionsApi";
-import { IndoorDirectionResponse } from "../types/indoorDirections";
+import {
+  IndoorDirectionResponse,
+  IndoorRouteStep,
+} from "../types/indoorDirections";
 import IndoorSearchBar from "../components/IndoorSearchBar";
 import BottomPanel from "../components/BottomPanel";
 import DirectionsPanel from "../components/DirectionsPanel";
@@ -48,6 +51,8 @@ export default function IndoorNavigation() {
   const params = useLocalSearchParams<{
     buildingId?: string;
     floor?: string;
+    startRoom?: string;
+    endRoom?: string;
   }>();
 
   const buildingId = (params.buildingId as BuildingId) || "H";
@@ -57,6 +62,10 @@ export default function IndoorNavigation() {
     params.floor && availableFloors.includes(params.floor)
       ? params.floor
       : defaultFloor;
+  const initialStartRoom =
+    typeof params.startRoom === "string" ? params.startRoom : "";
+  const initialEndRoom =
+    typeof params.endRoom === "string" ? params.endRoom : "";
   const [currentFloor, setCurrentFloor] = useState<string>(initialFloor);
   const backendBuildingId = getBackendBuildingId(buildingId, currentFloor);
 
@@ -75,8 +84,8 @@ export default function IndoorNavigation() {
 
   const mapViewRef = useRef<FloorPlanWebViewRef>(null);
   const [availableRooms, setAvailableRooms] = useState<string[]>([]);
-  const [startRoom, setStartRoom] = useState<string>("");
-  const [endRoom, setEndRoom] = useState<string>("");
+  const [startRoom, setStartRoom] = useState<string>(initialStartRoom);
+  const [endRoom, setEndRoom] = useState<string>(initialEndRoom);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showRoomList, setShowRoomList] = useState<boolean>(false);
   const [selectingFor, setSelectingFor] = useState<"start" | "end" | null>(
@@ -176,6 +185,575 @@ export default function IndoorNavigation() {
     if (upperRoom.startsWith("CC")) return "CC";
     return fallbackBuilding;
   };
+
+  const parseDistanceMeters = (value: string): number => {
+    const normalized = value.trim().toLowerCase();
+    const kmMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*km$/);
+    if (kmMatch) return Number(kmMatch[1]) * 1000;
+    const meterMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*m$/);
+    if (meterMatch) return Number(meterMatch[1]);
+    return 0;
+  };
+
+  const parseDurationMinutes = (value: string): number => {
+    const normalized = value.trim().toLowerCase();
+    const hourMatch = normalized.match(/(\d+)\s*hour/);
+    const minMatch = normalized.match(/(\d+)\s*min/);
+    const hours = hourMatch ? Number(hourMatch[1]) : 0;
+    const mins = minMatch ? Number(minMatch[1]) : 0;
+    const total = hours * 60 + mins;
+    return total > 0 ? total : 1;
+  };
+
+  const formatDistanceMeters = (meters: number): string => {
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  const formatDurationMinutes = (minutes: number): string => {
+    const safeMinutes = Math.max(1, Math.round(minutes));
+    if (safeMinutes < 60) return `${safeMinutes} mins`;
+    const hours = Math.floor(safeMinutes / 60);
+    const mins = safeMinutes % 60;
+    return `${hours} hour${hours > 1 ? "s" : ""} ${mins} mins`;
+  };
+
+  const floorToLevel = (floor: string): number => {
+    const upper = floor.toUpperCase();
+    const basement = upper.match(/^S(\d+)$/);
+    if (basement?.[1]) return -Number(basement[1]);
+    const n = Number(upper);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const selectVerticalConnector = (
+    rooms: string[],
+    preferElevator: boolean,
+  ): string | null => {
+    if (!rooms.length) return null;
+
+    const scoreRoom = (room: string): number => {
+      const lower = room.toLowerCase();
+      if (/elevator/.test(lower) && /main/.test(lower)) return 120;
+      if (/elevator/.test(lower)) return 100;
+      if (preferElevator) {
+        if (/stairs?/.test(lower)) return -1;
+      }
+      if (/stairs?/.test(lower) && /main/.test(lower)) return 90;
+      if (/stairs?/.test(lower)) return 80;
+      return 0;
+    };
+
+    const best = rooms
+      .map((room) => ({ room, score: scoreRoom(room) }))
+      .sort((a, b) => b.score - a.score || a.room.localeCompare(b.room))[0];
+
+    if (!best || best.score <= 0) return null;
+    return best.room;
+  };
+
+  type VerticalConnectorKind = "elevator" | "stairs";
+  type VerticalConnectorCandidate = {
+    room: string;
+    score: number;
+    kind: VerticalConnectorKind;
+    key: string;
+  };
+
+  const getVerticalConnectorCandidates = (
+    rooms: string[],
+    preferElevator: boolean,
+  ): VerticalConnectorCandidate[] => {
+    const scored = rooms
+      .map((room) => {
+        const lower = room.toLowerCase();
+        const isElevator = /elevator/.test(lower);
+        const isStairs = /stairs?/.test(lower);
+        if (!isElevator && !isStairs) return null;
+
+        const kind: VerticalConnectorKind = isElevator ? "elevator" : "stairs";
+        let score = 0;
+        if (isElevator) score += preferElevator ? 240 : 190;
+        if (isStairs) score += preferElevator ? 120 : 230;
+        if (/main/.test(lower)) score += 35;
+        if (/emergency/.test(lower)) score -= 50;
+
+        const normalizedKey = room
+          .toUpperCase()
+          .replace(/\s+/g, "")
+          .replace(/^[A-Z]{1,4}-?S?\d+-?/, "")
+          .replace(/^[A-Z]{1,4}-/, "");
+
+        return { room, score, kind, key: normalizedKey };
+      })
+      .filter(
+        (candidate): candidate is VerticalConnectorCandidate => !!candidate,
+      )
+      .sort((a, b) => b.score - a.score || a.room.localeCompare(b.room));
+
+    const deduped: VerticalConnectorCandidate[] = [];
+    const seen = new Set<string>();
+    for (const connector of scored) {
+      const key = connector.room.toUpperCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(connector);
+    }
+
+    return deduped;
+  };
+
+  const hasValidRoutePoints = (
+    response: IndoorDirectionResponse | null | undefined,
+  ): response is IndoorDirectionResponse =>
+    !!response &&
+    Array.isArray(response.routePoints) &&
+    response.routePoints.length > 0;
+
+  const isCrossFloorResponseComplete = (
+    response: IndoorDirectionResponse,
+    destinationRoomId: string,
+  ): boolean => {
+    const points = response.routePoints ?? [];
+    if (points.length < 2) return false;
+
+    const transitionIndex = points.findIndex((point) =>
+      point.label?.startsWith("TRANSITION_"),
+    );
+    if (transitionIndex < 0 || transitionIndex >= points.length - 1) {
+      return false;
+    }
+
+    const lastLabel = points[points.length - 1]?.label ?? "";
+    if (lastLabel.toUpperCase() !== destinationRoomId.toUpperCase()) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const buildSimpleWalkSteps = (
+    destination: string,
+    floor: string,
+    distance: string,
+    duration: string,
+  ): IndoorRouteStep[] => [
+    {
+      instruction: `Walk to ${destination}`,
+      distance,
+      duration,
+      maneuverType: "STRAIGHT",
+      floor,
+    },
+    {
+      instruction: `Arrive at ${destination}`,
+      distance: "0 m",
+      duration: "0 sec",
+      maneuverType: "ENTER_ROOM",
+      floor,
+      roomNumber: destination,
+      landmark: null,
+    },
+  ];
+
+  const reverseSameFloorRoute = (
+    route: IndoorDirectionResponse,
+    startRoomId: string,
+    destinationRoomId: string,
+    floor: string,
+  ): IndoorDirectionResponse | null => {
+    if (!route.routePoints?.length) return null;
+
+    const reversedPoints = [...route.routePoints]
+      .reverse()
+      .map((point, index, all) => {
+        if (index === 0) {
+          return { ...point, label: startRoomId };
+        }
+        if (index === all.length - 1) {
+          return { ...point, label: destinationRoomId };
+        }
+        return point;
+      });
+
+    return {
+      ...route,
+      startFloor: floor,
+      endFloor: floor,
+      routePoints: reversedPoints,
+      steps: buildSimpleWalkSteps(
+        destinationRoomId,
+        floor,
+        route.distance || "0 m",
+        route.duration || "1 min",
+      ),
+    };
+  };
+
+  const buildSyntheticSameFloorLeg = ({
+    building,
+    floor,
+    originRoomId,
+    destinationRoomId,
+    roomPoints,
+  }: {
+    building: string;
+    floor: string;
+    originRoomId: string;
+    destinationRoomId: string;
+    roomPoints: RoomPoint[];
+  }): IndoorDirectionResponse | null => {
+    const lookup = new Map(
+      roomPoints.map((point) => [point.id.toUpperCase(), point]),
+    );
+    const start = lookup.get(originRoomId.toUpperCase());
+    const end = lookup.get(destinationRoomId.toUpperCase());
+    if (!start || !end) return null;
+
+    const rawDistance = Math.hypot(end.x - start.x, end.y - start.y);
+    const distance = formatDistanceMeters(rawDistance);
+    const minutes = Math.max(1, Math.round(rawDistance / 85));
+    const duration = formatDurationMinutes(minutes);
+
+    return {
+      distance,
+      duration,
+      buildingName: building,
+      buildingId: building,
+      startFloor: floor,
+      endFloor: floor,
+      steps: buildSimpleWalkSteps(destinationRoomId, floor, distance, duration),
+      polyline: "",
+      routePoints: [
+        { x: start.x, y: start.y, label: originRoomId },
+        { x: end.x, y: end.y, label: destinationRoomId },
+      ],
+      stairMessage: null,
+    };
+  };
+
+  const mergeIndoorRoutes = (
+    legOne: IndoorDirectionResponse,
+    legTwo: IndoorDirectionResponse,
+  ): IndoorDirectionResponse => {
+    const firstPoints = legOne.routePoints ?? [];
+    const secondPoints = legTwo.routePoints ?? [];
+
+    const mergedPoints = [...firstPoints];
+    if (secondPoints.length > 0) {
+      const lastFirst = firstPoints[firstPoints.length - 1];
+      const [firstSecond, ...restSecond] = secondPoints;
+      const isDuplicateConnector =
+        !!lastFirst &&
+        Math.abs(lastFirst.x - firstSecond.x) < 0.001 &&
+        Math.abs(lastFirst.y - firstSecond.y) < 0.001;
+      if (isDuplicateConnector) {
+        mergedPoints.push(...restSecond);
+      } else {
+        mergedPoints.push(...secondPoints);
+      }
+    }
+
+    const totalMeters =
+      parseDistanceMeters(legOne.distance) +
+      parseDistanceMeters(legTwo.distance);
+    const totalMinutes =
+      parseDurationMinutes(legOne.duration) +
+      parseDurationMinutes(legTwo.duration);
+
+    const stairMessage = [legOne.stairMessage, legTwo.stairMessage]
+      .filter(
+        (message): message is string => !!message && message.trim().length > 0,
+      )
+      .join(" ");
+
+    return {
+      ...legTwo,
+      distance: formatDistanceMeters(totalMeters),
+      duration: formatDurationMinutes(totalMinutes),
+      startFloor: legOne.startFloor,
+      endFloor: legTwo.endFloor,
+      steps: [...(legOne.steps ?? []), ...(legTwo.steps ?? [])],
+      routePoints: mergedPoints,
+      stairMessage: stairMessage || null,
+    };
+  };
+
+  const mergeRoutesWithManualTransition = (
+    legOne: IndoorDirectionResponse,
+    legTwo: IndoorDirectionResponse,
+    fromFloor: string,
+    toFloor: string,
+    avoidStairsRouting: boolean,
+  ): IndoorDirectionResponse => {
+    const firstPoints = legOne.routePoints ?? [];
+    const secondPoints = legTwo.routePoints ?? [];
+    const transitionSource =
+      firstPoints[firstPoints.length - 1] ?? secondPoints[0] ?? null;
+
+    const mergedPoints = [...firstPoints];
+    if (transitionSource) {
+      mergedPoints.push({
+        x: transitionSource.x,
+        y: transitionSource.y,
+        label: `TRANSITION_${fromFloor}_TO_${toFloor}`,
+      });
+    }
+    mergedPoints.push(...secondPoints);
+
+    const totalMeters =
+      parseDistanceMeters(legOne.distance) +
+      parseDistanceMeters(legTwo.distance);
+    const totalMinutes =
+      parseDurationMinutes(legOne.duration) +
+      parseDurationMinutes(legTwo.duration);
+
+    const isAscending = floorToLevel(toFloor) >= floorToLevel(fromFloor);
+    const transitionStep: IndoorRouteStep = {
+      instruction: `Take ${avoidStairsRouting ? "the elevator" : "the stairs/elevator"} to floor ${toFloor}.`,
+      distance: "0 m",
+      duration: "1 min",
+      maneuverType: avoidStairsRouting
+        ? isAscending
+          ? "ELEVATOR_UP"
+          : "ELEVATOR_DOWN"
+        : isAscending
+          ? "STAIRS_UP"
+          : "STAIRS_DOWN",
+      floor: toFloor,
+    };
+
+    const stairMessage = [legOne.stairMessage, legTwo.stairMessage]
+      .filter(
+        (message): message is string => !!message && message.trim().length > 0,
+      )
+      .join(" ");
+
+    return {
+      ...legTwo,
+      distance: formatDistanceMeters(totalMeters),
+      duration: formatDurationMinutes(totalMinutes),
+      startFloor: legOne.startFloor,
+      endFloor: legTwo.endFloor,
+      steps: [...(legOne.steps ?? []), transitionStep, ...(legTwo.steps ?? [])],
+      routePoints: mergedPoints,
+      stairMessage: stairMessage || null,
+    };
+  };
+
+  const getSplitCrossFloorRoute = async ({
+    building,
+    origin,
+    destination,
+    originFloor,
+    destinationFloor,
+    avoidStairsRouting,
+  }: {
+    building: string;
+    origin: string;
+    destination: string;
+    originFloor: string;
+    destinationFloor: string;
+    avoidStairsRouting: boolean;
+  }): Promise<IndoorDirectionResponse | null> => {
+    if (originFloor === destinationFloor) return null;
+
+    const [
+      originFloorRooms,
+      destinationFloorRooms,
+      destinationRoomPoints,
+      originPois,
+      destinationPois,
+    ] = await Promise.all([
+      getAvailableRooms(building, originFloor),
+      getAvailableRooms(building, destinationFloor),
+      getRoomPoints(building, destinationFloor).catch(() => []),
+      getPointsOfInterest(building, originFloor).catch(() => []),
+      getPointsOfInterest(building, destinationFloor).catch(() => []),
+    ]);
+
+    const connectorPoiIds = (pois: PoiItem[]) =>
+      pois
+        .filter(
+          (poi) =>
+            /elevator|stairs?/i.test(poi.type) ||
+            /elevator|stairs?/i.test(poi.id),
+        )
+        .map((poi) => poi.id);
+
+    const originConnectorPool = Array.from(
+      new Set([...originFloorRooms, ...connectorPoiIds(originPois)]),
+    );
+    const destinationConnectorPool = Array.from(
+      new Set([...destinationFloorRooms, ...connectorPoiIds(destinationPois)]),
+    );
+
+    const originConnectors = getVerticalConnectorCandidates(
+      originConnectorPool,
+      avoidStairsRouting,
+    );
+    const destinationConnectors = getVerticalConnectorCandidates(
+      destinationConnectorPool,
+      avoidStairsRouting,
+    );
+
+    if (!originConnectors.length || !destinationConnectors.length) {
+      return null;
+    }
+
+    for (const originConnector of originConnectors) {
+      if (origin.toUpperCase() === originConnector.room.toUpperCase()) {
+        continue;
+      }
+
+      const legOne = await getIndoorDirections(
+        building,
+        origin,
+        originConnector.room,
+        originFloor,
+        originFloor,
+        avoidStairsRouting,
+      ).catch(() => null);
+
+      if (!hasValidRoutePoints(legOne)) continue;
+
+      const rankedDestinationConnectors = destinationConnectors
+        .map((destinationConnector) => {
+          let pairScore = destinationConnector.score;
+          if (destinationConnector.kind === originConnector.kind) {
+            pairScore += 80;
+          }
+          if (
+            originConnector.key &&
+            destinationConnector.key === originConnector.key
+          ) {
+            pairScore += 240;
+          }
+          return { destinationConnector, pairScore };
+        })
+        .sort(
+          (a, b) =>
+            b.pairScore - a.pairScore ||
+            a.destinationConnector.room.localeCompare(
+              b.destinationConnector.room,
+            ),
+        );
+
+      for (const { destinationConnector } of rankedDestinationConnectors) {
+        if (
+          destination.toUpperCase() === destinationConnector.room.toUpperCase()
+        ) {
+          continue;
+        }
+
+        const legTwoDirect = await getIndoorDirections(
+          building,
+          destinationConnector.room,
+          destination,
+          destinationFloor,
+          destinationFloor,
+          avoidStairsRouting,
+        ).catch(() => null);
+
+        let legTwo: IndoorDirectionResponse | null = hasValidRoutePoints(
+          legTwoDirect,
+        )
+          ? legTwoDirect
+          : null;
+
+        if (!legTwo) {
+          const legTwoReverse = await getIndoorDirections(
+            building,
+            destination,
+            destinationConnector.room,
+            destinationFloor,
+            destinationFloor,
+            avoidStairsRouting,
+          ).catch(() => null);
+
+          if (hasValidRoutePoints(legTwoReverse)) {
+            legTwo = reverseSameFloorRoute(
+              legTwoReverse,
+              destinationConnector.room,
+              destination,
+              destinationFloor,
+            );
+          }
+        }
+
+        if (!legTwo) {
+          legTwo = buildSyntheticSameFloorLeg({
+            building,
+            floor: destinationFloor,
+            originRoomId: destinationConnector.room,
+            destinationRoomId: destination,
+            roomPoints: destinationRoomPoints,
+          });
+        }
+
+        if (!hasValidRoutePoints(legTwo)) continue;
+
+        return mergeRoutesWithManualTransition(
+          legOne,
+          legTwo,
+          originFloor,
+          destinationFloor,
+          avoidStairsRouting,
+        );
+      }
+    }
+
+    return null;
+  };
+
+  const getSplitCrossFloorRouteWithFallback = async ({
+    building,
+    origin,
+    destination,
+    originFloor,
+    destinationFloor,
+    avoidStairsRouting,
+  }: {
+    building: string;
+    origin: string;
+    destination: string;
+    originFloor: string;
+    destinationFloor: string;
+    avoidStairsRouting: boolean;
+  }): Promise<IndoorDirectionResponse | null> => {
+    const primary = await getSplitCrossFloorRoute({
+      building,
+      origin,
+      destination,
+      originFloor,
+      destinationFloor,
+      avoidStairsRouting,
+    }).catch(() => null);
+    if (primary) return primary;
+
+    if (!avoidStairsRouting) return null;
+
+    return getSplitCrossFloorRoute({
+      building,
+      origin,
+      destination,
+      originFloor,
+      destinationFloor,
+      avoidStairsRouting: false,
+    }).catch(() => null);
+  };
+
+  useEffect(() => {
+    if (typeof params.startRoom !== "string") return;
+    setStartRoom(params.startRoom);
+    setStartBuildingId(getBuildingFromRoom(params.startRoom, buildingId));
+  }, [params.startRoom, buildingId]);
+
+  useEffect(() => {
+    if (typeof params.endRoom !== "string") return;
+    setEndRoom(params.endRoom);
+    setEndBuildingId(getBuildingFromRoom(params.endRoom, buildingId));
+  }, [params.endRoom, buildingId]);
 
   const selectRoom = (room: string) => {
     if (selectingFor === "start") {
