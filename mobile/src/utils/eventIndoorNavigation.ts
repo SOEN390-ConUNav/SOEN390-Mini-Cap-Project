@@ -94,7 +94,7 @@ const tokenizeForMatch = (value: string): Set<string> => {
   const tokens = new Set<string>();
 
   if (compact.length >= 2) tokens.add(compact);
-  if (suffix.length >= 2) tokens.add(suffix.replaceAll(/\./g, ""));
+  if (suffix.length >= 2) tokens.add(suffix.replaceAll(".", ""));
 
   const digitsOnly = compact.replaceAll(/\D/g, "");
   if (digitsOnly.length >= 3) tokens.add(digitsOnly);
@@ -132,10 +132,10 @@ const scoreRoomMatch = (
   }
 
   const suffixCandidate = getRoomSuffix(normalizedCandidate).replaceAll(
-    /\./g,
+    ".",
     "",
   );
-  const suffixRoom = getRoomSuffix(normalizedRoom).replaceAll(/\./g, "");
+  const suffixRoom = getRoomSuffix(normalizedRoom).replaceAll(".", "");
   if (suffixCandidate.length >= 2 && suffixCandidate === suffixRoom) {
     score = Math.max(score, 1050);
   }
@@ -254,19 +254,15 @@ const resolveBestRoomMatch = (
           floorEntry.floor,
           buildingId,
         );
-        if (!Number.isFinite(score)) continue;
-        if (!best || score > best.score) {
-          best = { room, floor: floorEntry.floor, score };
-        }
+        if (!Number.isFinite(score) || (best && score <= best.score)) continue;
+        best = { room, floor: floorEntry.floor, score };
       }
     }
   }
 
-  if (!best || best.score < 820) {
-    return null;
-  }
-
-  return { room: best.room, floor: best.floor };
+  return best && best.score >= 820
+    ? { room: best.room, floor: best.floor }
+    : null;
 };
 
 const parseFloorCandidate = (
@@ -350,7 +346,7 @@ export const buildEventIndoorTarget = async (
 
   if (!building) return null;
 
-  const buildingId = building.id as BuildingId;
+  const buildingId = building.id;
   const availableFloors = getAvailableFloors(buildingId);
   if (!availableFloors.length) {
     return {
