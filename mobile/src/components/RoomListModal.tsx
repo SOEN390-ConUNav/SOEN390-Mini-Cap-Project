@@ -1,10 +1,18 @@
-import React from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { useTheme } from '../hooks/useTheme';
+import React from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
+import { useTheme } from "../hooks/useTheme";
 
 interface RoomListModalProps {
   visible: boolean;
-  selectingFor: 'start' | 'end' | null;
+  selectingFor: "start" | "end" | null;
   searchQuery: string;
   filteredRooms: string[];
   onSearchChange: (query: string) => void;
@@ -12,10 +20,10 @@ interface RoomListModalProps {
   onClose: () => void;
 }
 
-function getModalTitle(selectingFor: 'start' | 'end' | null): string {
-  if (selectingFor === 'start') return 'Select Start Room';
-  if (selectingFor === 'end') return 'Select End Room';
-  return 'All Rooms';
+function getModalTitle(selectingFor: "start" | "end" | null): string {
+  if (selectingFor === "start") return "Select Start Room";
+  if (selectingFor === "end") return "Select End Room";
+  return "All Rooms";
 }
 
 export default function RoomListModal({
@@ -26,7 +34,7 @@ export default function RoomListModal({
   onSearchChange,
   onSelectRoom,
   onClose,
-}: RoomListModalProps) {
+}: Readonly<RoomListModalProps>) {
   const { colors } = useTheme();
   const modalTitle = getModalTitle(selectingFor);
 
@@ -89,18 +97,18 @@ export default function RoomListModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
   },
   searchInput: {
@@ -121,7 +129,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   noResults: {
-    textAlign: 'center',
+    textAlign: "center",
     padding: 20,
     fontSize: 16,
   },
@@ -129,11 +137,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

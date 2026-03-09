@@ -1,4 +1,4 @@
-import { IndoorDirectionResponse, RoutePoint } from "../types/indoorDirections";
+import { IndoorDirectionResponse } from "../types/indoorDirections";
 import { API_BASE_URL } from "../const";
 
 /**
@@ -10,6 +10,7 @@ export async function getIndoorDirections(
   destination: string,
   originFloor?: string,
   destinationFloor?: string,
+  avoidStairs?: boolean,
 ): Promise<IndoorDirectionResponse> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL is not defined");
@@ -23,6 +24,12 @@ export async function getIndoorDirections(
 
   if (originFloor) params.append("originFloor", originFloor);
   if (destinationFloor) params.append("destinationFloor", destinationFloor);
+
+  if (avoidStairs !== undefined) {
+    params.append("avoidStairs", String(avoidStairs));
+  }
+
+  console.log("API base:", API_BASE_URL);
 
   try {
     const response = await fetch(
@@ -200,3 +207,56 @@ export async function getWaypoints(
     return [];
   }
 }
+
+export interface UniversalDirectionResponse {
+  startIndoorRoute: IndoorDirectionResponse;
+  outdoorRoute: any;
+  endIndoorRoute: IndoorDirectionResponse;
+  nextShuttleTime: string | null;
+  totalDuration: string;
+}
+
+export const getUniversalDirections = async (
+  startBuilding: string,
+  startRoom: string,
+  startFloor: string,
+  endBuilding: string,
+  endRoom: string,
+  endFloor: string,
+  avoidStairs: boolean,
+): Promise<UniversalDirectionResponse> => {
+  if (!API_BASE_URL) {
+    throw new Error("API_BASE_URL is not defined");
+  }
+
+  const queryParams = new URLSearchParams({
+    startBuilding,
+    startRoom,
+    startFloor,
+    endBuilding,
+    endRoom,
+    endFloor,
+    avoidStairs: avoidStairs.toString(),
+  });
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/directions/universal?${queryParams.toString()}`,
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      throw new Error(`Backend error (${response.status}): ${errorText}`);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    if (
+      error.message?.includes("Network request failed") ||
+      error.message?.includes("Failed to fetch")
+    ) {
+      throw new Error(`Cannot connect to backend at ${API_BASE_URL}.`);
+    }
+    throw error;
+  }
+};

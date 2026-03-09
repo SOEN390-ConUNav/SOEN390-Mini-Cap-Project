@@ -1,0 +1,13 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Loyola Campus"
+- tapOn: "Map Marker"
+- tapOn: "Map Marker"
+- tapOn: "Directions"
+- tapOn: "Outside"
+- tapOn: "Walk"
+- tapOn: "Bike"
+- tapOn: "Car"
+- tapOn: "Bus"
+- tapOn: "Shuttle"

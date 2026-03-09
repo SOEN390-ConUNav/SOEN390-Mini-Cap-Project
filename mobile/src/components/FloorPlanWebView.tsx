@@ -1,9 +1,14 @@
-import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { Asset } from 'expo-asset';
-import { RoutePoint } from '../types/indoorDirections';
-import { BuildingId } from '../data/buildings';
+import React, {
+  useRef,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
+import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
+import { WebView } from "react-native-webview";
+import { Asset } from "expo-asset";
+import { RoutePoint } from "../types/indoorDirections";
+import { BuildingId } from "../data/buildings";
 
 export interface PoiMarker {
   x: number;
@@ -24,52 +29,54 @@ interface FloorPlanWebViewProps {
   floorNumber?: string;
   onPoiTap?: (poi: PoiMarker) => void;
   onRoomTap?: (room: RoomMarkerData) => void;
-  routePoints?: RoutePoint[]; 
-  poiData?: PoiMarker[];     
-  roomData?: RoomMarkerData[]; 
+  routePoints?: RoutePoint[];
+  poiData?: PoiMarker[];
+  roomData?: RoomMarkerData[];
 }
 
 export interface FloorPlanWebViewRef {
   drawRoute: (routePoints: RoutePoint[]) => void;
   clearRoute: () => void;
-  showWaypoints: (waypoints: Array<{x: number, y: number, id: string}>) => void;
+  showWaypoints: (
+    waypoints: Array<{ x: number; y: number; id: string }>,
+  ) => void;
   hideWaypoints: () => void;
-  showRoomMarkers: (roomPoints: Array<{x: number, y: number, id: string}>) => void;
+  showRoomMarkers: (
+    roomPoints: Array<{ x: number; y: number; id: string }>,
+  ) => void;
   hideRoomMarkers: () => void;
   showPois: (pois: PoiMarker[]) => void;
   hidePois: () => void;
 }
 
-
 const SVG_ASSETS: Record<string, Record<string, any>> = {
   H: {
-    '8': require('../../assets/building_plans/h8.svg'),
-    '9': require('../../assets/building_plans/Hall-9.svg'),
-    '2': require('../../assets/building_plans/Hall-2.svg'),
-    '1': require('../../assets/building_plans/Hall-1.svg'),
+    "8": require("../../assets/building_plans/h8.svg"),
+    "9": require("../../assets/building_plans/Hall-9.svg"),
+    "2": require("../../assets/building_plans/Hall-2.svg"),
+    "1": require("../../assets/building_plans/Hall-1.svg"),
   },
   VL: {
-    '1': require('../../assets/building_plans/VL-1.svg'),
-    '2': require('../../assets/building_plans/VL-2.svg'),
+    "1": require("../../assets/building_plans/VL-1.svg"),
+    "2": require("../../assets/building_plans/VL-2.svg"),
   },
   LB: {
-    '2': require('../../assets/building_plans/LB2-n-s.svg'),
-    '3': require('../../assets/building_plans/LB3-n-s.svg'),
-    '4': require('../../assets/building_plans/LB4-n-s.svg'),
-    '5': require('../../assets/building_plans/LB5-n-s.svg'),
+    "2": require("../../assets/building_plans/LB2-n-s.svg"),
+    "3": require("../../assets/building_plans/LB3-n-s.svg"),
+    "4": require("../../assets/building_plans/LB4-n-s.svg"),
+    "5": require("../../assets/building_plans/LB5-n-s.svg"),
   },
   MB: {
-    S2: require('../../assets/building_plans/MB-S2.svg'),
-    '1': require('../../assets/building_plans/MB-1.svg'),
+    S2: require("../../assets/building_plans/MB-S2.svg"),
+    "1": require("../../assets/building_plans/MB-1.svg"),
   },
   CC: {
-    '1': require('../../assets/building_plans/CC1.svg'),
+    "1": require("../../assets/building_plans/CC1.svg"),
   },
   VE: {
-    '1': require('../../assets/building_plans/VE-1.svg'),
-    '2': require('../../assets/building_plans/VE-2.svg'),
+    "1": require("../../assets/building_plans/VE-1.svg"),
+    "2": require("../../assets/building_plans/VE-2.svg"),
   },
-
 };
 
 function getSvgAsset(buildingId: BuildingId, floorNumber: string): any {
@@ -77,43 +84,85 @@ function getSvgAsset(buildingId: BuildingId, floorNumber: string): any {
 }
 
 const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
-  ({ buildingId = 'H', floorNumber = '8', onPoiTap, onRoomTap, routePoints: propRoutePoints, poiData, roomData }, ref) => {
+  (
+    {
+      buildingId = "H",
+      floorNumber = "8",
+      onPoiTap,
+      onRoomTap,
+      routePoints: propRoutePoints,
+      poiData,
+      roomData,
+    },
+    ref,
+  ) => {
     const webViewRef = useRef<WebView>(null);
-  const [svgHtml, setSvgHtml] = React.useState<string | null>(null);
-  const [isWebViewReady, setIsWebViewReady] = React.useState(false);
-  const pendingRouteRef = React.useRef<RoutePoint[] | null>(null);
+    const [svgHtml, setSvgHtml] = React.useState<string | null>(null);
+    const [isWebViewReady, setIsWebViewReady] = React.useState(false);
+    const isWebViewReadyRef = React.useRef(false);
+    const pendingRouteRef = React.useRef<RoutePoint[] | null>(null);
+    const floorVersionRef = React.useRef(0);
+    const loadedFloorRef = React.useRef<string | null>(null);
 
-  useEffect(() => {
-    const loadSvg = async () => {
-      try {
-        const asset = getSvgAsset(buildingId, floorNumber);
-        if (!asset) {
-          console.error('No SVG asset found for', buildingId, floorNumber);
-          return;
-        }
-        
-        const assetModule = await Asset.fromModule(asset).downloadAsync();
-        const uri = assetModule.localUri || assetModule.uri;
-        
-        setSvgHtml(null);
-        setIsWebViewReady(false);
-        pendingRouteRef.current = null;
+    const markWebViewReady = React.useCallback(
+      (ready: boolean, floor?: string) => {
+        isWebViewReadyRef.current = ready;
+        if (floor !== undefined) loadedFloorRef.current = floor;
+        if (!ready) loadedFloorRef.current = null;
+        setIsWebViewReady(ready);
+      },
+      [],
+    );
 
-        const response = await fetch(uri);
-        const svgText = await response.text();
-        const svgMatch = svgText.match(/<svg[\s\S]*<\/svg>/i);
-        
-        if (svgMatch) {
-          let svgContent = svgMatch[0];
-         
-          if (!svgContent.includes('viewBox')) {
-            svgContent = svgContent.replace(/<svg/, '<svg viewBox="0 0 1024 1024"');
+    useEffect(() => {
+      const version = floorVersionRef.current + 1;
+      let cancelled = false;
+
+      floorVersionRef.current = version;
+      markWebViewReady(false);
+      pendingRouteRef.current = null;
+      setSvgHtml(null);
+
+      if (webViewRef.current) {
+        webViewRef.current.injectJavaScript(`
+          (function() { if (window.clearRoute) window.clearRoute(); true; })();
+        `);
+      }
+
+      const loadSvg = async () => {
+        try {
+          const asset = getSvgAsset(buildingId, floorNumber);
+          if (!asset) {
+            console.error("No SVG asset found for", buildingId, floorNumber);
+            return;
           }
-          if (!svgContent.includes('preserveAspectRatio')) {
-            svgContent = svgContent.replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"');
-          }
-          
-          const html = `
+
+          const assetModule = await Asset.fromModule(asset).downloadAsync();
+          if (cancelled || version !== floorVersionRef.current) return;
+          const uri = assetModule.localUri || assetModule.uri;
+
+          const response = await fetch(uri);
+          const svgText = await response.text();
+          if (cancelled || version !== floorVersionRef.current) return;
+          const svgMatch = svgText.match(/<svg[\s\S]*<\/svg>/i);
+
+          if (svgMatch) {
+            let svgContent = svgMatch[0];
+
+            if (!svgContent.includes("viewBox")) {
+              svgContent = svgContent.replace(
+                /<svg/,
+                '<svg viewBox="0 0 1024 1024"',
+              );
+            }
+            if (!svgContent.includes("preserveAspectRatio")) {
+              svgContent = svgContent.replace(
+                /<svg/,
+                '<svg preserveAspectRatio="xMidYMid meet"',
+              );
+            }
+
+            const html = `
             <!DOCTYPE html>
             <html>
               <head>
@@ -460,40 +509,45 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               </body>
             </html>
           `;
-          setSvgHtml(html);
-          setIsWebViewReady(false);
+            if (cancelled || version !== floorVersionRef.current) return;
+            setSvgHtml(html);
+            markWebViewReady(false);
+          }
+        } catch (e) {
+          console.error("Error loading SVG:", e);
         }
-      } catch (e) {
-        console.error('Error loading SVG:', e);
-      }
-    };
-    
-    loadSvg();
-  }, [buildingId, floorNumber]);
+      };
 
+      loadSvg();
+      return () => {
+        cancelled = true;
+      };
+    }, [buildingId, floorNumber, markWebViewReady]);
 
-  const executeDrawRoute = React.useCallback((routePoints: RoutePoint[], retryCount = 0) => {
-      if (!webViewRef.current) {
-      if (retryCount < 3) {
-        setTimeout(() => executeDrawRoute(routePoints, retryCount + 1), 500);
-      }
-        return;
-      }
+    const executeDrawRoute = React.useCallback(
+      (routePoints: RoutePoint[], version: number, retryCount = 0) => {
+        if (version !== floorVersionRef.current) return;
+        if (!loadedFloorRef.current) return;
 
-    if (!isWebViewReady) {
-      pendingRouteRef.current = routePoints;
-      if (retryCount === 0) {
-        setTimeout(() => {
-          if (webViewRef.current) executeDrawRoute(routePoints, retryCount + 1);
-        }, 1000);
-      }
-      return;
-    }
-    
-    if (!routePoints || routePoints.length === 0) return;
+        if (!webViewRef.current) {
+          if (retryCount < 3) {
+            setTimeout(
+              () => executeDrawRoute(routePoints, version, retryCount + 1),
+              500,
+            );
+          }
+          return;
+        }
 
-    const pointsJson = JSON.stringify(routePoints);
-    webViewRef.current.injectJavaScript(`
+        if (!isWebViewReadyRef.current) {
+          pendingRouteRef.current = routePoints;
+          return;
+        }
+
+        if (!routePoints || routePoints.length === 0) return;
+
+        const pointsJson = JSON.stringify(routePoints);
+        webViewRef.current.injectJavaScript(`
       (function() {
         if (typeof window.drawRouteFromPoints === 'function') {
           try {
@@ -510,191 +564,216 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
         true;
       })();
     `);
-  }, [isWebViewReady]);
+      },
+      [],
+    );
 
-
-  React.useEffect(() => {
-    if (isWebViewReady) {
-      if (pendingRouteRef.current) {
-        const pendingRoute = pendingRouteRef.current;
-        pendingRouteRef.current = null;
-        setTimeout(() => {
-          if (webViewRef.current && isWebViewReady) executeDrawRoute(pendingRoute, 0);
-        }, 300);
-      } else if (propRoutePoints && propRoutePoints.length > 0) {
-        setTimeout(() => {
-          if (webViewRef.current && isWebViewReady) executeDrawRoute(propRoutePoints, 0);
-        }, 300);
+    React.useEffect(() => {
+      if (isWebViewReady && loadedFloorRef.current === floorNumber) {
+        const version = floorVersionRef.current;
+        if (pendingRouteRef.current) {
+          const pendingRoute = pendingRouteRef.current;
+          pendingRouteRef.current = null;
+          setTimeout(() => {
+            if (
+              version === floorVersionRef.current &&
+              isWebViewReadyRef.current
+            )
+              executeDrawRoute(pendingRoute, version, 0);
+          }, 300);
+        } else if (propRoutePoints && propRoutePoints.length > 0) {
+          setTimeout(() => {
+            if (
+              version === floorVersionRef.current &&
+              isWebViewReadyRef.current
+            )
+              executeDrawRoute(propRoutePoints, version, 0);
+          }, 300);
+        }
       }
-    }
-  }, [isWebViewReady, propRoutePoints]);
+    }, [isWebViewReady, propRoutePoints, executeDrawRoute, floorNumber]);
 
+    React.useEffect(() => {
+      if (!isWebViewReady || !webViewRef.current) return;
 
-  React.useEffect(() => {
-    if (!isWebViewReady || !webViewRef.current) return;
-
-    if (roomData && roomData.length > 0) {
-      const roomsJson = JSON.stringify(roomData);
-      setTimeout(() => {
-        webViewRef.current?.injectJavaScript(`
+      if (roomData && roomData.length > 0) {
+        const roomsJson = JSON.stringify(roomData);
+        setTimeout(() => {
+          webViewRef.current?.injectJavaScript(`
           (function() {
             try { if (typeof window.showRoomMarkers === 'function') window.showRoomMarkers(${roomsJson}); }
             catch(e) { console.error('Error auto-showing rooms:', e); }
             true;
           })();
         `);
-      }, 300);
-    }
-  }, [isWebViewReady, roomData]);
+        }, 300);
+      }
+    }, [isWebViewReady, roomData]);
 
- 
-  React.useEffect(() => {
-    if (!isWebViewReady || !webViewRef.current) return;
+    React.useEffect(() => {
+      if (!isWebViewReady || !webViewRef.current) return;
 
-    if (poiData && poiData.length > 0) {
-      const poisJson = JSON.stringify(poiData);
-      setTimeout(() => {
-        webViewRef.current?.injectJavaScript(`
+      if (poiData && poiData.length > 0) {
+        const poisJson = JSON.stringify(poiData);
+        setTimeout(() => {
+          webViewRef.current?.injectJavaScript(`
           (function() {
             try { if (typeof window.showPois === 'function') window.showPois(${poisJson}); }
             catch(e) { console.error('Error auto-showing POIs:', e); }
             true;
           })();
         `);
-      }, 400);
-    } else {
-      webViewRef.current?.injectJavaScript(`
+        }, 400);
+      } else {
+        webViewRef.current?.injectJavaScript(`
         (function() {
           if (typeof window.hidePois === 'function') window.hidePois();
           true;
         })();
       `);
-    }
-  }, [isWebViewReady, poiData]);
+      }
+    }, [isWebViewReady, poiData]);
 
-  
-  useImperativeHandle(ref, () => ({
-    drawRoute: (routePoints: RoutePoint[]) => {
-      executeDrawRoute(routePoints);
-    },
-    clearRoute: () => {
-      if (!webViewRef.current) return;
-      webViewRef.current.injectJavaScript(`
+    useImperativeHandle(
+      ref,
+      () => ({
+        drawRoute: (routePoints: RoutePoint[]) => {
+          executeDrawRoute(routePoints, floorVersionRef.current);
+        },
+        clearRoute: () => {
+          if (!webViewRef.current) return;
+          webViewRef.current.injectJavaScript(`
         (function() { if (window.clearRoute) window.clearRoute(); true; })();
       `);
-    },
-    showWaypoints: (waypoints: Array<{x: number, y: number, id: string}>) => {
-      if (!webViewRef.current || !isWebViewReady) return;
-      const waypointsJson = JSON.stringify(waypoints);
-      webViewRef.current.injectJavaScript(`
+        },
+        showWaypoints: (
+          waypoints: Array<{ x: number; y: number; id: string }>,
+        ) => {
+          if (!webViewRef.current || !isWebViewReady) return;
+          const waypointsJson = JSON.stringify(waypoints);
+          webViewRef.current.injectJavaScript(`
         (function() {
           try { if (typeof window.showWaypoints === 'function') window.showWaypoints(${waypointsJson}); }
           catch(e) { console.error('Error in showWaypoints:', e); }
           true;
         })();
       `);
-    },
-    hideWaypoints: () => {
-      if (!webViewRef.current) return;
-      webViewRef.current.injectJavaScript(`
+        },
+        hideWaypoints: () => {
+          if (!webViewRef.current) return;
+          webViewRef.current.injectJavaScript(`
         (function() { if (typeof window.hideWaypoints === 'function') window.hideWaypoints(); true; })();
       `);
-    },
-    showRoomMarkers: (roomPoints: Array<{x: number, y: number, id: string}>) => {
-      if (!webViewRef.current || !roomPoints || roomPoints.length === 0) return;
-      const roomPointsJson = JSON.stringify(roomPoints);
-      webViewRef.current.injectJavaScript(`
+        },
+        showRoomMarkers: (
+          roomPoints: Array<{ x: number; y: number; id: string }>,
+        ) => {
+          if (!webViewRef.current || !roomPoints || roomPoints.length === 0)
+            return;
+          const roomPointsJson = JSON.stringify(roomPoints);
+          webViewRef.current.injectJavaScript(`
         (function() {
           try { if (typeof window.showRoomMarkers === 'function') window.showRoomMarkers(${roomPointsJson}); }
           catch(e) { console.error('Error in showRoomMarkers:', e); }
           true;
         })();
       `);
-    },
-    hideRoomMarkers: () => {
-      if (!webViewRef.current) return;
-      webViewRef.current.injectJavaScript(`
+        },
+        hideRoomMarkers: () => {
+          if (!webViewRef.current) return;
+          webViewRef.current.injectJavaScript(`
         (function() { if (typeof window.hideRoomMarkers === 'function') window.hideRoomMarkers(); true; })();
       `);
-    },
-    showPois: (pois: PoiMarker[]) => {
-      if (!webViewRef.current || !isWebViewReady) return;
-      const poisJson = JSON.stringify(pois);
-      webViewRef.current.injectJavaScript(`
+        },
+        showPois: (pois: PoiMarker[]) => {
+          if (!webViewRef.current || !isWebViewReady) return;
+          const poisJson = JSON.stringify(pois);
+          webViewRef.current.injectJavaScript(`
         (function() {
           try { if (typeof window.showPois === 'function') window.showPois(${poisJson}); }
           catch(e) { console.error('Error in showPois:', e); }
           true;
         })();
       `);
-    },
-    hidePois: () => {
-      if (!webViewRef.current) return;
-      webViewRef.current.injectJavaScript(`
+        },
+        hidePois: () => {
+          if (!webViewRef.current) return;
+          webViewRef.current.injectJavaScript(`
         (function() { if (typeof window.hidePois === 'function') window.hidePois(); true; })();
       `);
-    },
-  }), [isWebViewReady]);
+        },
+      }),
+      [isWebViewReady],
+    );
 
-  if (!svgHtml) {
+    if (!svgHtml) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4285F4" />
+          <Text style={styles.loadingText}>Loading floor plan...</Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4285F4" />
-        <Text style={styles.loadingText}>Loading floor plan...</Text>
+      <View style={styles.container}>
+        <WebView
+          key={`${buildingId}-${floorNumber}`}
+          ref={webViewRef}
+          source={{ html: svgHtml }}
+          style={styles.webView}
+          scalesPageToFit={true}
+          bounces={true}
+          scrollEnabled={true}
+          javaScriptEnabled={true}
+          onMessage={(event) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === "webViewReady") {
+                markWebViewReady(true, floorNumber);
+                if (pendingRouteRef.current) {
+                  const pendingRoute = pendingRouteRef.current;
+                  const version = floorVersionRef.current;
+                  pendingRouteRef.current = null;
+                  setTimeout(
+                    () => executeDrawRoute(pendingRoute, version, 0),
+                    100,
+                  );
+                }
+              } else if (data.type === "poiTap" && onPoiTap && data.poi) {
+                onPoiTap(data.poi as PoiMarker);
+              } else if (data.type === "roomTap" && onRoomTap && data.room) {
+                onRoomTap(data.room as RoomMarkerData);
+              } else if (data.type === "routeDrawError") {
+                console.error("Route draw error:", data.message);
+              }
+            } catch (e) {
+              // Ignore non-JSON messages
+            }
+          }}
+          onError={(syntheticEvent) => {
+            console.error("WebView error:", syntheticEvent.nativeEvent);
+          }}
+          onLoadEnd={() => {
+            setTimeout(() => {
+              if (!isWebViewReadyRef.current) {
+                markWebViewReady(true, floorNumber);
+                if (pendingRouteRef.current) {
+                  const pendingRoute = pendingRouteRef.current;
+                  const version = floorVersionRef.current;
+                  pendingRouteRef.current = null;
+                  setTimeout(
+                    () => executeDrawRoute(pendingRoute, version, 0),
+                    100,
+                  );
+                }
+              }
+            }, 500);
+          }}
+        />
       </View>
     );
-  }
-
-  return (
-    <View style={styles.container}>
-      <WebView
-        ref={webViewRef}
-        source={{ html: svgHtml }}
-        style={styles.webView}
-        scalesPageToFit={true}
-        bounces={true}
-        scrollEnabled={true}
-        javaScriptEnabled={true}
-        onMessage={(event) => {
-          try {
-            const data = JSON.parse(event.nativeEvent.data);
-            if (data.type === 'webViewReady') {
-              setIsWebViewReady(true);
-              if (pendingRouteRef.current) {
-                const pendingRoute = pendingRouteRef.current;
-                pendingRouteRef.current = null;
-                setTimeout(() => executeDrawRoute(pendingRoute, 0), 100);
-              }
-            } else if (data.type === 'poiTap' && onPoiTap && data.poi) {
-              onPoiTap(data.poi as PoiMarker);
-            } else if (data.type === 'roomTap' && onRoomTap && data.room) {
-              onRoomTap(data.room as RoomMarkerData);
-            } else if (data.type === 'routeDrawError') {
-              console.error('Route draw error:', data.message);
-            }
-          } catch (e) {
-            // Ignore non-JSON messages
-          }
-        }}
-        onError={(syntheticEvent) => {
-          console.error('WebView error:', syntheticEvent.nativeEvent);
-        }}
-        onLoadEnd={() => {
-          setTimeout(() => {
-            if (!isWebViewReady) {
-              setIsWebViewReady(true);
-              if (pendingRouteRef.current) {
-                const pendingRoute = pendingRouteRef.current;
-                pendingRouteRef.current = null;
-                setTimeout(() => executeDrawRoute(pendingRoute, 0), 100);
-              }
-            }
-          }, 500);
-        }}
-      />
-    </View>
-  );
-  }
+  },
 );
 
 const styles = StyleSheet.create({
@@ -703,17 +782,17 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#757575',
+    color: "#757575",
   },
 });
 

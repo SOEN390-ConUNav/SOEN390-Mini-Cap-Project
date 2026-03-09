@@ -13,7 +13,7 @@ export default function EventDetailsPopup({
   onDirections,
   onChangeCalendar,
   onLogout,
-}: {
+}: Readonly<{
   visible: boolean;
   title: string;
   detailsText: string;
@@ -27,7 +27,7 @@ export default function EventDetailsPopup({
   onDirections: () => void;
   onChangeCalendar: () => void;
   onLogout: () => void;
-}) {
+}>) {
   if (!visible) return null;
   return (
     <PopupTemplate

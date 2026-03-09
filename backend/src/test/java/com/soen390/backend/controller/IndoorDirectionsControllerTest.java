@@ -38,7 +38,7 @@ class IndoorDirectionsControllerTest {
                 ));
 
         when(indoorDirectionService.getIndoorDirections(
-                eq("Hall-8"), eq("H8-843"), eq("H8-807"), eq("8"), eq("8")))
+                eq("Hall-8"), eq("H8-843"), eq("H8-807"), eq("8"), eq("8"), eq(false)))
                 .thenReturn(mockResponse);
 
         mockMvc.perform(get("/api/directions/indoor")
@@ -116,7 +116,6 @@ class IndoorDirectionsControllerTest {
         mockMvc.perform(get("/api/directions/indoor")
                         .param("buildingId", "Hall-8")
                         .param("origin", "H8-843"))
-          
                 .andExpect(status().isBadRequest());
     }
 
@@ -158,8 +157,6 @@ class IndoorDirectionsControllerTest {
                 .andExpect(jsonPath("$.error", containsString("Unknown building ID")));
     }
 
-
-
     @Test
     void getIndoorDirections_emptyRoute_returns404() throws Exception {
         IndoorDirectionResponse emptyRouteResponse = new IndoorDirectionResponse(
@@ -168,7 +165,7 @@ class IndoorDirectionsControllerTest {
                 List.of(), List.of());
 
         when(indoorDirectionService.getIndoorDirections(
-                eq("Hall-8"), eq("H8-843"), eq("H8-999"), eq("8"), eq("8")))
+                eq("Hall-8"), eq("H8-843"), eq("H8-999"), eq("8"), eq("8"), eq(false)))
                 .thenReturn(emptyRouteResponse);
 
         mockMvc.perform(get("/api/directions/indoor")

@@ -1,6 +1,7 @@
 package com.soen390.backend.service;
 
 import com.soen390.backend.enums.PlaceType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -15,6 +16,7 @@ public class PlacesOfInterestService {
 
     private RestClient restClient;
 
+    @Autowired
     public PlacesOfInterestService() {
         this.restClient = RestClient.create();
     }
@@ -48,7 +50,7 @@ public class PlacesOfInterestService {
                     .body(String.class);
 
         } catch (Exception e) {
-            throw new RuntimeException("Google Places API returned an empty response");
+            throw new IllegalStateException("Google Places API returned an empty response", e);
         }
 
         return rawJson;
@@ -68,14 +70,22 @@ public class PlacesOfInterestService {
                 )
         );
 
-        return restClient.post()
-                .uri("https://places.googleapis.com/v1/places:searchText")
-                .header("X-Goog-Api-Key", apiKey)
-                .header("X-Goog-FieldMask",
-                        "places.displayName,places.formattedAddress,places.location")
-                .body(body)
-                .retrieve()
-                .body(String.class);
+        String rawJson;
+        try {
+            rawJson = restClient.post()
+                    .uri("https://places.googleapis.com/v1/places:searchText")
+                    .header("X-Goog-Api-Key", apiKey)
+                    .header("X-Goog-FieldMask",
+                            "places.displayName,places.formattedAddress,places.location")
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Google Places Text Search returned an empty response", e);
+        }
+
+        return rawJson;
     }
 
 }

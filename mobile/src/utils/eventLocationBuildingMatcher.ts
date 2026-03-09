@@ -3,22 +3,22 @@ import { Building, BUILDINGS } from "../data/buildings";
 const normalizeLocationText = (value: string): string =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replaceAll(/[^a-z0-9]+/g, " ")
     .trim();
 
 const escapeRegExp = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 const containsAlias = (normalizedLocation: string, alias: string): boolean => {
-  const aliasPattern = new RegExp(`\\b${escapeRegExp(alias)}\\b`);
+  const aliasPattern = new RegExp(String.raw`\b${escapeRegExp(alias)}\b`);
   return aliasPattern.test(normalizedLocation);
 };
 
 const BUILDING_ALIAS_INDEX = BUILDINGS.map((building) => {
   const normalizedName = normalizeLocationText(building.name);
   const simplifiedName = normalizedName
-    .replace(/\b(building|complex|annex|library|wing|center|centre)\b/g, " ")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\b(building|complex|annex|library|wing|center|centre)\b/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim();
   const aliases = new Set<string>([
     normalizeLocationText(building.id),
@@ -40,9 +40,7 @@ export const findBuildingFromLocationText = (
   if (!trimmed) return null;
 
   const upper = trimmed.toUpperCase();
-  const roomCodeMatch = upper.match(
-    /\b([A-Z]{1,3})[-\s]?[A-Z]?\d{2,4}[A-Z]?\b/,
-  );
+  const roomCodeMatch = /\b([A-Z]{1,3})[-\s]?[A-Z]?\d{2,4}[A-Z]?\b/.exec(upper);
   if (roomCodeMatch?.[1]) {
     const byRoomCode = BUILDINGS.find(
       (building) => building.id.toUpperCase() === roomCodeMatch[1],
@@ -53,9 +51,9 @@ export const findBuildingFromLocationText = (
   const byBuildingId = BUILDINGS.find((building) => {
     const id = building.id.toUpperCase();
     if (id.length === 1) {
-      return new RegExp(`\\b${id}[-\\s]?\\d{2,4}[A-Z]?\\b`).test(upper);
+      return new RegExp(String.raw`\b${id}[-\s]?\d{2,4}[A-Z]?\b`).test(upper);
     }
-    return new RegExp(`\\b${id}(?=\\b|[-\\s])`).test(upper);
+    return new RegExp(String.raw`\b${id}(?=\b|[-\s])`).test(upper);
   });
   if (byBuildingId) return byBuildingId;
 

@@ -23,18 +23,28 @@ import {
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 import { useTheme } from "../hooks/useTheme";
-import { BURGUNDY } from "../theme/theme";
 import {
   useAccessibilitySettings,
   getFontScale,
   getFontWeightValue,
 } from "../hooks/useAccessibilitySettings";
 
+interface CalendarItem {
+  id: string;
+  summary?: string;
+  primary?: boolean;
+}
+
+interface EventItem {
+  summary?: string;
+  location?: string;
+}
+
 export default function UpcomingEventButton({
   onMainButtonPress,
   onOpenEventDetails,
   onRequestDirections,
-}: {
+}: Readonly<{
   onMainButtonPress?: () => void;
   onRequestDirections?: (locationText: string) => void;
   onOpenEventDetails?: (payload: {
@@ -46,14 +56,17 @@ export default function UpcomingEventButton({
     onChangeCalendar: () => void;
     onLogout: () => void;
   }) => void;
-}) {
-  const googleWebClientId = (Constants.expoConfig?.extra as any)
-    ?.GOOGLE_WEB_CLIENT_ID as string | undefined;
-  const [selectedCalendar, setSelectedCalendar] = useState<any | null>(null);
-  const [calendars, setCalendars] = useState<any[]>([]);
+}>) {
+  const googleWebClientId = (
+    Constants.expoConfig?.extra as Record<string, unknown>
+  )?.GOOGLE_WEB_CLIENT_ID as string | undefined;
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(
+    null,
+  );
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
-  const [nextEvent, setNextEvent] = useState<any | null>(null);
+  const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
   const { colors } = useTheme();
@@ -129,7 +142,7 @@ export default function UpcomingEventButton({
           stateRes.status === 403)
       ) {
         if (!allowReauth) {
-          await clearLocalGoogleState();
+          clearLocalGoogleState();
           return null;
         }
 
@@ -142,10 +155,9 @@ export default function UpcomingEventButton({
       }
 
       const state = await stateRes.json();
-      const selected =
-        state?.selectedCalendar && state.selectedCalendar.id
-          ? state.selectedCalendar
-          : null;
+      const selected = state?.selectedCalendar?.id
+        ? state.selectedCalendar
+        : null;
       setSelectedCalendar(selected);
       const detailsTextFromBackend =
         typeof state?.nextEventDetailsText === "string"
@@ -285,7 +297,7 @@ export default function UpcomingEventButton({
       try {
         await requestGoogleLogout();
       } catch {}
-      await clearLocalGoogleState();
+      clearLocalGoogleState();
       try {
         await GoogleSignin.revokeAccess();
       } catch {}
@@ -394,13 +406,21 @@ export default function UpcomingEventButton({
 
       <Modal visible={showCalendarPicker} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Select a calendar</Text>
+          <View style={[styles.modalCard, { borderColor: colors.primary }]}>
+            <Text style={[styles.modalTitle, { color: colors.primary }]}>Select a calendar</Text>
 
             {isCalendarLoading ? (
-              <View style={styles.calendarLoadingBox}>
-                <ActivityIndicator size="small" color={BURGUNDY} />
-                <Text style={styles.calendarLoadingText}>
+              <View
+                style={[
+                  styles.calendarLoadingBox,
+                  {
+                    borderColor: colors.primary,
+                    backgroundColor: `${colors.primary}0D`,
+                  },
+                ]}
+              >
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.calendarLoadingText, { color: colors.primary }]}>
                   Refreshing calendars...
                 </Text>
               </View>
@@ -414,7 +434,11 @@ export default function UpcomingEventButton({
                     <TouchableOpacity
                       style={[
                         styles.calendarRow,
-                        isActive && styles.calendarRowActive,
+                        { borderColor: colors.primary },
+                        isActive && [
+                          styles.calendarRowActive,
+                          { backgroundColor: `${colors.primary}14` },
+                        ],
                       ]}
                       onPress={async () => {
                         setShowCalendarPicker(false);
@@ -424,13 +448,14 @@ export default function UpcomingEventButton({
                       <Text
                         style={[
                           styles.calendarName,
+                          { color: colors.primary },
                           isActive && styles.calendarNameActive,
                         ]}
                       >
                         {item.summary}
                       </Text>
                       {item.primary ? (
-                        <Text style={styles.calendarMeta}>Primary</Text>
+                        <Text style={[styles.calendarMeta, { color: colors.primary }]}>Primary</Text>
                       ) : null}
                     </TouchableOpacity>
                   );
@@ -440,7 +465,7 @@ export default function UpcomingEventButton({
 
             <View style={{ height: 12 }} />
             <TouchableOpacity
-              style={styles.cancelBtn}
+              style={[styles.cancelBtn, { backgroundColor: colors.primary }]}
               onPress={() => setShowCalendarPicker(false)}
             >
               <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -496,7 +521,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: BURGUNDY,
     padding: 14,
     maxHeight: "70%",
   },
@@ -504,7 +528,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12,
-    color: BURGUNDY,
     textAlign: "center",
   },
   calendarLoadingBox: {
@@ -512,30 +535,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 24,
     borderWidth: 1,
-    borderColor: BURGUNDY,
     borderRadius: 16,
-    backgroundColor: "rgba(128, 0, 32, 0.05)",
   },
   calendarLoadingText: {
     marginTop: 10,
     fontSize: 13,
-    color: BURGUNDY,
   },
   calendarRow: {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: BURGUNDY,
     borderRadius: 16,
     backgroundColor: "white",
     marginBottom: 10,
   },
-  calendarRowActive: {
-    backgroundColor: "rgba(128, 0, 32, 0.08)",
-  },
+  calendarRowActive: {},
   calendarName: {
     fontSize: 15,
-    color: BURGUNDY,
     fontWeight: "600",
   },
   calendarNameActive: {
@@ -543,7 +559,6 @@ const styles = StyleSheet.create({
   },
   calendarMeta: {
     fontSize: 12,
-    color: BURGUNDY,
     marginTop: 2,
   },
   cancelBtn: {
@@ -551,7 +566,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 9,
     alignItems: "center",
-    backgroundColor: BURGUNDY,
   },
   cancelBtnText: {
     color: "white",
