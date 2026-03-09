@@ -363,7 +363,10 @@ describe("UpcomingEventButton branch coverage", () => {
       }),
     );
     payload.onDirections();
-    expect(onRequestDirections).toHaveBeenCalledWith("H-937");
+    expect(onRequestDirections).toHaveBeenCalledWith({
+      locationText: "H-937",
+      detailsText: "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
+    });
 
     await act(async () => {
       payload.onChangeCalendar();

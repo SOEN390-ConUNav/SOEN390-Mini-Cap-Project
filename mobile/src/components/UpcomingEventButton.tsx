@@ -42,7 +42,10 @@ export default function UpcomingEventButton({
   onRequestDirections,
 }: Readonly<{
   onMainButtonPress?: () => void;
-  onRequestDirections?: (locationText: string) => void;
+  onRequestDirections?: (payload: {
+    locationText: string;
+    detailsText: string;
+  }) => void;
   onOpenEventDetails?: (payload: {
     title: string;
     detailsText: string;
@@ -349,7 +352,10 @@ export default function UpcomingEventButton({
                   );
                   return;
                 }
-                onRequestDirections(upcomingLocation);
+                onRequestDirections({
+                  locationText: upcomingLocation,
+                  detailsText: eventDetailsText,
+                });
               },
               onChangeCalendar: () => {
                 void startImportFlow(true);
