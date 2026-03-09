@@ -25,8 +25,9 @@ type RoomIndex = {
 const MAX_REGEX_INPUT_LENGTH = 2048;
 const MAX_REGEX_MATCHES = 200;
 const MAX_REGEX_CAPTURE_LENGTH = 48;
-const CLASSROOM_LINE_REGEX =
-  /\b(?:classroom|room|rm)\b[ \t]{0,6}[:#-]?[ \t]{0,6}([^\n\r]{1,120})/i;
+const CLASSROOM_KEYWORD_REGEX = /\b(?:classroom|room|rm)\b/i;
+const CLASSROOM_VALUE_REGEX =
+  /^[ \t]{0,6}[:#-]?[ \t]{0,6}([A-Z0-9][A-Z0-9 .\-\/]{0,119})/i;
 const FLOOR_LINE_REGEX =
   /\b(?:floor|flr|niveau)\b[ \t]{0,6}[:#-]?[ \t]{0,6}(S?\d{1,2})\b/i;
 const ROOM_MARKER_REGEX =
@@ -188,6 +189,20 @@ const collectRegexMatches = (set: Set<string>, text: string, regex: RegExp) => {
   }
 };
 
+const extractClassroomLine = (detailsText: string): string | null => {
+  const safeDetailsText = safeRegexInput(detailsText);
+  const keywordMatch = CLASSROOM_KEYWORD_REGEX.exec(safeDetailsText);
+  if (!keywordMatch) return null;
+
+  const startIndex = keywordMatch.index + keywordMatch[0].length;
+  if (startIndex >= safeDetailsText.length) return null;
+
+  const tail = safeDetailsText.slice(startIndex);
+  const valueMatch = CLASSROOM_VALUE_REGEX.exec(tail);
+  const rawValue = valueMatch?.[1]?.trim();
+  return rawValue && rawValue.length > 0 ? rawValue : null;
+};
+
 const parseRoomCandidates = (
   detailsText: string,
   locationText: string,
@@ -197,7 +212,7 @@ const parseRoomCandidates = (
   const safeDetailsText = safeRegexInput(detailsText);
   const mergedText = `${safeLocationText}\n${safeDetailsText}`;
 
-  const classroomLine = CLASSROOM_LINE_REGEX.exec(safeDetailsText)?.[1];
+  const classroomLine = extractClassroomLine(safeDetailsText);
   if (classroomLine) {
     collectRegexMatches(candidates, classroomLine, ROOM_MARKER_REGEX);
     collectRegexMatches(candidates, classroomLine, PREFIXED_ROOM_REGEX);

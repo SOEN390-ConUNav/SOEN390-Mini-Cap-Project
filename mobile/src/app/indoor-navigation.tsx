@@ -226,32 +226,6 @@ export default function IndoorNavigation() {
     return Number.isFinite(n) ? n : 0;
   };
 
-  const selectVerticalConnector = (
-    rooms: string[],
-    preferElevator: boolean,
-  ): string | null => {
-    if (!rooms.length) return null;
-
-    const scoreRoom = (room: string): number => {
-      const lower = room.toLowerCase();
-      if (/elevator/.test(lower) && /main/.test(lower)) return 120;
-      if (/elevator/.test(lower)) return 100;
-      if (preferElevator) {
-        if (/stairs?/.test(lower)) return -1;
-      }
-      if (/stairs?/.test(lower) && /main/.test(lower)) return 90;
-      if (/stairs?/.test(lower)) return 80;
-      return 0;
-    };
-
-    const best = rooms
-      .map((room) => ({ room, score: scoreRoom(room) }))
-      .sort((a, b) => b.score - a.score || a.room.localeCompare(b.room))[0];
-
-    if (!best || best.score <= 0) return null;
-    return best.room;
-  };
-
   type VerticalConnectorKind = "elevator" | "stairs";
   type VerticalConnectorCandidate = {
     room: string;
@@ -429,53 +403,6 @@ export default function IndoorNavigation() {
         { x: end.x, y: end.y, label: destinationRoomId },
       ],
       stairMessage: null,
-    };
-  };
-
-  const mergeIndoorRoutes = (
-    legOne: IndoorDirectionResponse,
-    legTwo: IndoorDirectionResponse,
-  ): IndoorDirectionResponse => {
-    const firstPoints = legOne.routePoints ?? [];
-    const secondPoints = legTwo.routePoints ?? [];
-
-    const mergedPoints = [...firstPoints];
-    if (secondPoints.length > 0) {
-      const lastFirst = firstPoints[firstPoints.length - 1];
-      const [firstSecond, ...restSecond] = secondPoints;
-      const isDuplicateConnector =
-        !!lastFirst &&
-        Math.abs(lastFirst.x - firstSecond.x) < 0.001 &&
-        Math.abs(lastFirst.y - firstSecond.y) < 0.001;
-      if (isDuplicateConnector) {
-        mergedPoints.push(...restSecond);
-      } else {
-        mergedPoints.push(...secondPoints);
-      }
-    }
-
-    const totalMeters =
-      parseDistanceMeters(legOne.distance) +
-      parseDistanceMeters(legTwo.distance);
-    const totalMinutes =
-      parseDurationMinutes(legOne.duration) +
-      parseDurationMinutes(legTwo.duration);
-
-    const stairMessage = [legOne.stairMessage, legTwo.stairMessage]
-      .filter(
-        (message): message is string => !!message && message.trim().length > 0,
-      )
-      .join(" ");
-
-    return {
-      ...legTwo,
-      distance: formatDistanceMeters(totalMeters),
-      duration: formatDurationMinutes(totalMinutes),
-      startFloor: legOne.startFloor,
-      endFloor: legTwo.endFloor,
-      steps: [...(legOne.steps ?? []), ...(legTwo.steps ?? [])],
-      routePoints: mergedPoints,
-      stairMessage: stairMessage || null,
     };
   };
 
@@ -827,7 +754,24 @@ export default function IndoorNavigation() {
           destFloor,
           avoidStairs,
         );
-        applyIndoorRouteResponse(response, requestId);
+        let resolvedRoute = response;
+        if (
+          originFloor !== destFloor &&
+          !isCrossFloorResponseComplete(response, endRoom)
+        ) {
+          const fallbackRoute = await getSplitCrossFloorRouteWithFallback({
+            building: startBuildingId,
+            origin: startRoom,
+            destination: endRoom,
+            originFloor,
+            destinationFloor: destFloor,
+            avoidStairsRouting: avoidStairs,
+          });
+          if (fallbackRoute) {
+            resolvedRoute = fallbackRoute;
+          }
+        }
+        applyIndoorRouteResponse(resolvedRoute, requestId);
       } else {
         const response = await getUniversalDirections(
           startBuildingId,
