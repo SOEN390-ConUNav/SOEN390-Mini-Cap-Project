@@ -22,11 +22,23 @@ type RoomIndex = {
   rooms: string[];
 };
 
-const CLASSROOM_LINE_REGEX = /(?:classroom|room|rm)\s*[:#-]?\s*([^\n\r]+)/i;
-const FLOOR_LINE_REGEX = /\b(?:floor|flr|niveau)\s*[:#-]?\s*(S?\d+)\b/i;
-const ROOM_MARKER_REGEX = /\b(?:RM|ROOM)\s*[:#-]?\s*([A-Z0-9][A-Z0-9.\-/]*)/gi;
-const PREFIXED_ROOM_REGEX = /\b([A-Z]{1,3}\s*-?\s*S?\d[\dA-Z.\-/]*)\b/gi;
+const MAX_REGEX_INPUT_LENGTH = 2048;
+const MAX_REGEX_MATCHES = 200;
+const MAX_REGEX_CAPTURE_LENGTH = 48;
+const CLASSROOM_LINE_REGEX =
+  /\b(?:classroom|room|rm)\b[ \t]{0,6}[:#-]?[ \t]{0,6}([^\n\r]{1,120})/i;
+const FLOOR_LINE_REGEX =
+  /\b(?:floor|flr|niveau)\b[ \t]{0,6}[:#-]?[ \t]{0,6}(S?\d{1,2})\b/i;
+const ROOM_MARKER_REGEX =
+  /\b(?:RM|ROOM)\b[ \t]{0,6}[:#-]?[ \t]{0,6}([A-Z0-9][A-Z0-9.\-/]{0,23})\b/gi;
+const PREFIXED_ROOM_REGEX =
+  /\b([A-Z]{1,3}[ \t]{0,3}-?[ \t]{0,3}S?\d[A-Z0-9.\-/]{0,15})\b/gi;
 const ROOM_NUMBER_REGEX = /\b(S\d[.\-]?\d{2,4}|\d{3,4})\b/gi;
+
+const safeRegexInput = (value: string): string =>
+  value.length > MAX_REGEX_INPUT_LENGTH
+    ? value.slice(0, MAX_REGEX_INPUT_LENGTH)
+    : value;
 
 const normalizeRoom = (value: string): string =>
   value
@@ -164,11 +176,15 @@ const pushCandidate = (set: Set<string>, value: string | undefined | null) => {
 };
 
 const collectRegexMatches = (set: Set<string>, text: string, regex: RegExp) => {
+  const safeText = safeRegexInput(text);
   regex.lastIndex = 0;
-  let match = regex.exec(text);
-  while (match?.[1]) {
-    pushCandidate(set, match[1]);
-    match = regex.exec(text);
+  for (let i = 0; i < MAX_REGEX_MATCHES; i += 1) {
+    const match = regex.exec(safeText);
+    if (!match?.[1]) break;
+    pushCandidate(set, match[1].slice(0, MAX_REGEX_CAPTURE_LENGTH));
+    if (match[0].length === 0) {
+      regex.lastIndex += 1;
+    }
   }
 };
 
@@ -177,14 +193,16 @@ const parseRoomCandidates = (
   locationText: string,
 ): string[] => {
   const candidates = new Set<string>();
-  const mergedText = `${locationText}\n${detailsText}`;
+  const safeLocationText = safeRegexInput(locationText);
+  const safeDetailsText = safeRegexInput(detailsText);
+  const mergedText = `${safeLocationText}\n${safeDetailsText}`;
 
-  const classroomLine = CLASSROOM_LINE_REGEX.exec(detailsText)?.[1];
+  const classroomLine = CLASSROOM_LINE_REGEX.exec(safeDetailsText)?.[1];
   if (classroomLine) {
     collectRegexMatches(candidates, classroomLine, ROOM_MARKER_REGEX);
     collectRegexMatches(candidates, classroomLine, PREFIXED_ROOM_REGEX);
     collectRegexMatches(candidates, classroomLine, ROOM_NUMBER_REGEX);
-    const firstToken = classroomLine.trim().split(/\s+/)[0];
+    const firstToken = classroomLine.trim().split(" ")[0];
     pushCandidate(candidates, firstToken);
   }
 
@@ -233,8 +251,9 @@ const parseFloorCandidate = (
   roomCandidates: string[],
   buildingId: BuildingId,
 ): string | null => {
-  const floorFromDetails =
-    FLOOR_LINE_REGEX.exec(detailsText)?.[1]?.toUpperCase();
+  const floorFromDetails = FLOOR_LINE_REGEX.exec(
+    safeRegexInput(detailsText),
+  )?.[1]?.toUpperCase();
   if (floorFromDetails) return floorFromDetails;
 
   for (const candidate of roomCandidates) {
