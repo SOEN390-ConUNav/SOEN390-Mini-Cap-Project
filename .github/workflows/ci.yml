@@ -79,6 +79,15 @@ jobs:
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
 
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Backend Test Results
+          path: backend/target/surefire-reports/TEST-*.xml
+          reporter: java-junit
+          fail-on-error: false
+
   mobile:
     name: Mobile (Expo) - install/doctor
     needs: changes
