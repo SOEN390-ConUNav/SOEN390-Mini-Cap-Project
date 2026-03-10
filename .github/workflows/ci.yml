@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   changes:
@@ -111,3 +112,17 @@ jobs:
 
       - name: Expo doctor
         run: npx expo-doctor
+
+      - name: Run unit tests
+        run: npm test -- --watchAll=false --ci
+        env:
+          CI: true
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Test Results
+          path: mobile/test-results/junit.xml
+          reporter: jest-junit
+          fail-on-error: false
