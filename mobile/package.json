@@ -24,9 +24,10 @@
         {
           "outputDirectory": "test-results",
           "outputName": "junit.xml",
-          "classNameTemplate": "{classname}",
+          "classNameTemplate": "{filepath}",
           "titleTemplate": "{title}",
-          "suiteName": "Mobile Unit Tests"
+          "suiteName": "Mobile Unit Tests",
+          "suiteNameTemplate": "{filepath}"
         }
       ]
     ]
