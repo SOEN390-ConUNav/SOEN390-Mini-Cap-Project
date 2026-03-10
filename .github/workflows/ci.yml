@@ -39,7 +39,7 @@ jobs:
   backend:
     name: Backend (Spring Boot) - build/test
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -91,7 +91,7 @@ jobs:
   mobile:
     name: Mobile (Expo) - install/doctor
     needs: changes
-    if: needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.mobile == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
