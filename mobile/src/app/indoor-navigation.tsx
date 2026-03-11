@@ -164,8 +164,28 @@ export default function IndoorNavigation() {
 
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
     if (!roomId) return fallbackFloor;
-    const parts = roomId.split("-");
-    const lastPart = parts.at(-1) ?? roomId;
+    const normalizedRoom = roomId.trim().toUpperCase();
+
+    // Explicit building-floor-room format, e.g. MB-S2-330 or MB-1-210.
+    const explicitFloorMatch = /^[A-Z]{1,4}-(S\d+|\d+)-/.exec(normalizedRoom);
+    if (explicitFloorMatch?.[1]) {
+      return explicitFloorMatch[1];
+    }
+
+    // Compact prefix floor format, e.g. MBS2-Entrance-Exit.
+    const compactBasementMatch = /^[A-Z]{1,4}(S\d+)-/.exec(normalizedRoom);
+    if (compactBasementMatch?.[1]) {
+      return compactBasementMatch[1];
+    }
+
+    // Compact prefix floor format, e.g. H8-801.
+    const compactFloorMatch = /^[A-Z]{1,4}(\d+)-/.exec(normalizedRoom);
+    if (compactFloorMatch?.[1]) {
+      return compactFloorMatch[1];
+    }
+
+    const parts = normalizedRoom.split("-");
+    const lastPart = parts.at(-1) ?? normalizedRoom;
     if (
       lastPart.startsWith("S") &&
       lastPart.length >= 2 &&

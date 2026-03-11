@@ -1016,6 +1016,44 @@ describe("IndoorNavigation", () => {
     });
   });
 
+  it("parses MB building floor from MB-floor-room ids such as MB-S2-330", async () => {
+    mockParams = {
+      buildingId: "MB",
+      floor: "S2",
+      startRoom: "MB-Elevator-Main",
+      endRoom: "MB-S2-330",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "20 m",
+      duration: "2 min",
+      buildingName: "John Molson Building",
+      buildingId: "MB",
+      startFloor: "S2",
+      endFloor: "S2",
+      steps: [],
+      polyline: "",
+      routePoints: [
+        { x: 0, y: 0, label: "MB-Elevator-Main" },
+        { x: 1, y: 1, label: "MB-S2-330" },
+      ],
+      stairMessage: null,
+    });
+
+    render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "MB",
+        "MB-Elevator-Main",
+        "MB-S2-330",
+        "S2",
+        "S2",
+        false,
+      );
+    });
+  });
+
   it("uses reverse same-floor leg when direct destination leg is missing", async () => {
     mockParams = {
       buildingId: "H",

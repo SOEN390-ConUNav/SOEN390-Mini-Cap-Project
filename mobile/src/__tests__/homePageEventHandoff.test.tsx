@@ -364,7 +364,7 @@ describe("HomePageIndex event handoff coverage", () => {
     (buildEventIndoorTarget as jest.Mock).mockResolvedValue({
       buildingId: "H",
       floor: "9",
-      startFloor: "9",
+      startFloor: "1",
       floorSupported: true,
       destinationRoom: "H9-937",
       startRoom: "Hall-Elevator-Main",
@@ -385,7 +385,7 @@ describe("HomePageIndex event handoff coverage", () => {
         pathname: "/indoor-navigation",
         params: {
           buildingId: "H",
-          floor: "9",
+          floor: "1",
           startRoom: "Hall-Elevator-Main",
           endRoom: "H9-937",
         },

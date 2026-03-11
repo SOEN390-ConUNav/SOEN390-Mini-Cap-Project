@@ -898,9 +898,10 @@ export default function HomePageIndex() {
         return;
       }
 
+      const initialIndoorFloor = target.startFloor ?? target.floor;
       const params: Record<string, string> = {
         buildingId: target.buildingId,
-        floor: target.floor,
+        floor: initialIndoorFloor,
       };
       if (target.startRoom) params.startRoom = target.startRoom;
       if (target.destinationRoom) params.endRoom = target.destinationRoom;
