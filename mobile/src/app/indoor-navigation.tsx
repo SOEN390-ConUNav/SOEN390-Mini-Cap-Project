@@ -141,13 +141,20 @@ export default function IndoorNavigation() {
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
     if (!roomId) return fallbackFloor;
 
+    const prefix = roomId.split("-")[0];
+    const prefixNumber = prefix.replace(/[^0-9]/g, ""); // Strips all letters, keeps numbers
+
+    if (prefixNumber.length > 0) {
+      return prefixNumber;
+    }
+
     const parts = roomId.split("-");
     if (parts.length < 2) return fallbackFloor;
 
     let roomPart = parts[1];
 
     if (roomPart.includes(".")) {
-      return roomPart.split(".")[0];
+      roomPart = roomPart.split(".")[0];
     }
 
     roomPart = roomPart.replace(/[a-zA-Z]+$/, "");
