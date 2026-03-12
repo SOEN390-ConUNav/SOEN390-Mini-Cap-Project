@@ -1079,9 +1079,8 @@ export default function IndoorNavigation() {
 
   let floorTransitionAction: React.ReactNode = null;
   if (
-    routeData &&
-    routeData.startFloor &&
-    routeData.endFloor &&
+    routeData?.startFloor &&
+    routeData?.endFloor &&
     routeData.startFloor !== routeData.endFloor
   ) {
     if (currentFloor === routeData.startFloor) {
