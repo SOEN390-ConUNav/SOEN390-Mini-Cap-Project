@@ -194,7 +194,7 @@ export default function IndoorNavigation() {
       roomPart = roomPart.split(".")[0];
     }
 
-    roomPart = roomPart.replace(/[A-Z]+$/, "");
+    roomPart = roomPart.replace(/[A-Z]{1,16}$/, "");
 
     if (roomPart.length >= 3) {
       return roomPart.slice(0, -2);
@@ -1160,8 +1160,8 @@ export default function IndoorNavigation() {
       </View>
 
       {routeData &&
-        routeData.startFloor &&
-        routeData.endFloor &&
+        Boolean(routeData.startFloor) &&
+        Boolean(routeData.endFloor) &&
         routeData.startFloor !== routeData.endFloor && (
           <View style={styles.floorTransitionContainer}>
             {currentFloor === routeData.startFloor ? (
