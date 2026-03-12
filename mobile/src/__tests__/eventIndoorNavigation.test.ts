@@ -53,7 +53,7 @@ describe("eventIndoorNavigation", () => {
     expect(getAvailableRooms).toHaveBeenCalledTimes(3);
   });
 
-  it("resolves classroom and selects a likely indoor start room", async () => {
+  it("resolves classroom and starts from an entrance-floor room when available", async () => {
     (findBuildingFromLocationText as jest.Mock).mockReturnValue({ id: "H" });
     (getAvailableFloors as jest.Mock).mockReturnValue(["1", "8", "9"]);
     (getAvailableRooms as jest.Mock).mockImplementation(
@@ -76,10 +76,10 @@ describe("eventIndoorNavigation", () => {
     expect(target).toEqual({
       buildingId: "H",
       floor: "9",
-      startFloor: "9",
+      startFloor: "1",
       floorSupported: true,
       destinationRoom: "H9-937",
-      startRoom: "Hall-Elevator-Main",
+      startRoom: "H1-Maisonneuve-Entry",
     });
   });
 
@@ -131,6 +131,33 @@ describe("eventIndoorNavigation", () => {
       buildingId: "MB",
       floor: "S2",
       startFloor: "S2",
+      floorSupported: true,
+      destinationRoom: "MB-S2-330",
+      startRoom: "MB-Elevator-Main",
+    });
+  });
+
+  it("uses entrance-level start floor for MB event handoff when a start room exists on floor 1", async () => {
+    (findBuildingFromLocationText as jest.Mock).mockReturnValue({ id: "MB" });
+    (getAvailableFloors as jest.Mock).mockReturnValue(["1", "S2"]);
+    (getAvailableRooms as jest.Mock).mockImplementation(
+      async (_buildingId: string, floor: string) => {
+        if (floor === "1") {
+          return ["MB1-Emergency-Exit-1", "MB-Elevator-Main"];
+        }
+        return ["MB-S2-330"];
+      },
+    );
+
+    const target = await buildEventIndoorTarget({
+      locationText: "John Molson School of Business",
+      detailsText: "Classroom: MB-S2-330",
+    });
+
+    expect(target).toEqual({
+      buildingId: "MB",
+      floor: "S2",
+      startFloor: "1",
       floorSupported: true,
       destinationRoom: "MB-S2-330",
       startRoom: "MB-Elevator-Main",

@@ -334,6 +334,27 @@ const resolveSpecialStartRoom = (
   return elevators[0] ?? null;
 };
 
+const getPreferredStartFloor = (
+  buildingId: BuildingId,
+  availableFloors: string[],
+  destinationFloor: string,
+): string => {
+  // Mirror backend entrance-floor behavior where possible.
+  if (buildingId === "LB" && availableFloors.includes("2")) return "2";
+  if (availableFloors.includes("1")) return "1";
+  if (availableFloors.includes(destinationFloor)) return destinationFloor;
+  return availableFloors[0] ?? destinationFloor;
+};
+
+const resolveStartRoomForFloor = (
+  rooms: string[],
+  buildingId: BuildingId,
+  floor: string,
+  destinationRoom: string | null,
+): string | null =>
+  resolveSpecialStartRoom(rooms, buildingId, floor) ??
+  resolveStartRoom(rooms, destinationRoom);
+
 export const buildEventIndoorTarget = async (
   request: EventDirectionsRequest,
 ): Promise<EventIndoorTarget | null> => {
@@ -403,10 +424,37 @@ export const buildEventIndoorTarget = async (
   const floorRooms =
     roomIndex.find((entry) => entry.floor === resolvedFloor)?.rooms ?? [];
   const destinationRoom = bestMatch?.room ?? roomCandidates[0] ?? null;
-  const startFloor = resolvedFloor;
-  const startRoom =
-    resolveSpecialStartRoom(floorRooms, buildingId, resolvedFloor) ??
-    resolveStartRoom(floorRooms, destinationRoom);
+  const preferredStartFloor = getPreferredStartFloor(
+    buildingId,
+    availableFloors,
+    resolvedFloor,
+  );
+  const preferredStartFloorRooms =
+    roomIndex.find((entry) => entry.floor === preferredStartFloor)?.rooms ?? [];
+
+  let startFloor = preferredStartFloor;
+  let startRoom = resolveStartRoomForFloor(
+    preferredStartFloorRooms,
+    buildingId,
+    preferredStartFloor,
+    destinationRoom,
+  );
+
+  // If we cannot resolve a meaningful start room on the preferred entrance floor,
+  // fall back to destination-floor start behavior.
+  if (!startRoom && preferredStartFloor !== resolvedFloor) {
+    startFloor = resolvedFloor;
+    startRoom = resolveStartRoomForFloor(
+      floorRooms,
+      buildingId,
+      resolvedFloor,
+      destinationRoom,
+    );
+  }
+
+  if (!startRoom) {
+    startFloor = resolvedFloor;
+  }
 
   return {
     buildingId,

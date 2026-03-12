@@ -72,9 +72,18 @@ public class OutdoorPlacesOfInterestControllerTest {
                         .param("radius", "1000")
                         .param("latitude", "37.7749")
                         .param("longitude", "-122.4194")
-                        .param("placeType", PlaceType.RESTAURANT.toString()))
+                        .param("placeType", "restaurant"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.places").isArray())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void getPlacesShouldReturn400ForInvalidPlaceType() throws Exception {
+        mockMvc.perform(post("/api/places/outdoor")
+                        .param("latitude", "37.7749")
+                        .param("longitude", "-122.4194")
+                        .param("placeType", "not-a-place-type"))
+                .andExpect(status().isBadRequest());
     }
 }

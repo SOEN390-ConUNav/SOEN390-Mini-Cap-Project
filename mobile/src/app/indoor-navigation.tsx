@@ -48,20 +48,17 @@ const BASEMENT_FLOOR_REGEX = /^S(\d+)$/i;
 const DURATION_HOUR_REGEX = /\b(\d{1,3})[ \t]{0,4}hours?\b/i;
 const DURATION_MINUTE_REGEX = /\b(\d{1,3})[ \t]{0,4}mins?\b/i;
 
-function getRoomPromisesForBuildings(buildings: BuildingId[]) {
-  return buildings.flatMap((bId) =>
-    getAvailableFloors(bId).map((floorNum) => getAvailableRooms(bId, floorNum)),
-  );
-}
-
 export default function IndoorNavigation() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     buildingId?: string;
     floor?: string;
-    startRoom?: string;
-    endRoom?: string;
+    startRoom?: string | string[];
+    endRoom?: string | string[];
   }>();
+
+  const getParamValue = (value?: string | string[]) =>
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 
   const buildingId = (params.buildingId as BuildingId) || "H";
   const defaultFloor = getDefaultFloor(buildingId);
@@ -70,12 +67,15 @@ export default function IndoorNavigation() {
     params.floor && availableFloors.includes(params.floor)
       ? params.floor
       : defaultFloor;
-  const initialStartRoom =
-    typeof params.startRoom === "string" ? params.startRoom : "";
-  const initialEndRoom =
-    typeof params.endRoom === "string" ? params.endRoom : "";
+  const initialStartRoom = getParamValue(params.startRoom);
+  const initialEndRoom = getParamValue(params.endRoom);
   const [currentFloor, setCurrentFloor] = useState<string>(initialFloor);
   const backendBuildingId = getBackendBuildingId(buildingId, currentFloor);
+
+  const currentFloorRef = useRef(currentFloor);
+  useEffect(() => {
+    currentFloorRef.current = currentFloor;
+  }, [currentFloor]);
 
   useEffect(() => {}, [
     buildingId,
@@ -83,12 +83,6 @@ export default function IndoorNavigation() {
     backendBuildingId,
     availableFloors,
   ]);
-
-  useEffect(() => {
-    if (params.floor && availableFloors.includes(params.floor)) {
-      setCurrentFloor(params.floor);
-    }
-  }, [params.floor, availableFloors]);
 
   const mapViewRef = useRef<FloorPlanWebViewRef>(null);
   const [availableRooms, setAvailableRooms] = useState<string[]>([]);
@@ -116,6 +110,35 @@ export default function IndoorNavigation() {
   const [activeBuildingId, setActiveBuildingId] = useState<string>(buildingId);
   const routeRequestIdRef = useRef(0);
 
+  const buildUniversityRoomPromises = () => {
+    const allBuildings: BuildingId[] = ["H", "LB", "MB", "VL", "VE", "CC"];
+    const roomPromises: Array<Promise<string[]>> = [];
+
+    for (const bId of allBuildings) {
+      const floors = getAvailableFloors(bId);
+      for (const floorNum of floors) {
+        roomPromises.push(getAvailableRooms(bId, floorNum));
+      }
+    }
+
+    return roomPromises;
+  };
+
+  const loadAllUniversityRooms = async () => {
+    try {
+      const roomsArrays = await Promise.all(buildUniversityRoomPromises());
+      const combinedRooms = roomsArrays.flat();
+      const uniqueRooms = Array.from(new Set(combinedRooms)).sort((a, b) =>
+        a.localeCompare(b),
+      );
+
+      setAvailableRooms(uniqueRooms);
+    } catch (error) {
+      console.error("Failed to load university rooms:", error);
+      setAvailableRooms([]);
+    }
+  };
+
   const handleClearRoute = useCallback(() => {
     mapViewRef.current?.clearRoute();
   }, []);
@@ -129,17 +152,12 @@ export default function IndoorNavigation() {
     if (prevBuildingRef.current !== buildingId) {
       prevBuildingRef.current = buildingId;
       invalidatePendingRouteRequests();
-      setStartRoom("");
-      setEndRoom("");
-      setSearchQuery("");
       setRouteData(null);
       setUniversalRouteData(null);
       setShowRouteDetails(false);
       setShowRoomList(false);
       setSelectingFor(null);
       handleClearRoute();
-      const newDefault = getDefaultFloor(buildingId);
-      setCurrentFloor(newDefault);
     }
   }, [buildingId, handleClearRoute, invalidatePendingRouteRequests]);
 
@@ -164,8 +182,28 @@ export default function IndoorNavigation() {
 
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
     if (!roomId) return fallbackFloor;
-    const parts = roomId.split("-");
-    const lastPart = parts.at(-1) ?? roomId;
+    const normalizedRoom = roomId.trim().toUpperCase();
+
+    // Explicit building-floor-room format, e.g. MB-S2-330 or MB-1-210.
+    const explicitFloorMatch = /^[A-Z]{1,4}-(S\d+|\d+)-/.exec(normalizedRoom);
+    if (explicitFloorMatch?.[1]) {
+      return explicitFloorMatch[1];
+    }
+
+    // Compact prefix floor format, e.g. MBS2-Entrance-Exit.
+    const compactBasementMatch = /^[A-Z]{1,4}(S\d+)-/.exec(normalizedRoom);
+    if (compactBasementMatch?.[1]) {
+      return compactBasementMatch[1];
+    }
+
+    // Compact prefix floor format, e.g. H8-801 or MB3-330.
+    const compactFloorMatch = /^[A-Z]{1,4}(\d+)-/.exec(normalizedRoom);
+    if (compactFloorMatch?.[1]) {
+      return compactFloorMatch[1];
+    }
+
+    const parts = normalizedRoom.split("-");
+    const lastPart = parts.at(-1) ?? normalizedRoom;
     if (
       lastPart.startsWith("S") &&
       lastPart.length >= 2 &&
@@ -174,11 +212,28 @@ export default function IndoorNavigation() {
     ) {
       return lastPart.slice(0, 2);
     }
+
+    let roomPart = parts.length >= 2 ? parts[1] : "";
+    if (roomPart.includes(".")) {
+      roomPart = roomPart.split(".")[0];
+    }
+
+    roomPart = roomPart.replace(/[A-Z]{1,16}$/, "");
+
+    if (roomPart.length >= 3) {
+      return roomPart.slice(0, -2);
+    }
+
+    if (roomPart.length > 0) {
+      return roomPart;
+    }
+
     for (const char of lastPart) {
       if (char >= "0" && char <= "9") {
         return char;
       }
     }
+
     return fallbackFloor;
   };
 
@@ -749,18 +804,6 @@ export default function IndoorNavigation() {
     }).catch(() => null);
   };
 
-  useEffect(() => {
-    if (typeof params.startRoom !== "string") return;
-    setStartRoom(params.startRoom);
-    setStartBuildingId(getBuildingFromRoom(params.startRoom, buildingId));
-  }, [params.startRoom, buildingId]);
-
-  useEffect(() => {
-    if (typeof params.endRoom !== "string") return;
-    setEndRoom(params.endRoom);
-    setEndBuildingId(getBuildingFromRoom(params.endRoom, buildingId));
-  }, [params.endRoom, buildingId]);
-
   const selectRoom = (room: string) => {
     if (selectingFor === "start") {
       setStartRoom(room);
@@ -784,10 +827,13 @@ export default function IndoorNavigation() {
   };
 
   const applyIndoorRouteResponse = useCallback(
-    (response: IndoorDirectionResponse, requestId: number) => {
+    (
+      response: IndoorDirectionResponse | null | undefined,
+      requestId: number,
+    ) => {
       if (requestId !== routeRequestIdRef.current) return;
       const hasValidRoute =
-        response.routePoints && response.routePoints.length > 0;
+        !!response?.routePoints && response.routePoints.length > 0;
       if (hasValidRoute) {
         mapViewRef.current?.clearRoute();
         setRouteData(response);
@@ -821,8 +867,8 @@ export default function IndoorNavigation() {
     setIsLoadingRoute(true);
 
     try {
-      const originFloor = getFloorFromRoom(startRoom, currentFloor);
-      const destFloor = getFloorFromRoom(endRoom, currentFloor);
+      const originFloor = getFloorFromRoom(startRoom, currentFloorRef.current);
+      const destFloor = getFloorFromRoom(endRoom, currentFloorRef.current);
 
       if (startBuildingId === endBuildingId) {
         const response = await getIndoorDirections(
@@ -879,7 +925,6 @@ export default function IndoorNavigation() {
     endRoom,
     startBuildingId,
     endBuildingId,
-    currentFloor,
     avoidStairs,
     handleClearRoute,
     applyIndoorRouteResponse,
@@ -887,25 +932,7 @@ export default function IndoorNavigation() {
   ]);
 
   useEffect(() => {
-    const loadAllUniversityRooms = async () => {
-      try {
-        const allBuildings: BuildingId[] = ["H", "LB", "MB", "VL", "VE", "CC"];
-        const roomPromises = getRoomPromisesForBuildings(allBuildings);
-
-        const roomsArrays = await Promise.all(roomPromises);
-        const combinedRooms = roomsArrays.flat();
-        const uniqueRooms = Array.from(new Set(combinedRooms)).sort((a, b) =>
-          a.localeCompare(b),
-        );
-
-        setAvailableRooms(uniqueRooms);
-      } catch (error) {
-        console.error("Failed to load university rooms:", error);
-        setAvailableRooms([]);
-      }
-    };
-
-    loadAllUniversityRooms();
+    void loadAllUniversityRooms();
   }, []);
 
   useEffect(() => {
@@ -975,6 +1002,24 @@ export default function IndoorNavigation() {
     invalidatePendingRouteRequests,
   ]);
 
+  useEffect(() => {
+    const activeFloors = getAvailableFloors(activeBuildingId);
+
+    if (params.floor && activeFloors.includes(params.floor)) {
+      setCurrentFloor(params.floor);
+    }
+  }, [params.floor, activeBuildingId]);
+
+  useEffect(() => {
+    const nextStartRoom = getParamValue(params.startRoom);
+    const nextEndRoom = getParamValue(params.endRoom);
+
+    setStartRoom(nextStartRoom);
+    setEndRoom(nextEndRoom);
+    setStartBuildingId(getBuildingFromRoom(nextStartRoom, buildingId));
+    setEndBuildingId(getBuildingFromRoom(nextEndRoom, buildingId));
+  }, [buildingId, params.endRoom, params.startRoom]);
+
   const filteredRooms = availableRooms.filter((room) =>
     room.toLowerCase().includes(searchQuery.toLowerCase()),
   );
@@ -1032,6 +1077,37 @@ export default function IndoorNavigation() {
     }
   }
 
+  let floorTransitionAction: React.ReactNode = null;
+  if (
+    routeData?.startFloor &&
+    routeData?.endFloor &&
+    routeData.startFloor !== routeData.endFloor
+  ) {
+    if (currentFloor === routeData.startFloor) {
+      floorTransitionAction = (
+        <TouchableOpacity
+          style={styles.transitionButton}
+          onPress={() => handleFloorChange(routeData.endFloor)}
+        >
+          <Text style={styles.transitionButtonText}>
+            Go to Floor {routeData.endFloor}
+          </Text>
+        </TouchableOpacity>
+      );
+    } else if (currentFloor === routeData.endFloor) {
+      floorTransitionAction = (
+        <TouchableOpacity
+          style={styles.transitionButton}
+          onPress={() => handleFloorChange(routeData.startFloor)}
+        >
+          <Text style={styles.transitionButtonText}>
+            Back to Floor {routeData.startFloor}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -1067,7 +1143,7 @@ export default function IndoorNavigation() {
         />
       </View>
 
-      {availableFloors.length > 1 && (
+      {getAvailableFloors(activeBuildingId).length > 1 && (
         <View
           style={[styles.floorSelectorContainer, { top: statusBarHeight + 16 }]}
         >
@@ -1125,26 +1201,7 @@ export default function IndoorNavigation() {
         Boolean(routeData.endFloor) &&
         routeData.startFloor !== routeData.endFloor && (
           <View style={styles.floorTransitionContainer}>
-            {currentFloor === routeData.startFloor && (
-              <TouchableOpacity
-                style={styles.transitionButton}
-                onPress={() => handleFloorChange(routeData.endFloor)}
-              >
-                <Text style={styles.transitionButtonText}>
-                  Go to Floor {routeData.endFloor}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {currentFloor === routeData.endFloor && (
-              <TouchableOpacity
-                style={styles.transitionButton}
-                onPress={() => handleFloorChange(routeData.startFloor)}
-              >
-                <Text style={styles.transitionButtonText}>
-                  Back to Floor {routeData.startFloor}
-                </Text>
-              </TouchableOpacity>
-            )}
+            {floorTransitionAction}
           </View>
         )}
 
