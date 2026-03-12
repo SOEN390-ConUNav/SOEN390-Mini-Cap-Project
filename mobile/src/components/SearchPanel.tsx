@@ -25,14 +25,14 @@ const BURGUNDY = "#800020";
 const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
 
 const PLACE_TYPES = [
-  { label: "Restaurants", value: "restaurant" },
-  { label: "Parking", value: "parking" },
-  { label: "Libraries", value: "library" },
-  { label: "Parks", value: "park" },
-  { label: "Food Stores", value: "food_store" },
-  { label: "Banks", value: "bank" },
-  { label: "Gyms", value: "gym" },
-  { label: "Subway", value: "subway_station" },
+  { label: "Restaurants", value: "RESTAURANT" },
+  { label: "Parking", value: "PARKING" },
+  { label: "Libraries", value: "LIBRARY" },
+  { label: "Parks", value: "PARK" },
+  { label: "Food Stores", value: "FOOD_STORE" },
+  { label: "Banks", value: "BANK" },
+  { label: "Gyms", value: "GYM" },
+  { label: "Subway", value: "SUBWAY_STATION" },
 ];
 
 type SearchPanelProps = {
@@ -304,7 +304,7 @@ export default function SearchPanel({
         {query.length === 0 && (
           <>
             <View style={styles.nearbyHeaderContainer}>
-              <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
+              <Text style={styles.sectionTitle}>Nearby {activeFilter.toLowerCase()}</Text>
               <TouchableOpacity
                 testID="distance-filter-button"
                 onPress={() => distance.setDistanceFilterVisible(true)}
