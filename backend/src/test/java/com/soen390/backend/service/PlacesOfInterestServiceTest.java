@@ -33,6 +33,21 @@ class PlacesOfInterestServiceTest {
 
         mockServer.expect(requestTo("https://places.googleapis.com/v1/places:searchNearby"))
                 .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andExpect(content().json("""
+                        {
+                          "includedTypes": ["park"],
+                          "maxResultCount": 1,
+                          "locationRestriction": {
+                            "circle": {
+                              "center": {
+                                "latitude": 0.0,
+                                "longitude": 0.0
+                              },
+                              "radius": 100.0
+                            }
+                          }
+                        }
+                        """))
                 .andRespond(withSuccess(mockResponse, MediaType.APPLICATION_JSON));
 
         String result = placesService.getNearbyPlaces(1, 100.0, 0.0, 0.0, PlaceType.PARK);
