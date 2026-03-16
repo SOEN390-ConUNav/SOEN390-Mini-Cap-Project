@@ -86,7 +86,8 @@ jobs:
         run: |
           mkdir -p site/mobile
           mkdir -p site/backend
-          cp -R mobile/coverage/* site/mobile/
+          # Jest HTML coverage lives under coverage/lcov-report by default
+          cp -R mobile/coverage/lcov-report/* site/mobile/
           cp -R backend/target/site/jacoco/* site/backend/
           echo "<html>
                   <body>
