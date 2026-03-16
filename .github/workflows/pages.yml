@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - JB/183-test-code-coverage
   workflow_dispatch:
 
 permissions:
