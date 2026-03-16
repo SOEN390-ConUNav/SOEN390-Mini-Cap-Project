@@ -15,8 +15,10 @@ import {
   getAvailableRooms,
   getRoomPoints,
   getPointsOfInterest,
+  getWaypoints,
   RoomPoint,
   PoiItem,
+  Waypoint,
   getUniversalDirections,
 } from "../api/indoorDirectionsApi";
 import {
@@ -108,6 +110,8 @@ export default function IndoorNavigation() {
     "origin" | "outdoor" | "destination"
   >("origin");
   const [activeBuildingId, setActiveBuildingId] = useState<string>(buildingId);
+  const [showDebugWaypoints, setShowDebugWaypoints] = useState<boolean>(false);
+  const [debugWaypoints, setDebugWaypoints] = useState<Waypoint[]>([]);
   const routeRequestIdRef = useRef(0);
 
   const buildUniversityRoomPromises = () => {
@@ -960,6 +964,31 @@ export default function IndoorNavigation() {
     loadPois();
   }, [activeBuildingId, currentFloor]);
 
+  useEffect(() => {
+    if (activeBuildingId !== "MB" || !showDebugWaypoints) {
+      setDebugWaypoints([]);
+      return;
+    }
+
+    const loadWaypoints = async () => {
+      try {
+        const items = await getWaypoints(activeBuildingId, currentFloor);
+        setDebugWaypoints(items);
+      } catch (error) {
+        console.error("Failed to load debug waypoints:", error);
+        setDebugWaypoints([]);
+      }
+    };
+
+    loadWaypoints();
+  }, [activeBuildingId, currentFloor, showDebugWaypoints]);
+
+  useEffect(() => {
+    if (activeBuildingId !== "MB" && showDebugWaypoints) {
+      setShowDebugWaypoints(false);
+    }
+  }, [activeBuildingId, showDebugWaypoints]);
+
   const handlePoiTap = useCallback(
     (poi: PoiMarker) => {
       setEndRoom(poi.id);
@@ -1118,6 +1147,17 @@ export default function IndoorNavigation() {
           buildingId={activeBuildingId}
           floorNumber={currentFloor}
           routePoints={displayedRoutePoints}
+          waypointData={
+            showDebugWaypoints &&
+            activeBuildingId === "MB" &&
+            debugWaypoints.length > 0
+              ? debugWaypoints.map((wp) => ({
+                  x: wp.x,
+                  y: wp.y,
+                  id: wp.id,
+                }))
+              : undefined
+          }
           roomData={
             roomPoints.length > 0
               ? roomPoints.map((r) => ({
@@ -1195,6 +1235,27 @@ export default function IndoorNavigation() {
           thumbColor={avoidStairs ? "#fff" : "#f4f3f4"}
         />
       </View>
+
+      {activeBuildingId === "MB" && (
+        <View style={styles.debugWaypointContainer}>
+          <TouchableOpacity
+            style={[
+              styles.debugWaypointButton,
+              showDebugWaypoints && styles.debugWaypointButtonActive,
+            ]}
+            onPress={() => setShowDebugWaypoints((current) => !current)}
+          >
+            <Text
+              style={[
+                styles.debugWaypointButtonText,
+                showDebugWaypoints && styles.debugWaypointButtonTextActive,
+              ]}
+            >
+              {showDebugWaypoints ? "Hide MB Waypoints" : "Show MB Waypoints"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {routeData &&
         Boolean(routeData.startFloor) &&
@@ -1342,6 +1403,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#333",
+  },
+  debugWaypointContainer: {
+    position: "absolute",
+    top: 262,
+    right: 16,
+    zIndex: 12,
+  },
+  debugWaypointButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#8B1538",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  debugWaypointButtonActive: {
+    backgroundColor: "#8B1538",
+  },
+  debugWaypointButtonText: {
+    color: "#8B1538",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  debugWaypointButtonTextActive: {
+    color: "#FFFFFF",
   },
 
   floorTransitionContainer: {

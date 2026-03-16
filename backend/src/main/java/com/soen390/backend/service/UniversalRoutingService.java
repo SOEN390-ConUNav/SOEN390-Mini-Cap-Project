@@ -37,7 +37,7 @@ public class UniversalRoutingService {
 
         if (buildingId.startsWith("VE")) return "VE1-Entrance/exit";
         if (buildingId.startsWith("VL")) return "VL-101";
-        if (buildingId.startsWith("MB")) return "MB1-Emergency-Exit-1";
+        if (buildingId.startsWith("MB")) return "MB1-Main-Entrance";
 
         return "main-entrance";
     }

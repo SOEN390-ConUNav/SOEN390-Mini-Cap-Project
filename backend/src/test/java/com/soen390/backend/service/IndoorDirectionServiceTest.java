@@ -246,7 +246,7 @@ class IndoorDirectionServiceTest {
         assertEquals("Webster Library Building",
                 directionService.getIndoorDirections("LB-2", "LB-204", "LB-259", "2", "2", false).getBuildingName());
         assertEquals("John Molson School of Business",
-                directionService.getIndoorDirections("MB-S2", "MB-S2-Room1", "MB-S2-Room2", "S2", "S2", false).getBuildingName());
+                directionService.getIndoorDirections("MB-S2", "MB-S2-245", "MB-S2-255", "S2", "S2", false).getBuildingName());
     }
 
     @Test
@@ -477,7 +477,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_MB_returnsRoute() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "MB-S2", "MB-S2-Room1", "MB-S2-Room2", "S2", "S2", false);
+                "MB-S2", "MB-S2-245", "MB-S2-255", "S2", "S2", false);
         assertNotNull(r);
     }
 
@@ -715,7 +715,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_MB1_returnsRoute() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "MB-1", "MB-1-101", "MB-1-102", "1", "1", false);
+                "MB-1", "MB-1-294", "MB-1-347", "1", "1", false);
         assertNotNull(r);
     }
 
@@ -1049,7 +1049,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_MB1_roomToRoom() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "MB-1", "MB-1-101", "MB-1-102", "1", "1", false);
+                "MB-1", "MB-1-294", "MB-1-347", "1", "1", false);
         assertNotNull(r);
     }
 
@@ -1088,7 +1088,7 @@ class IndoorDirectionServiceTest {
     @Test
     void getIndoorDirections_MBPrefix_buildingId() {
         IndoorDirectionResponse r = directionService.getIndoorDirections(
-                "MB-S2", "MB-S2-Room1", "MB-S2-Room2", "S2", "S2", false);
+                "MB-S2", "MB-S2-245", "MB-S2-255", "S2", "S2", false);
         assertTrue(r.getBuildingId().startsWith("MB-"));
     }
 

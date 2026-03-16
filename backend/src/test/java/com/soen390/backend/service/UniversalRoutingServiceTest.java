@@ -145,7 +145,7 @@ class UniversalRoutingServiceTest {
 
         universalRoutingService.getCompleteRoute("MB", "r1", "1", "H", "r2", "1", false);
         verify(indoorDirectionService).getIndoorDirections(
-                eq("MB"), eq("r1"), eq("MB1-Emergency-Exit-1"), eq("1"), eq("1"), anyBoolean());
+                eq("MB"), eq("r1"), eq("MB1-Main-Entrance"), eq("1"), eq("1"), anyBoolean());
     }
 
     @Test

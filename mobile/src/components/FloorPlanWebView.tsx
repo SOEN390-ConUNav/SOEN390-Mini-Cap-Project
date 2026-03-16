@@ -32,6 +32,7 @@ interface FloorPlanWebViewProps {
   routePoints?: RoutePoint[];
   poiData?: PoiMarker[];
   roomData?: RoomMarkerData[];
+  waypointData?: Array<{ x: number; y: number; id: string }>;
 }
 
 export interface FloorPlanWebViewRef {
@@ -93,6 +94,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       routePoints: propRoutePoints,
       poiData,
       roomData,
+      waypointData,
     },
     ref,
   ) => {
@@ -332,7 +334,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                           text.setAttribute('text-anchor', 'middle');
                           text.setAttribute('font-weight', 'bold');
                           text.setAttribute('style', 'pointer-events: none;');
-                          text.textContent = wp.id || ('WP' + index);
+                          text.textContent = String(index + 1);
                           
                           g.appendChild(circle);
                           g.appendChild(text);
@@ -592,6 +594,30 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
         }
       }
     }, [isWebViewReady, propRoutePoints, executeDrawRoute, floorNumber]);
+
+    React.useEffect(() => {
+      if (!isWebViewReady || !webViewRef.current) return;
+
+      if (waypointData && waypointData.length > 0) {
+        const waypointsJson = JSON.stringify(waypointData);
+        setTimeout(() => {
+          webViewRef.current?.injectJavaScript(`
+          (function() {
+            try { if (typeof window.showWaypoints === 'function') window.showWaypoints(${waypointsJson}); }
+            catch(e) { console.error('Error auto-showing waypoints:', e); }
+            true;
+          })();
+        `);
+        }, 250);
+      } else {
+        webViewRef.current?.injectJavaScript(`
+        (function() {
+          if (typeof window.hideWaypoints === 'function') window.hideWaypoints();
+          true;
+        })();
+      `);
+      }
+    }, [isWebViewReady, waypointData]);
 
     React.useEffect(() => {
       if (!isWebViewReady || !webViewRef.current) return;

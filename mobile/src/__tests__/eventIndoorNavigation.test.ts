@@ -91,7 +91,7 @@ describe("eventIndoorNavigation", () => {
         if (floor === "S2") {
           return ["MB-S2-330", "MB-Elevator-Main"];
         }
-        return ["MB-1-101"];
+        return ["MB-1-210"];
       },
     );
 
@@ -116,9 +116,9 @@ describe("eventIndoorNavigation", () => {
     (getAvailableRooms as jest.Mock).mockImplementation(
       async (_buildingId: string, floor: string) => {
         if (floor === "S2") {
-          return ["MBS2-Entrance-Exit", "MB-Elevator-Main", "MB-S2-330"];
+          return ["MB-S2-Entrance-Exit", "MB-Elevator-Main", "MB-S2-330"];
         }
-        return ["MB-1-101"];
+        return ["MB-1-210"];
       },
     );
 
@@ -143,7 +143,7 @@ describe("eventIndoorNavigation", () => {
     (getAvailableRooms as jest.Mock).mockImplementation(
       async (_buildingId: string, floor: string) => {
         if (floor === "1") {
-          return ["MB1-Emergency-Exit-1", "MB-Elevator-Main"];
+          return ["MB1-Main-Entrance", "MB-Elevator-Main"];
         }
         return ["MB-S2-330"];
       },
@@ -160,7 +160,7 @@ describe("eventIndoorNavigation", () => {
       startFloor: "1",
       floorSupported: true,
       destinationRoom: "MB-S2-330",
-      startRoom: "MB-Elevator-Main",
+      startRoom: "MB1-Main-Entrance",
     });
   });
 
@@ -290,7 +290,7 @@ describe("eventIndoorNavigation", () => {
         if (floor === "3") {
           return ["MB3-330", "MB-Elevator-Main"];
         }
-        return ["MB1-101"];
+        return ["MB-1-210"];
       },
     );
 
