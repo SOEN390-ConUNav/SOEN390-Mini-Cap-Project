@@ -170,6 +170,18 @@ jest.mock("../components/DirectionsPanel", () => {
         <Text testID="directions-panel">
           Steps: {props.routeData?.steps?.length ?? 0}
         </Text>
+        <Pressable
+          testID="collapse-directions"
+          onPress={() => props.onSnapIndexChange?.(0)}
+        >
+          <Text>Collapse Directions</Text>
+        </Pressable>
+        <Pressable
+          testID="expand-directions"
+          onPress={() => props.onSnapIndexChange?.(1)}
+        >
+          <Text>Expand Directions</Text>
+        </Pressable>
         <Pressable testID="close-directions" onPress={props.onClose}>
           <Text>Close Directions</Text>
         </Pressable>
@@ -536,6 +548,43 @@ describe("IndoorNavigation", () => {
       expect(queryByTestId("next-step-button")).toBeNull();
       expect(queryByTestId("previous-step-button")).toBeNull();
       expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+  });
+
+  it("shows the step buttons again when the directions panel is collapsed", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId, queryByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+
+    await waitFor(() => {
+      expect(queryByTestId("next-step-button")).toBeNull();
+    });
+
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByTestId("previous-step-button")).toBeTruthy();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("expand-directions"));
+
+    await waitFor(() => {
+      expect(queryByTestId("next-step-button")).toBeNull();
+      expect(queryByTestId("previous-step-button")).toBeNull();
     });
   });
 
