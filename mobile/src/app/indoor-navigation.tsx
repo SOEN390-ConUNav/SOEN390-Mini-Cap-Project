@@ -841,6 +841,198 @@ const navigateStep = ({
   });
 };
 
+const getWaypointMarkerData = (
+  activeBuildingId: string,
+  showDebugWaypoints: boolean,
+  debugWaypoints: Waypoint[],
+) =>
+  showDebugWaypoints && activeBuildingId === "MB" && debugWaypoints.length > 0
+    ? debugWaypoints.map((wp) => ({
+        x: wp.x,
+        y: wp.y,
+        id: wp.id,
+      }))
+    : undefined;
+
+const getRoomMarkerData = (roomPoints: RoomPoint[]) =>
+  roomPoints.length > 0
+    ? roomPoints.map((room) => ({
+        x: room.x,
+        y: room.y,
+        id: room.id,
+      }))
+    : undefined;
+
+const getPoiMarkerData = (pois: PoiItem[]) =>
+  pois.length > 0
+    ? pois.map((poi) => ({
+        x: poi.x,
+        y: poi.y,
+        id: poi.id,
+        displayName: poi.displayName,
+        type: poi.type,
+      }))
+    : undefined;
+
+type DebugWaypointToggleProps = {
+  activeBuildingId: string;
+  showDebugWaypoints: boolean;
+  onToggle: () => void;
+};
+
+const DebugWaypointToggle = ({
+  activeBuildingId,
+  showDebugWaypoints,
+  onToggle,
+}: DebugWaypointToggleProps) => {
+  if (activeBuildingId !== "MB") {
+    return null;
+  }
+
+  return (
+    <View style={styles.debugWaypointContainer}>
+      <TouchableOpacity
+        style={[
+          styles.debugWaypointButton,
+          showDebugWaypoints && styles.debugWaypointButtonActive,
+        ]}
+        onPress={onToggle}
+      >
+        <Text
+          style={[
+            styles.debugWaypointButtonText,
+            showDebugWaypoints && styles.debugWaypointButtonTextActive,
+          ]}
+        >
+          {showDebugWaypoints ? "Hide MB Waypoints" : "Show MB Waypoints"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+type StepNavigationControlsProps = {
+  totalSteps: number;
+  showRouteDetails: boolean;
+  directionsSnapIndex: number;
+  canGoToPreviousStep: boolean;
+  canGoToNextStep: boolean;
+  visibleStepIndex: number;
+  onStepChange: (delta: -1 | 1) => void;
+};
+
+const StepNavigationControls = ({
+  totalSteps,
+  showRouteDetails,
+  directionsSnapIndex,
+  canGoToPreviousStep,
+  canGoToNextStep,
+  visibleStepIndex,
+  onStepChange,
+}: StepNavigationControlsProps) => {
+  const isVisible =
+    totalSteps > 0 && (!showRouteDetails || directionsSnapIndex === 0);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <View style={styles.floorTransitionContainer}>
+      <View style={styles.stepNavigationRow}>
+        <TouchableOpacity
+          testID="previous-step-button"
+          style={[
+            styles.stepNavigationButton,
+            !canGoToPreviousStep && styles.stepNavigationButtonDisabled,
+          ]}
+          onPress={() => onStepChange(-1)}
+          disabled={!canGoToPreviousStep}
+        >
+          <Text
+            style={[
+              styles.stepNavigationButtonText,
+              !canGoToPreviousStep && styles.stepNavigationButtonTextDisabled,
+            ]}
+          >
+            Previous Step
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={styles.stepProgressText}>
+          Step {visibleStepIndex + 1} of {totalSteps}
+        </Text>
+
+        <TouchableOpacity
+          testID="next-step-button"
+          style={[
+            styles.stepNavigationButton,
+            !canGoToNextStep && styles.stepNavigationButtonDisabled,
+          ]}
+          onPress={() => onStepChange(1)}
+          disabled={!canGoToNextStep}
+        >
+          <Text
+            style={[
+              styles.stepNavigationButtonText,
+              !canGoToNextStep && styles.stepNavigationButtonTextDisabled,
+            ]}
+          >
+            Next Step
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+type ShuttleBannerProps = {
+  nextShuttleTime?: string;
+  routePhase: "origin" | "outdoor" | "destination";
+};
+
+const ShuttleBanner = ({ nextShuttleTime, routePhase }: ShuttleBannerProps) => {
+  if (!nextShuttleTime || routePhase !== "origin") {
+    return null;
+  }
+
+  return (
+    <View
+      style={[styles.stairBanner, { bottom: 230, borderLeftColor: "#8B1538" }]}
+    >
+      <Text style={[styles.stairBannerText, { color: "#8B1538" }]}>
+        Next Shuttle Bus: {nextShuttleTime}
+      </Text>
+    </View>
+  );
+};
+
+type UniversalTransitionProps = {
+  visible: boolean;
+  endBuildingId: string;
+  onPress: () => void;
+};
+
+const UniversalTransitionButton = ({
+  visible,
+  endBuildingId,
+  onPress,
+}: UniversalTransitionProps) => {
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <View style={styles.universalTransitionContainer}>
+      <TouchableOpacity style={styles.transitionButton} onPress={onPress}>
+        <Text style={styles.transitionButtonText}>
+          Exit Building & Go to {endBuildingId}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 export default function IndoorNavigation() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -1243,6 +1435,15 @@ export default function IndoorNavigation() {
     totalSteps > 0 ? Math.min(currentStepIndex, totalSteps - 1) : 0;
   const canGoToPreviousStep = visibleStepIndex > 0;
   const canGoToNextStep = visibleStepIndex < totalSteps - 1;
+  const waypointData = getWaypointMarkerData(
+    activeBuildingId,
+    showDebugWaypoints,
+    debugWaypoints,
+  );
+  const roomData = getRoomMarkerData(roomPoints);
+  const poiData = getPoiMarkerData(pois);
+  const showUniversalTransition =
+    !!universalRouteData && routePhase === "origin";
 
   const handleStepNavigation = useCallback(
     (delta: -1 | 1) =>
@@ -1272,37 +1473,9 @@ export default function IndoorNavigation() {
           buildingId={activeBuildingId}
           floorNumber={currentFloor}
           routePoints={displayedRoutePoints}
-          waypointData={
-            showDebugWaypoints &&
-            activeBuildingId === "MB" &&
-            debugWaypoints.length > 0
-              ? debugWaypoints.map((wp) => ({
-                  x: wp.x,
-                  y: wp.y,
-                  id: wp.id,
-                }))
-              : undefined
-          }
-          roomData={
-            roomPoints.length > 0
-              ? roomPoints.map((r) => ({
-                  x: r.x,
-                  y: r.y,
-                  id: r.id,
-                }))
-              : undefined
-          }
-          poiData={
-            pois.length > 0
-              ? pois.map((p) => ({
-                  x: p.x,
-                  y: p.y,
-                  id: p.id,
-                  displayName: p.displayName,
-                  type: p.type,
-                }))
-              : undefined
-          }
+          waypointData={waypointData}
+          roomData={roomData}
+          poiData={poiData}
           onPoiTap={handlePoiTap}
           onRoomTap={handleRoomTap}
         />
@@ -1361,118 +1534,51 @@ export default function IndoorNavigation() {
         />
       </View>
 
-      {activeBuildingId === "MB" && (
-        <View style={styles.debugWaypointContainer}>
-          <TouchableOpacity
-            style={[
-              styles.debugWaypointButton,
-              showDebugWaypoints && styles.debugWaypointButtonActive,
-            ]}
-            onPress={() => setShowDebugWaypoints((current) => !current)}
-          >
-            <Text
-              style={[
-                styles.debugWaypointButtonText,
-                showDebugWaypoints && styles.debugWaypointButtonTextActive,
-              ]}
-            >
-              {showDebugWaypoints ? "Hide MB Waypoints" : "Show MB Waypoints"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <DebugWaypointToggle
+        activeBuildingId={activeBuildingId}
+        showDebugWaypoints={showDebugWaypoints}
+        onToggle={() => setShowDebugWaypoints((current) => !current)}
+      />
 
-      {totalSteps > 0 && (!showRouteDetails || directionsSnapIndex === 0) && (
-        <View style={styles.floorTransitionContainer}>
-          <View style={styles.stepNavigationRow}>
-            <TouchableOpacity
-              testID="previous-step-button"
-              style={[
-                styles.stepNavigationButton,
-                !canGoToPreviousStep && styles.stepNavigationButtonDisabled,
-              ]}
-              onPress={() => handleStepNavigation(-1)}
-              disabled={!canGoToPreviousStep}
-            >
-              <Text
-                style={[
-                  styles.stepNavigationButtonText,
-                  !canGoToPreviousStep &&
-                    styles.stepNavigationButtonTextDisabled,
-                ]}
-              >
-                Previous Step
-              </Text>
-            </TouchableOpacity>
+      <StepNavigationControls
+        totalSteps={totalSteps}
+        showRouteDetails={showRouteDetails}
+        directionsSnapIndex={directionsSnapIndex}
+        canGoToPreviousStep={canGoToPreviousStep}
+        canGoToNextStep={canGoToNextStep}
+        visibleStepIndex={visibleStepIndex}
+        onStepChange={handleStepNavigation}
+      />
 
-            <Text style={styles.stepProgressText}>
-              Step {visibleStepIndex + 1} of {totalSteps}
-            </Text>
+      <ShuttleBanner
+        nextShuttleTime={universalRouteData?.nextShuttleTime}
+        routePhase={routePhase}
+      />
 
-            <TouchableOpacity
-              testID="next-step-button"
-              style={[
-                styles.stepNavigationButton,
-                !canGoToNextStep && styles.stepNavigationButtonDisabled,
-              ]}
-              onPress={() => handleStepNavigation(1)}
-              disabled={!canGoToNextStep}
-            >
-              <Text
-                style={[
-                  styles.stepNavigationButtonText,
-                  !canGoToNextStep && styles.stepNavigationButtonTextDisabled,
-                ]}
-              >
-                Next Step
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      <UniversalTransitionButton
+        visible={showUniversalTransition}
+        endBuildingId={endBuildingId}
+        onPress={() => {
+          if (!universalRouteData) {
+            return;
+          }
 
-      {universalRouteData?.nextShuttleTime && routePhase === "origin" && (
-        <View
-          style={[
-            styles.stairBanner,
-            { bottom: 230, borderLeftColor: "#8B1538" },
-          ]}
-        >
-          <Text style={[styles.stairBannerText, { color: "#8B1538" }]}>
-            Next Shuttle Bus: {universalRouteData.nextShuttleTime}
-          </Text>
-        </View>
-      )}
+          setRoutePhase("destination");
+          setRouteData(universalRouteData.endIndoorRoute);
+          setCurrentStepIndex(0);
+          setDirectionsSnapIndex(1);
+          setActiveBuildingId(endBuildingId);
+          handleFloorChange(universalRouteData.endIndoorRoute.startFloor);
 
-      {universalRouteData && routePhase === "origin" && (
-        <View style={styles.universalTransitionContainer}>
-          <TouchableOpacity
-            style={styles.transitionButton}
-            onPress={() => {
-              setRoutePhase("destination");
-              setRouteData(universalRouteData.endIndoorRoute);
-              setCurrentStepIndex(0);
-              setDirectionsSnapIndex(1);
-
-              setActiveBuildingId(endBuildingId);
-
-              handleFloorChange(universalRouteData.endIndoorRoute.startFloor);
-
-              setTimeout(() => {
-                if (mapViewRef.current) {
-                  mapViewRef.current.drawRoute(
-                    universalRouteData.endIndoorRoute.routePoints,
-                  );
-                }
-              }, 500);
-            }}
-          >
-            <Text style={styles.transitionButtonText}>
-              Exit Building & Go to {endBuildingId}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          setTimeout(() => {
+            if (mapViewRef.current) {
+              mapViewRef.current.drawRoute(
+                universalRouteData.endIndoorRoute.routePoints,
+              );
+            }
+          }, 500);
+        }}
+      />
 
       {!showRouteDetails && (
         <BottomPanel
