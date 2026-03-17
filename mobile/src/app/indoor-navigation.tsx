@@ -50,6 +50,140 @@ const BASEMENT_FLOOR_REGEX = /^S(\d+)$/i;
 const DURATION_HOUR_REGEX = /\b(\d{1,3})[ \t]{0,4}hours?\b/i;
 const DURATION_MINUTE_REGEX = /\b(\d{1,3})[ \t]{0,4}mins?\b/i;
 
+const getParamValue = (value?: string | string[]) =>
+  Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+
+const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
+  if (!roomId) return fallbackFloor;
+  const normalizedRoom = roomId.trim().toUpperCase();
+
+  // Explicit building-floor-room format, e.g. MB-S2-330 or MB-1-210.
+  const explicitFloorMatch = /^[A-Z]{1,4}-(S\d+|\d+)-/.exec(normalizedRoom);
+  if (explicitFloorMatch?.[1]) {
+    return explicitFloorMatch[1];
+  }
+
+  // Compact prefix floor format, e.g. MBS2-Entrance-Exit.
+  const compactBasementMatch = /^[A-Z]{1,4}(S\d+)-/.exec(normalizedRoom);
+  if (compactBasementMatch?.[1]) {
+    return compactBasementMatch[1];
+  }
+
+  // Compact prefix floor format, e.g. H8-801 or MB3-330.
+  const compactFloorMatch = /^[A-Z]{1,4}(\d+)-/.exec(normalizedRoom);
+  if (compactFloorMatch?.[1]) {
+    return compactFloorMatch[1];
+  }
+
+  const parts = normalizedRoom.split("-");
+  const lastPart = parts.at(-1) ?? normalizedRoom;
+  if (
+    lastPart.startsWith("S") &&
+    lastPart.length >= 2 &&
+    lastPart[1] >= "0" &&
+    lastPart[1] <= "9"
+  ) {
+    return lastPart.slice(0, 2);
+  }
+
+  let roomPart = parts.length >= 2 ? parts[1] : "";
+  if (roomPart.includes(".")) {
+    roomPart = roomPart.split(".")[0];
+  }
+
+  roomPart = roomPart.replace(/[A-Z]{1,16}$/, "");
+
+  if (roomPart.length >= 3) {
+    return roomPart.slice(0, -2);
+  }
+
+  if (roomPart.length > 0) {
+    return roomPart;
+  }
+
+  for (const char of lastPart) {
+    if (char >= "0" && char <= "9") {
+      return char;
+    }
+  }
+
+  return fallbackFloor;
+};
+
+const getBuildingFromRoom = (roomId: string, fallbackBuilding: string) => {
+  if (!roomId) return fallbackBuilding;
+  const upperRoom = roomId.toUpperCase();
+  if (upperRoom.startsWith("H")) return "H";
+  if (upperRoom.startsWith("LB")) return "LB";
+  if (upperRoom.startsWith("MB")) return "MB";
+  if (upperRoom.startsWith("VL")) return "VL";
+  if (upperRoom.startsWith("VE")) return "VE";
+  if (upperRoom.startsWith("CC")) return "CC";
+  return fallbackBuilding;
+};
+
+const parseDistanceMeters = (value: string): number => {
+  const normalized = value.trim().slice(0, MAX_DISTANCE_REGEX_INPUT_LENGTH);
+  const kmMatch = DISTANCE_KM_REGEX.exec(normalized);
+  if (kmMatch?.[1]) return Number(kmMatch[1]) * 1000;
+  const meterMatch = DISTANCE_METER_REGEX.exec(normalized);
+  if (meterMatch?.[1]) return Number(meterMatch[1]);
+  return 0;
+};
+
+const parseDurationMinutes = (value: string): number => {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .slice(0, MAX_DURATION_REGEX_INPUT_LENGTH);
+  const hourMatch = DURATION_HOUR_REGEX.exec(normalized);
+  const minMatch = DURATION_MINUTE_REGEX.exec(normalized);
+  const hours = hourMatch?.[1] ? Number(hourMatch[1]) : 0;
+  const mins = minMatch?.[1] ? Number(minMatch[1]) : 0;
+  const total = hours * 60 + mins;
+  return total > 0 ? total : 1;
+};
+
+const formatDistanceMeters = (meters: number): string => {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
+const formatDurationMinutes = (minutes: number): string => {
+  const safeMinutes = Math.max(1, Math.round(minutes));
+  if (safeMinutes < 60) return `${safeMinutes} mins`;
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${hours} hour${hours > 1 ? "s" : ""} ${mins} mins`;
+};
+
+const floorToLevel = (floor: string): number => {
+  const upper = floor.toUpperCase();
+  const basement = BASEMENT_FLOOR_REGEX.exec(upper);
+  if (basement?.[1]) return -Number(basement[1]);
+  const n = Number(upper);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const getDisplayBuildingName = (
+  routeData: IndoorDirectionResponse | null,
+  buildingId: BuildingId,
+): string => {
+  if (routeData?.buildingName) {
+    return routeData.buildingName;
+  }
+
+  if (buildingId === "H") {
+    return "Hall Building";
+  }
+
+  if (buildingId === "VL") {
+    return "Vanier Library Building";
+  }
+
+  return "Building";
+};
+
 export default function IndoorNavigation() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -58,9 +192,6 @@ export default function IndoorNavigation() {
     startRoom?: string | string[];
     endRoom?: string | string[];
   }>();
-
-  const getParamValue = (value?: string | string[]) =>
-    Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 
   const buildingId = (params.buildingId as BuildingId) || "H";
   const defaultFloor = getDefaultFloor(buildingId);
@@ -195,118 +326,6 @@ export default function IndoorNavigation() {
     },
     [invalidatePendingRouteRequests, syncFloorSelection],
   );
-
-  const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
-    if (!roomId) return fallbackFloor;
-    const normalizedRoom = roomId.trim().toUpperCase();
-
-    // Explicit building-floor-room format, e.g. MB-S2-330 or MB-1-210.
-    const explicitFloorMatch = /^[A-Z]{1,4}-(S\d+|\d+)-/.exec(normalizedRoom);
-    if (explicitFloorMatch?.[1]) {
-      return explicitFloorMatch[1];
-    }
-
-    // Compact prefix floor format, e.g. MBS2-Entrance-Exit.
-    const compactBasementMatch = /^[A-Z]{1,4}(S\d+)-/.exec(normalizedRoom);
-    if (compactBasementMatch?.[1]) {
-      return compactBasementMatch[1];
-    }
-
-    // Compact prefix floor format, e.g. H8-801 or MB3-330.
-    const compactFloorMatch = /^[A-Z]{1,4}(\d+)-/.exec(normalizedRoom);
-    if (compactFloorMatch?.[1]) {
-      return compactFloorMatch[1];
-    }
-
-    const parts = normalizedRoom.split("-");
-    const lastPart = parts.at(-1) ?? normalizedRoom;
-    if (
-      lastPart.startsWith("S") &&
-      lastPart.length >= 2 &&
-      lastPart[1] >= "0" &&
-      lastPart[1] <= "9"
-    ) {
-      return lastPart.slice(0, 2);
-    }
-
-    let roomPart = parts.length >= 2 ? parts[1] : "";
-    if (roomPart.includes(".")) {
-      roomPart = roomPart.split(".")[0];
-    }
-
-    roomPart = roomPart.replace(/[A-Z]{1,16}$/, "");
-
-    if (roomPart.length >= 3) {
-      return roomPart.slice(0, -2);
-    }
-
-    if (roomPart.length > 0) {
-      return roomPart;
-    }
-
-    for (const char of lastPart) {
-      if (char >= "0" && char <= "9") {
-        return char;
-      }
-    }
-
-    return fallbackFloor;
-  };
-
-  const getBuildingFromRoom = (roomId: string, fallbackBuilding: string) => {
-    if (!roomId) return fallbackBuilding;
-    const upperRoom = roomId.toUpperCase();
-    if (upperRoom.startsWith("H")) return "H";
-    if (upperRoom.startsWith("LB")) return "LB";
-    if (upperRoom.startsWith("MB")) return "MB";
-    if (upperRoom.startsWith("VL")) return "VL";
-    if (upperRoom.startsWith("VE")) return "VE";
-    if (upperRoom.startsWith("CC")) return "CC";
-    return fallbackBuilding;
-  };
-
-  const parseDistanceMeters = (value: string): number => {
-    const normalized = value.trim().slice(0, MAX_DISTANCE_REGEX_INPUT_LENGTH);
-    const kmMatch = DISTANCE_KM_REGEX.exec(normalized);
-    if (kmMatch?.[1]) return Number(kmMatch[1]) * 1000;
-    const meterMatch = DISTANCE_METER_REGEX.exec(normalized);
-    if (meterMatch?.[1]) return Number(meterMatch[1]);
-    return 0;
-  };
-
-  const parseDurationMinutes = (value: string): number => {
-    const normalized = value
-      .trim()
-      .toLowerCase()
-      .slice(0, MAX_DURATION_REGEX_INPUT_LENGTH);
-    const hourMatch = DURATION_HOUR_REGEX.exec(normalized);
-    const minMatch = DURATION_MINUTE_REGEX.exec(normalized);
-    const hours = hourMatch?.[1] ? Number(hourMatch[1]) : 0;
-    const mins = minMatch?.[1] ? Number(minMatch[1]) : 0;
-    const total = hours * 60 + mins;
-    return total > 0 ? total : 1;
-  };
-
-  const formatDistanceMeters = (meters: number): string => {
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${(meters / 1000).toFixed(1)} km`;
-  };
-
-  const formatDurationMinutes = (minutes: number): string => {
-    const safeMinutes = Math.max(1, Math.round(minutes));
-    if (safeMinutes < 60) return `${safeMinutes} mins`;
-    const hours = Math.floor(safeMinutes / 60);
-    const mins = safeMinutes % 60;
-    return `${hours} hour${hours > 1 ? "s" : ""} ${mins} mins`;
-  };
-
-  const floorToLevel = (floor: string): number => {
-    const upper = floor.toUpperCase();
-    const basement = BASEMENT_FLOOR_REGEX.exec(upper);
-    if (basement?.[1]) return -Number(basement[1]);
-    const n = Number(upper);
-    return Number.isFinite(n) ? n : 0;
-  };
 
   type VerticalConnectorKind = "elevator" | "stairs";
   type VerticalConnectorCandidate = {
@@ -1193,15 +1212,7 @@ export default function IndoorNavigation() {
     setActiveBuildingId(buildingId);
   }, [buildingId]);
 
-  let displayBuildingName = routeData?.buildingName || "Building";
-
-  if (!routeData?.buildingName) {
-    if (buildingId === "H") {
-      displayBuildingName = "Hall Building";
-    } else if (buildingId === "VL") {
-      displayBuildingName = "Vanier Library Building";
-    }
-  }
+  const displayBuildingName = getDisplayBuildingName(routeData, buildingId);
 
   return (
     <View style={styles.container}>
