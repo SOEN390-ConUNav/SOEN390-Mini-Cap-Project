@@ -60,7 +60,7 @@
     { "id": "MB-1-AllowedPath_32", "x": 415, "y": 715.5 }
   ],
   "pathfindingConfig": {
-    "searchRadius": 300.0,
+    "searchRadius": 80.0,
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
