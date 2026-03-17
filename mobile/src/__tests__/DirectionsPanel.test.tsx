@@ -94,6 +94,20 @@ describe("DirectionsPanel", () => {
     expect(queryByText("30s")).toBeNull();
   });
 
+  it("uses the provided currentStepIndex as the active step", () => {
+    const { getByText, queryByText } = render(
+      <DirectionsPanel
+        routeData={routeData}
+        currentStepIndex={1}
+        visible={true}
+        onClose={mockOnClose}
+      />,
+    );
+    expect(getByText("Turn left")).toBeTruthy();
+    expect(getByText("Arrive at H8-807")).toBeTruthy();
+    expect(queryByText("Leave H8-843 and continue straight")).toBeNull();
+  });
+
   it("renders remaining steps below the primary card", () => {
     const { getByText } = render(
       <DirectionsPanel

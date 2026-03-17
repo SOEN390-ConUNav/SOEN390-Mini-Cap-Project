@@ -73,6 +73,11 @@ export default function IndoorNavigation() {
   const initialEndRoom = getParamValue(params.endRoom);
   const [currentFloor, setCurrentFloor] = useState<string>(initialFloor);
   const backendBuildingId = getBackendBuildingId(buildingId, currentFloor);
+  const routerRef = useRef(router);
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
 
   const currentFloorRef = useRef(currentFloor);
   useEffect(() => {
@@ -112,6 +117,7 @@ export default function IndoorNavigation() {
   const [activeBuildingId, setActiveBuildingId] = useState<string>(buildingId);
   const [showDebugWaypoints, setShowDebugWaypoints] = useState<boolean>(false);
   const [debugWaypoints, setDebugWaypoints] = useState<Waypoint[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const routeRequestIdRef = useRef(0);
 
   const buildUniversityRoomPromises = () => {
@@ -165,13 +171,17 @@ export default function IndoorNavigation() {
     }
   }, [buildingId, handleClearRoute, invalidatePendingRouteRequests]);
 
+  const syncFloorSelection = useCallback((newFloor: string) => {
+    setCurrentFloor(newFloor);
+    routerRef.current.setParams({ floor: newFloor });
+  }, []);
+
   const handleFloorChange = useCallback(
     (newFloor: string) => {
       invalidatePendingRouteRequests();
       mapViewRef.current?.clearRoute();
 
-      setCurrentFloor(newFloor);
-      router.setParams({ floor: newFloor });
+      syncFloorSelection(newFloor);
 
       setRouteData((currentData) => {
         if (currentData && currentData.startFloor !== currentData.endFloor) {
@@ -181,7 +191,7 @@ export default function IndoorNavigation() {
         return null;
       });
     },
-    [invalidatePendingRouteRequests, router],
+    [invalidatePendingRouteRequests, syncFloorSelection],
   );
 
   const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
@@ -547,6 +557,51 @@ export default function IndoorNavigation() {
       )
       .map((poi) => poi.id);
 
+  const isVerticalTransitionStep = (step: IndoorRouteStep): boolean => {
+    const instruction = step.instruction.toLowerCase();
+    return (
+      step.maneuverType === "ELEVATOR_UP" ||
+      step.maneuverType === "ELEVATOR_DOWN" ||
+      step.maneuverType === "STAIRS_UP" ||
+      step.maneuverType === "STAIRS_DOWN" ||
+      step.maneuverType === "ESCALATOR_UP" ||
+      step.maneuverType === "ESCALATOR_DOWN" ||
+      /\btake\b.*\b(elevator|stairs|escalator)\b/.test(instruction)
+    );
+  };
+
+  const getVerticalTransitionStepIndex = (
+    response: IndoorDirectionResponse | null | undefined,
+  ): number => {
+    if (!response || response.startFloor === response.endFloor) {
+      return -1;
+    }
+
+    return response.steps.findIndex(isVerticalTransitionStep);
+  };
+
+  const getFloorForStepIndex = (
+    response: IndoorDirectionResponse | null | undefined,
+    stepIndex: number,
+  ): string => {
+    if (!response) {
+      return currentFloorRef.current;
+    }
+
+    if (response.startFloor === response.endFloor) {
+      return response.steps[stepIndex]?.floor || response.startFloor;
+    }
+
+    const transitionStepIndex = getVerticalTransitionStepIndex(response);
+    if (transitionStepIndex >= 0) {
+      return stepIndex > transitionStepIndex
+        ? response.endFloor
+        : response.startFloor;
+    }
+
+    return response.steps[stepIndex]?.floor || response.startFloor;
+  };
+
   const rankDestinationConnectors = (
     originConnector: VerticalConnectorCandidate,
     destinationConnectors: VerticalConnectorCandidate[],
@@ -842,12 +897,15 @@ export default function IndoorNavigation() {
         mapViewRef.current?.clearRoute();
         setRouteData(response);
         setUniversalRouteData(null);
+        setCurrentStepIndex(0);
+        syncFloorSelection(response.startFloor);
       } else {
         handleClearRoute();
         setRouteData(null);
+        setCurrentStepIndex(0);
       }
     },
-    [handleClearRoute],
+    [handleClearRoute, syncFloorSelection],
   );
 
   const applyUniversalRouteResponse = useCallback(
@@ -858,9 +916,11 @@ export default function IndoorNavigation() {
         setUniversalRouteData(response);
         setRouteData(response.startIndoorRoute);
         setRoutePhase("origin");
+        setCurrentStepIndex(0);
+        syncFloorSelection(response.startIndoorRoute.startFloor);
       }
     },
-    [],
+    [syncFloorSelection],
   );
 
   const fetchRoute = useCallback(async () => {
@@ -919,6 +979,7 @@ export default function IndoorNavigation() {
       handleClearRoute();
       setRouteData(null);
       setUniversalRouteData(null);
+      setCurrentStepIndex(0);
     } finally {
       if (requestId === routeRequestIdRef.current) {
         setIsLoadingRoute(false);
@@ -1022,6 +1083,7 @@ export default function IndoorNavigation() {
       setRouteData(null);
       setUniversalRouteData(null);
       setIsLoadingRoute(false);
+      setCurrentStepIndex(0);
     }
   }, [
     startRoom,
@@ -1091,6 +1153,34 @@ export default function IndoorNavigation() {
   };
 
   const displayedRoutePoints = getDisplayedRoute();
+  const totalSteps = routeData?.steps?.length ?? 0;
+  const visibleStepIndex =
+    totalSteps > 0 ? Math.min(currentStepIndex, totalSteps - 1) : 0;
+  const canGoToPreviousStep = visibleStepIndex > 0;
+  const canGoToNextStep = visibleStepIndex < totalSteps - 1;
+
+  const handleStepNavigation = useCallback(
+    (delta: -1 | 1) => {
+      if (!routeData?.steps?.length) return;
+
+      setCurrentStepIndex((currentIndex) => {
+        const nextIndex = Math.max(
+          0,
+          Math.min(currentIndex + delta, routeData.steps.length - 1),
+        );
+
+        if (nextIndex !== currentIndex) {
+          const nextFloor = getFloorForStepIndex(routeData, nextIndex);
+          if (nextFloor !== currentFloorRef.current) {
+            syncFloorSelection(nextFloor);
+          }
+        }
+
+        return nextIndex;
+      });
+    },
+    [getFloorForStepIndex, routeData, syncFloorSelection],
+  );
 
   useEffect(() => {
     setActiveBuildingId(buildingId);
@@ -1103,37 +1193,6 @@ export default function IndoorNavigation() {
       displayBuildingName = "Hall Building";
     } else if (buildingId === "VL") {
       displayBuildingName = "Vanier Library Building";
-    }
-  }
-
-  let floorTransitionAction: React.ReactNode = null;
-  if (
-    routeData?.startFloor &&
-    routeData?.endFloor &&
-    routeData.startFloor !== routeData.endFloor
-  ) {
-    if (currentFloor === routeData.startFloor) {
-      floorTransitionAction = (
-        <TouchableOpacity
-          style={styles.transitionButton}
-          onPress={() => handleFloorChange(routeData.endFloor)}
-        >
-          <Text style={styles.transitionButtonText}>
-            Go to Floor {routeData.endFloor}
-          </Text>
-        </TouchableOpacity>
-      );
-    } else if (currentFloor === routeData.endFloor) {
-      floorTransitionAction = (
-        <TouchableOpacity
-          style={styles.transitionButton}
-          onPress={() => handleFloorChange(routeData.startFloor)}
-        >
-          <Text style={styles.transitionButtonText}>
-            Back to Floor {routeData.startFloor}
-          </Text>
-        </TouchableOpacity>
-      );
     }
   }
 
@@ -1257,14 +1316,54 @@ export default function IndoorNavigation() {
         </View>
       )}
 
-      {routeData &&
-        Boolean(routeData.startFloor) &&
-        Boolean(routeData.endFloor) &&
-        routeData.startFloor !== routeData.endFloor && (
-          <View style={styles.floorTransitionContainer}>
-            {floorTransitionAction}
+      {totalSteps > 0 && (
+        <View style={styles.floorTransitionContainer}>
+          <View style={styles.stepNavigationRow}>
+            <TouchableOpacity
+              testID="previous-step-button"
+              style={[
+                styles.stepNavigationButton,
+                !canGoToPreviousStep && styles.stepNavigationButtonDisabled,
+              ]}
+              onPress={() => handleStepNavigation(-1)}
+              disabled={!canGoToPreviousStep}
+            >
+              <Text
+                style={[
+                  styles.stepNavigationButtonText,
+                  !canGoToPreviousStep &&
+                    styles.stepNavigationButtonTextDisabled,
+                ]}
+              >
+                Previous Step
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.stepProgressText}>
+              Step {visibleStepIndex + 1} of {totalSteps}
+            </Text>
+
+            <TouchableOpacity
+              testID="next-step-button"
+              style={[
+                styles.stepNavigationButton,
+                !canGoToNextStep && styles.stepNavigationButtonDisabled,
+              ]}
+              onPress={() => handleStepNavigation(1)}
+              disabled={!canGoToNextStep}
+            >
+              <Text
+                style={[
+                  styles.stepNavigationButtonText,
+                  !canGoToNextStep && styles.stepNavigationButtonTextDisabled,
+                ]}
+              >
+                Next Step
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
+        </View>
+      )}
 
       {universalRouteData?.nextShuttleTime && routePhase === "origin" && (
         <View
@@ -1280,12 +1379,13 @@ export default function IndoorNavigation() {
       )}
 
       {universalRouteData && routePhase === "origin" && (
-        <View style={styles.floorTransitionContainer}>
+        <View style={styles.universalTransitionContainer}>
           <TouchableOpacity
             style={styles.transitionButton}
             onPress={() => {
               setRoutePhase("destination");
               setRouteData(universalRouteData.endIndoorRoute);
+              setCurrentStepIndex(0);
 
               setActiveBuildingId(endBuildingId);
 
@@ -1322,6 +1422,7 @@ export default function IndoorNavigation() {
 
       <DirectionsPanel
         routeData={routeData}
+        currentStepIndex={visibleStepIndex}
         visible={showRouteDetails}
         onClose={() => setShowRouteDetails(false)}
       />
@@ -1440,6 +1541,50 @@ const styles = StyleSheet.create({
     bottom: 260,
     alignSelf: "center",
     zIndex: 15,
+  },
+  universalTransitionContainer: {
+    position: "absolute",
+    bottom: 330,
+    alignSelf: "center",
+    zIndex: 15,
+  },
+  stepNavigationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  stepNavigationButton: {
+    backgroundColor: "#8B1538",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  stepNavigationButtonDisabled: {
+    backgroundColor: "#D7D7D7",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  stepNavigationButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  stepNavigationButtonTextDisabled: {
+    color: "#7A7A7A",
+  },
+  stepProgressText: {
+    color: "#333333",
+    fontSize: 14,
+    fontWeight: "700",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 20,
   },
   transitionButton: {
     backgroundColor: "#8B1538",
