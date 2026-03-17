@@ -184,6 +184,118 @@ const getDisplayBuildingName = (
   return "Building";
 };
 
+const UNIVERSITY_BUILDINGS: BuildingId[] = ["H", "LB", "MB", "VL", "VE", "CC"];
+
+const buildUniversityRoomPromises = (): Array<Promise<string[]>> =>
+  UNIVERSITY_BUILDINGS.flatMap((bId) =>
+    getAvailableFloors(bId).map((floorNum) => getAvailableRooms(bId, floorNum)),
+  );
+
+const isVerticalTransitionStep = (step: IndoorRouteStep): boolean => {
+  const instruction = step.instruction.toLowerCase();
+  return (
+    step.maneuverType === "ELEVATOR_UP" ||
+    step.maneuverType === "ELEVATOR_DOWN" ||
+    step.maneuverType === "STAIRS_UP" ||
+    step.maneuverType === "STAIRS_DOWN" ||
+    step.maneuverType === "ESCALATOR_UP" ||
+    step.maneuverType === "ESCALATOR_DOWN" ||
+    /\btake\b.*\b(elevator|stairs|escalator)\b/.test(instruction)
+  );
+};
+
+const getVerticalTransitionStepIndex = (
+  response: IndoorDirectionResponse | null | undefined,
+): number => {
+  if (!response || response.startFloor === response.endFloor) {
+    return -1;
+  }
+
+  return response.steps.findIndex(isVerticalTransitionStep);
+};
+
+const getFloorForStepIndex = (
+  response: IndoorDirectionResponse | null | undefined,
+  stepIndex: number,
+  fallbackFloor: string,
+): string => {
+  if (!response) {
+    return fallbackFloor;
+  }
+
+  if (response.startFloor === response.endFloor) {
+    return response.steps[stepIndex]?.floor || response.startFloor;
+  }
+
+  const transitionStepIndex = getVerticalTransitionStepIndex(response);
+  if (transitionStepIndex >= 0) {
+    return stepIndex > transitionStepIndex
+      ? response.endFloor
+      : response.startFloor;
+  }
+
+  return response.steps[stepIndex]?.floor || response.startFloor;
+};
+
+const getDisplayedRoutePoints = (
+  routeData: IndoorDirectionResponse | null,
+  currentFloor: string,
+) => {
+  const points = routeData?.routePoints;
+  if (!points || points.length === 0) return undefined;
+
+  const transitionIndex = points.findIndex((point) =>
+    point.label?.startsWith("TRANSITION_"),
+  );
+
+  if (transitionIndex === -1) {
+    return points;
+  }
+
+  const { startFloor, endFloor } = routeData;
+  if (currentFloor === startFloor) {
+    return points.slice(0, transitionIndex + 1);
+  }
+
+  if (currentFloor === endFloor) {
+    return points.slice(transitionIndex + 1);
+  }
+
+  return undefined;
+};
+
+const applySelectedRoom = ({
+  room,
+  selectingFor,
+  buildingId,
+  setStartRoom,
+  setEndRoom,
+  setStartBuildingId,
+  setEndBuildingId,
+  closeSelector,
+}: {
+  room: string;
+  selectingFor: "start" | "end" | null;
+  buildingId: BuildingId;
+  setStartRoom: React.Dispatch<React.SetStateAction<string>>;
+  setEndRoom: React.Dispatch<React.SetStateAction<string>>;
+  setStartBuildingId: React.Dispatch<React.SetStateAction<string>>;
+  setEndBuildingId: React.Dispatch<React.SetStateAction<string>>;
+  closeSelector: () => void;
+}) => {
+  const nextBuildingId = getBuildingFromRoom(room, buildingId);
+
+  if (selectingFor === "start") {
+    setStartRoom(room);
+    setStartBuildingId(nextBuildingId);
+  } else if (selectingFor === "end") {
+    setEndRoom(room);
+    setEndBuildingId(nextBuildingId);
+  }
+
+  closeSelector();
+};
+
 export default function IndoorNavigation() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -251,20 +363,6 @@ export default function IndoorNavigation() {
   const [debugWaypoints, setDebugWaypoints] = useState<Waypoint[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const routeRequestIdRef = useRef(0);
-
-  const buildUniversityRoomPromises = () => {
-    const allBuildings: BuildingId[] = ["H", "LB", "MB", "VL", "VE", "CC"];
-    const roomPromises: Array<Promise<string[]>> = [];
-
-    for (const bId of allBuildings) {
-      const floors = getAvailableFloors(bId);
-      for (const floorNum of floors) {
-        roomPromises.push(getAvailableRooms(bId, floorNum));
-      }
-    }
-
-    return roomPromises;
-  };
 
   const loadAllUniversityRooms = async () => {
     try {
@@ -578,51 +676,6 @@ export default function IndoorNavigation() {
       )
       .map((poi) => poi.id);
 
-  const isVerticalTransitionStep = (step: IndoorRouteStep): boolean => {
-    const instruction = step.instruction.toLowerCase();
-    return (
-      step.maneuverType === "ELEVATOR_UP" ||
-      step.maneuverType === "ELEVATOR_DOWN" ||
-      step.maneuverType === "STAIRS_UP" ||
-      step.maneuverType === "STAIRS_DOWN" ||
-      step.maneuverType === "ESCALATOR_UP" ||
-      step.maneuverType === "ESCALATOR_DOWN" ||
-      /\btake\b.*\b(elevator|stairs|escalator)\b/.test(instruction)
-    );
-  };
-
-  const getVerticalTransitionStepIndex = (
-    response: IndoorDirectionResponse | null | undefined,
-  ): number => {
-    if (!response || response.startFloor === response.endFloor) {
-      return -1;
-    }
-
-    return response.steps.findIndex(isVerticalTransitionStep);
-  };
-
-  const getFloorForStepIndex = (
-    response: IndoorDirectionResponse | null | undefined,
-    stepIndex: number,
-  ): string => {
-    if (!response) {
-      return currentFloorRef.current;
-    }
-
-    if (response.startFloor === response.endFloor) {
-      return response.steps[stepIndex]?.floor || response.startFloor;
-    }
-
-    const transitionStepIndex = getVerticalTransitionStepIndex(response);
-    if (transitionStepIndex >= 0) {
-      return stepIndex > transitionStepIndex
-        ? response.endFloor
-        : response.startFloor;
-    }
-
-    return response.steps[stepIndex]?.floor || response.startFloor;
-  };
-
   const rankDestinationConnectors = (
     originConnector: VerticalConnectorCandidate,
     destinationConnectors: VerticalConnectorCandidate[],
@@ -885,16 +938,20 @@ export default function IndoorNavigation() {
   };
 
   const selectRoom = (room: string) => {
-    if (selectingFor === "start") {
-      setStartRoom(room);
-      setStartBuildingId(getBuildingFromRoom(room, buildingId));
-    } else if (selectingFor === "end") {
-      setEndRoom(room);
-      setEndBuildingId(getBuildingFromRoom(room, buildingId));
-    }
-    setShowRoomList(false);
-    setSelectingFor(null);
-    setSearchQuery("");
+    applySelectedRoom({
+      room,
+      selectingFor,
+      buildingId,
+      setStartRoom,
+      setEndRoom,
+      setStartBuildingId,
+      setEndBuildingId,
+      closeSelector: () => {
+        setShowRoomList(false);
+        setSelectingFor(null);
+        setSearchQuery("");
+      },
+    });
   };
 
   const swapLocations = () => {
@@ -1153,32 +1210,7 @@ export default function IndoorNavigation() {
     Constants.statusBarHeight ||
     (Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 0);
 
-  const getDisplayedRoute = () => {
-    const points = routeData?.routePoints;
-    if (!points || points.length === 0) return undefined;
-
-    const transitionIndex = points.findIndex((p) =>
-      p.label?.startsWith("TRANSITION_"),
-    );
-
-    if (transitionIndex === -1) {
-      return points;
-    }
-
-    const { startFloor, endFloor } = routeData;
-
-    if (currentFloor === startFloor) {
-      return points.slice(0, transitionIndex + 1);
-    }
-
-    if (currentFloor === endFloor) {
-      return points.slice(transitionIndex + 1);
-    }
-
-    return undefined;
-  };
-
-  const displayedRoutePoints = getDisplayedRoute();
+  const displayedRoutePoints = getDisplayedRoutePoints(routeData, currentFloor);
   const totalSteps = routeData?.steps?.length ?? 0;
   const visibleStepIndex =
     totalSteps > 0 ? Math.min(currentStepIndex, totalSteps - 1) : 0;
@@ -1196,7 +1228,11 @@ export default function IndoorNavigation() {
         );
 
         if (nextIndex !== currentIndex) {
-          const nextFloor = getFloorForStepIndex(routeData, nextIndex);
+          const nextFloor = getFloorForStepIndex(
+            routeData,
+            nextIndex,
+            currentFloorRef.current,
+          );
           if (nextFloor !== currentFloorRef.current) {
             syncFloorSelection(nextFloor);
           }
