@@ -514,6 +514,31 @@ describe("IndoorNavigation", () => {
     });
   });
 
+  it("hides the step buttons while the directions panel is open", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId, queryByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+
+    await waitFor(() => {
+      expect(queryByTestId("next-step-button")).toBeNull();
+      expect(queryByTestId("previous-step-button")).toBeNull();
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+  });
+
   it("handles routing error without crashing", async () => {
     (getIndoorDirections as jest.Mock).mockRejectedValue(
       new Error("Network error"),

@@ -105,6 +105,7 @@ export default function IndoorNavigation() {
     null,
   );
   const [showRouteDetails, setShowRouteDetails] = useState<boolean>(false);
+  const [directionsSnapIndex, setDirectionsSnapIndex] = useState<number>(1);
   const [roomPoints, setRoomPoints] = useState<RoomPoint[]>([]);
   const [pois, setPois] = useState<PoiItem[]>([]);
   const [avoidStairs, setAvoidStairs] = useState<boolean>(false);
@@ -165,6 +166,7 @@ export default function IndoorNavigation() {
       setRouteData(null);
       setUniversalRouteData(null);
       setShowRouteDetails(false);
+      setDirectionsSnapIndex(1);
       setShowRoomList(false);
       setSelectingFor(null);
       handleClearRoute();
@@ -898,11 +900,13 @@ export default function IndoorNavigation() {
         setRouteData(response);
         setUniversalRouteData(null);
         setCurrentStepIndex(0);
+        setDirectionsSnapIndex(1);
         syncFloorSelection(response.startFloor);
       } else {
         handleClearRoute();
         setRouteData(null);
         setCurrentStepIndex(0);
+        setDirectionsSnapIndex(1);
       }
     },
     [handleClearRoute, syncFloorSelection],
@@ -917,6 +921,7 @@ export default function IndoorNavigation() {
         setRouteData(response.startIndoorRoute);
         setRoutePhase("origin");
         setCurrentStepIndex(0);
+        setDirectionsSnapIndex(1);
         syncFloorSelection(response.startIndoorRoute.startFloor);
       }
     },
@@ -980,6 +985,7 @@ export default function IndoorNavigation() {
       setRouteData(null);
       setUniversalRouteData(null);
       setCurrentStepIndex(0);
+      setDirectionsSnapIndex(1);
     } finally {
       if (requestId === routeRequestIdRef.current) {
         setIsLoadingRoute(false);
@@ -1084,6 +1090,7 @@ export default function IndoorNavigation() {
       setUniversalRouteData(null);
       setIsLoadingRoute(false);
       setCurrentStepIndex(0);
+      setDirectionsSnapIndex(1);
     }
   }, [
     startRoom,
@@ -1316,7 +1323,7 @@ export default function IndoorNavigation() {
         </View>
       )}
 
-      {totalSteps > 0 && (
+      {totalSteps > 0 && (!showRouteDetails || directionsSnapIndex === 0) && (
         <View style={styles.floorTransitionContainer}>
           <View style={styles.stepNavigationRow}>
             <TouchableOpacity
@@ -1386,6 +1393,7 @@ export default function IndoorNavigation() {
               setRoutePhase("destination");
               setRouteData(universalRouteData.endIndoorRoute);
               setCurrentStepIndex(0);
+              setDirectionsSnapIndex(1);
 
               setActiveBuildingId(endBuildingId);
 
@@ -1415,6 +1423,7 @@ export default function IndoorNavigation() {
           isLoadingRoute={isLoadingRoute}
           showDirections={showRouteDetails}
           onToggleDirections={() => {
+            setDirectionsSnapIndex(1);
             setShowRouteDetails(true);
           }}
         />
@@ -1424,7 +1433,11 @@ export default function IndoorNavigation() {
         routeData={routeData}
         currentStepIndex={visibleStepIndex}
         visible={showRouteDetails}
-        onClose={() => setShowRouteDetails(false)}
+        onClose={() => {
+          setDirectionsSnapIndex(1);
+          setShowRouteDetails(false);
+        }}
+        onSnapIndexChange={setDirectionsSnapIndex}
       />
 
       <RoomListModal
@@ -1538,7 +1551,7 @@ const styles = StyleSheet.create({
 
   floorTransitionContainer: {
     position: "absolute",
-    bottom: 260,
+    bottom: Platform.OS === "ios" ? 170 : 150,
     alignSelf: "center",
     zIndex: 15,
   },

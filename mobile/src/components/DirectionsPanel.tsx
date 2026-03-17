@@ -17,6 +17,7 @@ interface DirectionsPanelProps {
   currentStepIndex?: number;
   visible: boolean;
   onClose: () => void;
+  onSnapIndexChange?: (index: number) => void;
 }
 
 function getIndoorManeuverIcon(
@@ -108,6 +109,7 @@ export default function DirectionsPanel({
   currentStepIndex = 0,
   visible,
   onClose,
+  onSnapIndexChange,
 }: Readonly<DirectionsPanelProps>) {
   const steps = routeData?.steps;
   if (!steps || steps.length === 0) return null;
@@ -132,6 +134,7 @@ export default function DirectionsPanel({
       handleColor="rgba(255,255,255,0.4)"
       contentContainerStyle={styles.drawerContent}
       onClose={onClose}
+      onSnapIndexChange={onSnapIndexChange}
     >
       <PrimaryStep step={firstStep} />
 
