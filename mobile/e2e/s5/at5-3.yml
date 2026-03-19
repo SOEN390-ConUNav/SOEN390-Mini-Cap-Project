@@ -1,0 +1,9 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "Loyola Campus"
+- tapOn:
+    point: "50%,48%"
+- tapOn:
+    point: "50%,48%"
+- tapOn: "Indoor Maps"
