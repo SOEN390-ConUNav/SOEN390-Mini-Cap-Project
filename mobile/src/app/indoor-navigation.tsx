@@ -41,6 +41,10 @@ import {
   getDefaultFloor,
   getAvailableFloors,
 } from "../utils/buildingIndoorMaps";
+import {
+  inferPoiType,
+  getDisplayNameFromRoomId,
+} from "../utils/floorPlanPoiUtils";
 
 const MAX_DURATION_REGEX_INPUT_LENGTH = 128;
 const MAX_DISTANCE_REGEX_INPUT_LENGTH = 64;
@@ -854,25 +858,45 @@ const getWaypointMarkerData = (
       }))
     : undefined;
 
-const getRoomMarkerData = (roomPoints: RoomPoint[]) =>
-  roomPoints.length > 0
-    ? roomPoints.map((room) => ({
-        x: room.x,
-        y: room.y,
-        id: room.id,
-      }))
-    : undefined;
+function splitRoomsAndPois(
+  roomPoints: RoomPoint[],
+  apiPois: PoiItem[],
+): {
+  roomData: RoomMarkerData[] | undefined;
+  poiData: PoiMarker[] | undefined;
+} {
+  const apiPoiIds = new Set(apiPois.map((p) => p.id.toUpperCase()));
+  const rooms: RoomMarkerData[] = [];
+  const pois: PoiMarker[] = [
+    ...apiPois.map((p) => ({
+      x: p.x,
+      y: p.y,
+      id: p.id,
+      displayName: p.displayName,
+      type: p.type,
+    })),
+  ];
 
-const getPoiMarkerData = (pois: PoiItem[]) =>
-  pois.length > 0
-    ? pois.map((poi) => ({
-        x: poi.x,
-        y: poi.y,
-        id: poi.id,
-        displayName: poi.displayName,
-        type: poi.type,
-      }))
-    : undefined;
+  for (const r of roomPoints) {
+    const type = inferPoiType(r.id);
+    if (type && !apiPoiIds.has(r.id.toUpperCase())) {
+      pois.push({
+        x: r.x,
+        y: r.y,
+        id: r.id,
+        displayName: getDisplayNameFromRoomId(r.id),
+        type,
+      });
+    } else if (!type) {
+      rooms.push({ x: r.x, y: r.y, id: r.id });
+    }
+  }
+
+  return {
+    roomData: rooms.length > 0 ? rooms : undefined,
+    poiData: pois.length > 0 ? pois : undefined,
+  };
+}
 
 type DebugWaypointToggleProps = {
   activeBuildingId: string;
@@ -1440,8 +1464,7 @@ export default function IndoorNavigation() {
     showDebugWaypoints,
     debugWaypoints,
   );
-  const roomData = getRoomMarkerData(roomPoints);
-  const poiData = getPoiMarkerData(pois);
+  const { roomData, poiData } = splitRoomsAndPois(roomPoints, pois);
   const showUniversalTransition =
     !!universalRouteData && routePhase === "origin";
 

@@ -429,12 +429,13 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                       'emergency-exit':  { bg: '#F44336', letter: '!',  color: '#fff' },
                       'bathroom-men':    { bg: '#2196F3', letter: 'M',  color: '#fff' },
                       'bathroom-women':  { bg: '#E91E63', letter: 'W',  color: '#fff' },
-                      'water-fountain':  { bg: '#00BCD4', letter: 'W',  color: '#fff' },
+                      'water-fountain':  { bg: '#00BCD4', letter: '💧', color: '#fff' },
                       'computer-station':{ bg: '#9C27B0', letter: 'C',  color: '#fff' },
                       'study-area':      { bg: '#FF9800', letter: 'A',  color: '#fff' },
                       'printer':         { bg: '#607D8B', letter: 'P',  color: '#fff' },
                       'bookshelf':       { bg: '#795548', letter: 'B',  color: '#fff' },
-                      'entrance-exit':   { bg: '#FF5722', letter: 'D',  color: '#fff' }
+                      'entrance-exit':   { bg: '#FF5722', letter: 'D',  color: '#fff' },
+                      'exit':            { bg: '#FF5722', letter: 'D',  color: '#fff' }
                     };
 
                     window.showPois = function(pois) {
