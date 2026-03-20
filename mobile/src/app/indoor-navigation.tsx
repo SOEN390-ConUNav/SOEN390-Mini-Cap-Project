@@ -15,10 +15,8 @@ import {
   getAvailableRooms,
   getRoomPoints,
   getPointsOfInterest,
-  getWaypoints,
   RoomPoint,
   PoiItem,
-  Waypoint,
   getUniversalDirections,
 } from "../api/indoorDirectionsApi";
 import {
@@ -898,43 +896,6 @@ function splitRoomsAndPois(
   };
 }
 
-type DebugWaypointToggleProps = {
-  activeBuildingId: string;
-  showDebugWaypoints: boolean;
-  onToggle: () => void;
-};
-
-const DebugWaypointToggle = ({
-  activeBuildingId,
-  showDebugWaypoints,
-  onToggle,
-}: DebugWaypointToggleProps) => {
-  if (activeBuildingId !== "MB") {
-    return null;
-  }
-
-  return (
-    <View style={styles.debugWaypointContainer}>
-      <TouchableOpacity
-        style={[
-          styles.debugWaypointButton,
-          showDebugWaypoints && styles.debugWaypointButtonActive,
-        ]}
-        onPress={onToggle}
-      >
-        <Text
-          style={[
-            styles.debugWaypointButtonText,
-            showDebugWaypoints && styles.debugWaypointButtonTextActive,
-          ]}
-        >
-          {showDebugWaypoints ? "Hide MB Waypoints" : "Show MB Waypoints"}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
 type StepNavigationControlsProps = {
   totalSteps: number;
   showRouteDetails: boolean;
@@ -1120,8 +1081,6 @@ export default function IndoorNavigation() {
     "origin" | "outdoor" | "destination"
   >("origin");
   const [activeBuildingId, setActiveBuildingId] = useState<string>(buildingId);
-  const [showDebugWaypoints, setShowDebugWaypoints] = useState<boolean>(false);
-  const [debugWaypoints, setDebugWaypoints] = useState<Waypoint[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const routeRequestIdRef = useRef(0);
 
@@ -1350,31 +1309,6 @@ export default function IndoorNavigation() {
     loadPois();
   }, [activeBuildingId, currentFloor]);
 
-  useEffect(() => {
-    if (activeBuildingId !== "MB" || !showDebugWaypoints) {
-      setDebugWaypoints([]);
-      return;
-    }
-
-    const loadWaypoints = async () => {
-      try {
-        const items = await getWaypoints(activeBuildingId, currentFloor);
-        setDebugWaypoints(items);
-      } catch (error) {
-        console.error("Failed to load debug waypoints:", error);
-        setDebugWaypoints([]);
-      }
-    };
-
-    loadWaypoints();
-  }, [activeBuildingId, currentFloor, showDebugWaypoints]);
-
-  useEffect(() => {
-    if (activeBuildingId !== "MB" && showDebugWaypoints) {
-      setShowDebugWaypoints(false);
-    }
-  }, [activeBuildingId, showDebugWaypoints]);
-
   const handlePoiTap = useCallback(
     (poi: PoiMarker) => {
       setEndRoom(poi.id);
@@ -1496,7 +1430,6 @@ export default function IndoorNavigation() {
           buildingId={activeBuildingId}
           floorNumber={currentFloor}
           routePoints={displayedRoutePoints}
-          waypointData={waypointData}
           roomData={roomData}
           poiData={poiData}
           onPoiTap={handlePoiTap}
@@ -1556,12 +1489,6 @@ export default function IndoorNavigation() {
           thumbColor={avoidStairs ? "#fff" : "#f4f3f4"}
         />
       </View>
-
-      <DebugWaypointToggle
-        activeBuildingId={activeBuildingId}
-        showDebugWaypoints={showDebugWaypoints}
-        onToggle={() => setShowDebugWaypoints((current) => !current)}
-      />
 
       <StepNavigationControls
         totalSteps={totalSteps}
@@ -1706,37 +1633,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#333",
   },
-  debugWaypointContainer: {
-    position: "absolute",
-    top: 262,
-    right: 16,
-    zIndex: 12,
-  },
-  debugWaypointButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: "#8B1538",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-  },
-  debugWaypointButtonActive: {
-    backgroundColor: "#8B1538",
-  },
-  debugWaypointButtonText: {
-    color: "#8B1538",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  debugWaypointButtonTextActive: {
-    color: "#FFFFFF",
-  },
-
   floorTransitionContainer: {
     position: "absolute",
     bottom: Platform.OS === "ios" ? 170 : 150,

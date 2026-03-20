@@ -7,7 +7,6 @@ import {
   getIndoorDirections,
   getPointsOfInterest,
   getRoomPoints,
-  getWaypoints,
   getUniversalDirections,
 } from "../api/indoorDirectionsApi";
 
@@ -37,7 +36,6 @@ jest.mock("../api/indoorDirectionsApi", () => ({
   getAvailableRooms: jest.fn(),
   getRoomPoints: jest.fn(),
   getPointsOfInterest: jest.fn(),
-  getWaypoints: jest.fn(),
   getUniversalDirections: jest.fn(),
 }));
 
@@ -55,9 +53,6 @@ jest.mock("../components/FloorPlanWebView", () => {
       <View testID="floor-plan-webview">
         <Text testID="route-point-count">
           {String(props.routePoints?.length ?? 0)}
-        </Text>
-        <Text testID="waypoint-count">
-          {String(props.waypointData?.length ?? 0)}
         </Text>
         <Pressable
           testID="sim-poi-tap"
@@ -247,7 +242,6 @@ describe("IndoorNavigation", () => {
     (getPointsOfInterest as jest.Mock).mockResolvedValue([
       { id: "POI-1", x: 4, y: 5, displayName: "Cafe", type: "food" },
     ]);
-    (getWaypoints as jest.Mock).mockResolvedValue([]);
     (getUniversalDirections as jest.Mock).mockResolvedValue({
       startIndoorRoute: null,
       outdoorRoute: null,
@@ -1275,47 +1269,6 @@ describe("IndoorNavigation", () => {
         false,
       );
     });
-  });
-
-  it("loads MB debug waypoints when the toggle is enabled", async () => {
-    mockParams = { buildingId: "MB", floor: "S2" };
-    (getWaypoints as jest.Mock).mockResolvedValue([
-      { id: "WP-1", x: 10, y: 20 },
-      { id: "WP-2", x: 30, y: 40 },
-    ]);
-
-    const { getByText, getByTestId } = render(<IndoorNavigation />);
-
-    fireEvent.press(getByText("Show MB Waypoints"));
-
-    await waitFor(() => {
-      expect(getWaypoints).toHaveBeenCalledWith("MB", "S2");
-      expect(getByTestId("waypoint-count").props.children).toBe("2");
-    });
-  });
-
-  it("clears MB debug waypoints when loading fails", async () => {
-    mockParams = { buildingId: "MB", floor: "S2" };
-    const consoleSpy = jest
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    (getWaypoints as jest.Mock).mockRejectedValue(
-      new Error("waypoint fetch failed"),
-    );
-
-    const { getByText, getByTestId } = render(<IndoorNavigation />);
-
-    fireEvent.press(getByText("Show MB Waypoints"));
-
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to load debug waypoints:",
-        expect.any(Error),
-      );
-      expect(getByTestId("waypoint-count").props.children).toBe("0");
-    });
-
-    consoleSpy.mockRestore();
   });
 
   it("parses MB building floor from MB-floor-room ids such as MB-S2-330", async () => {
