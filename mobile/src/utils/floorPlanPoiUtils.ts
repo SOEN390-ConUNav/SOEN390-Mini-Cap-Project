@@ -35,6 +35,6 @@ export function getDisplayNameFromRoomId(roomId: string): string {
       .split("-")
       .slice(1)
       .join(" ")
-      .replace(/([a-z])([A-Z])/g, "$1 $2") || roomId
+      .replaceAll(/([a-z])([A-Z])/g, "$1 $2") || roomId
   );
 }
