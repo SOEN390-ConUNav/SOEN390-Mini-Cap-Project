@@ -242,7 +242,6 @@ describe("IndoorNavigation", () => {
     (getPointsOfInterest as jest.Mock).mockResolvedValue([
       { id: "POI-1", x: 4, y: 5, displayName: "Cafe", type: "food" },
     ]);
-    (getWaypoints as jest.Mock).mockResolvedValue([]);
     (getUniversalDirections as jest.Mock).mockResolvedValue({
       startIndoorRoute: null,
       outdoorRoute: null,
