@@ -843,19 +843,6 @@ const navigateStep = ({
   });
 };
 
-const getWaypointMarkerData = (
-  activeBuildingId: string,
-  showDebugWaypoints: boolean,
-  debugWaypoints: Waypoint[],
-) =>
-  showDebugWaypoints && activeBuildingId === "MB" && debugWaypoints.length > 0
-    ? debugWaypoints.map((wp) => ({
-        x: wp.x,
-        y: wp.y,
-        id: wp.id,
-      }))
-    : undefined;
-
 function splitRoomsAndPois(
   roomPoints: RoomPoint[],
   apiPois: PoiItem[],
@@ -1393,11 +1380,6 @@ export default function IndoorNavigation() {
     totalSteps > 0 ? Math.min(currentStepIndex, totalSteps - 1) : 0;
   const canGoToPreviousStep = visibleStepIndex > 0;
   const canGoToNextStep = visibleStepIndex < totalSteps - 1;
-  const waypointData = getWaypointMarkerData(
-    activeBuildingId,
-    showDebugWaypoints,
-    debugWaypoints,
-  );
   const { roomData, poiData } = splitRoomsAndPois(roomPoints, pois);
   const showUniversalTransition =
     !!universalRouteData && routePhase === "origin";
