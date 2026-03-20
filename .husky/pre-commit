@@ -2,7 +2,12 @@
 
 FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-MOBILE_FILES=$(printf "%s\n" "$FILES" | sed -n '/^mobile\//p')
+# Prettier has no parser for these — exclude or the hook exits 1
+MOBILE_FILES=$(
+  printf "%s\n" "$FILES" |
+    sed -n '/^mobile\//p' |
+    grep -vE '\.gitignore$|\.prettierignore$|package-lock\.json$|\.env(\.|$)'
+)
 
 if [ -n "$MOBILE_FILES" ]; then
   echo "📱 Formatting mobile files..."
