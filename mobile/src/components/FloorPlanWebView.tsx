@@ -32,16 +32,11 @@ interface FloorPlanWebViewProps {
   routePoints?: RoutePoint[];
   poiData?: PoiMarker[];
   roomData?: RoomMarkerData[];
-  waypointData?: Array<{ x: number; y: number; id: string }>;
 }
 
 export interface FloorPlanWebViewRef {
   drawRoute: (routePoints: RoutePoint[]) => void;
   clearRoute: () => void;
-  showWaypoints: (
-    waypoints: Array<{ x: number; y: number; id: string }>,
-  ) => void;
-  hideWaypoints: () => void;
   showRoomMarkers: (
     roomPoints: Array<{ x: number; y: number; id: string }>,
   ) => void;
@@ -94,7 +89,6 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       routePoints: propRoutePoints,
       poiData,
       roomData,
-      waypointData,
     },
     ref,
   ) => {
@@ -306,51 +300,6 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                           if (el && el.parentNode) el.parentNode.removeChild(el);
                         } catch(e) {}
                       });
-                    };
-                    
-                    window.showWaypoints = function(waypoints) {
-                      try {
-                        if (!waypoints || waypoints.length === 0) return;
-                        window.hideWaypoints();
-                        
-                        var g = document.createElementNS(SVG_NS, 'g');
-                        g.id = 'waypointsGroup';
-                        g.setAttribute('style', 'pointer-events: none;');
-                        
-                        waypoints.forEach(function(wp, index) {
-                          var circle = document.createElementNS(SVG_NS, 'circle');
-                          circle.setAttribute('cx', wp.x.toString());
-                          circle.setAttribute('cy', wp.y.toString());
-                          circle.setAttribute('r', '10');
-                          circle.setAttribute('fill', '#4285F4');
-                          circle.setAttribute('stroke', '#FFFFFF');
-                          circle.setAttribute('stroke-width', '3');
-                          
-                          var text = document.createElementNS(SVG_NS, 'text');
-                          text.setAttribute('x', wp.x.toString());
-                          text.setAttribute('y', (wp.y - 15).toString());
-                          text.setAttribute('font-size', '14');
-                          text.setAttribute('fill', '#FF0000');
-                          text.setAttribute('text-anchor', 'middle');
-                          text.setAttribute('font-weight', 'bold');
-                          text.setAttribute('style', 'pointer-events: none;');
-                          text.textContent = String(index + 1);
-                          
-                          g.appendChild(circle);
-                          g.appendChild(text);
-                        });
-                        
-                        svg.appendChild(g);
-                      } catch(e) {
-                        console.error('Error showing waypoints:', e);
-                      }
-                    };
-                    
-                    window.hideWaypoints = function() {
-                      try {
-                        var g = svg.querySelector('#waypointsGroup');
-                        if (g && g.parentNode) g.parentNode.removeChild(g);
-                      } catch(e) {}
                     };
                     
                     window.showRoomMarkers = function(roomPoints) {
@@ -598,30 +547,6 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
     React.useEffect(() => {
       if (!isWebViewReady || !webViewRef.current) return;
 
-      if (waypointData && waypointData.length > 0) {
-        const waypointsJson = JSON.stringify(waypointData);
-        setTimeout(() => {
-          webViewRef.current?.injectJavaScript(`
-          (function() {
-            try { if (typeof window.showWaypoints === 'function') window.showWaypoints(${waypointsJson}); }
-            catch(e) { console.error('Error auto-showing waypoints:', e); }
-            true;
-          })();
-        `);
-        }, 250);
-      } else {
-        webViewRef.current?.injectJavaScript(`
-        (function() {
-          if (typeof window.hideWaypoints === 'function') window.hideWaypoints();
-          true;
-        })();
-      `);
-      }
-    }, [isWebViewReady, waypointData]);
-
-    React.useEffect(() => {
-      if (!isWebViewReady || !webViewRef.current) return;
-
       if (roomData && roomData.length > 0) {
         const roomsJson = JSON.stringify(roomData);
         setTimeout(() => {
@@ -670,25 +595,6 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           if (!webViewRef.current) return;
           webViewRef.current.injectJavaScript(`
         (function() { if (window.clearRoute) window.clearRoute(); true; })();
-      `);
-        },
-        showWaypoints: (
-          waypoints: Array<{ x: number; y: number; id: string }>,
-        ) => {
-          if (!webViewRef.current || !isWebViewReady) return;
-          const waypointsJson = JSON.stringify(waypoints);
-          webViewRef.current.injectJavaScript(`
-        (function() {
-          try { if (typeof window.showWaypoints === 'function') window.showWaypoints(${waypointsJson}); }
-          catch(e) { console.error('Error in showWaypoints:', e); }
-          true;
-        })();
-      `);
-        },
-        hideWaypoints: () => {
-          if (!webViewRef.current) return;
-          webViewRef.current.injectJavaScript(`
-        (function() { if (typeof window.hideWaypoints === 'function') window.hideWaypoints(); true; })();
       `);
         },
         showRoomMarkers: (
