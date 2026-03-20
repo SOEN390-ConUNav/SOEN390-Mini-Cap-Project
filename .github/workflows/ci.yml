@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   changes:
@@ -38,7 +39,7 @@ jobs:
   backend:
     name: Backend (Spring Boot) - build/test
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -78,10 +79,19 @@ jobs:
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
 
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Backend Test Results
+          path: backend/target/surefire-reports/TEST-*.xml
+          reporter: java-junit
+          fail-on-error: false
+
   mobile:
     name: Mobile (Expo) - install/doctor
     needs: changes
-    if: needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.mobile == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -111,3 +121,17 @@ jobs:
 
       - name: Expo doctor
         run: npx expo-doctor
+
+      - name: Run unit tests
+        run: npm test -- --watchAll=false --ci
+        env:
+          CI: true
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Test Results
+          path: mobile/test-results/junit.xml
+          reporter: jest-junit
+          fail-on-error: false

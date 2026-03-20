@@ -14,7 +14,12 @@ const mockSetParams = jest.fn();
 const mockDrawRoute = jest.fn();
 const mockClearRoute = jest.fn();
 
-let mockParams: { buildingId?: string; floor?: string } = {
+let mockParams: {
+  buildingId?: string;
+  floor?: string;
+  startRoom?: string;
+  endRoom?: string;
+} = {
   buildingId: "H",
   floor: "8",
 };
@@ -120,6 +125,15 @@ jest.mock("../components/RoomListModal", () => {
         >
           <Text>Pick VL Room</Text>
         </Pressable>
+        <Pressable
+          testID="pick-room-unknown"
+          onPress={() => props.onSelectRoom("UNKNOWN")}
+        >
+          <Text>Pick Unknown Room</Text>
+        </Pressable>
+        <Pressable testID="close-room-modal" onPress={props.onClose}>
+          <Text>Close Room Modal</Text>
+        </Pressable>
       </View>
     );
   };
@@ -148,15 +162,72 @@ jest.mock("../components/BottomPanel", () => {
 });
 
 jest.mock("../components/DirectionsPanel", () => {
-  const { Text } = require("react-native");
+  const { Text, Pressable, View } = require("react-native");
   return (props: any) => {
     if (!props.visible) return null;
     return (
-      <Text testID="directions-panel">
-        Steps: {props.routeData?.steps?.length ?? 0}
-      </Text>
+      <View>
+        <Text testID="directions-panel">
+          Steps: {props.routeData?.steps?.length ?? 0}
+        </Text>
+        <Pressable
+          testID="collapse-directions"
+          onPress={() => props.onSnapIndexChange?.(0)}
+        >
+          <Text>Collapse Directions</Text>
+        </Pressable>
+        <Pressable
+          testID="expand-directions"
+          onPress={() => props.onSnapIndexChange?.(1)}
+        >
+          <Text>Expand Directions</Text>
+        </Pressable>
+        <Pressable testID="close-directions" onPress={props.onClose}>
+          <Text>Close Directions</Text>
+        </Pressable>
+      </View>
     );
   };
+});
+
+const buildCrossFloorRoute = (overrides: Record<string, unknown> = {}) => ({
+  distance: "50 m",
+  duration: "3 min",
+  buildingName: "Hall Building",
+  buildingId: "Hall-8",
+  startFloor: "8",
+  endFloor: "9",
+  steps: [
+    {
+      instruction: "Walk to the elevator",
+      distance: "10 m",
+      duration: "1 min",
+      floor: "8",
+      maneuverType: "STRAIGHT",
+    },
+    {
+      instruction: "Take elevator to floor 9",
+      distance: "0 m",
+      duration: "1 min",
+      floor: "9",
+      maneuverType: "ELEVATOR_UP",
+    },
+    {
+      instruction: "Continue to H9-903",
+      distance: "15 m",
+      duration: "1 min",
+      floor: "9",
+      maneuverType: "STRAIGHT",
+    },
+  ],
+  polyline: "",
+  routePoints: [
+    { x: 10, y: 20, label: "H8-801" },
+    { x: 15, y: 25, label: "TRANSITION_8_TO_9" },
+    { x: 20, y: 30, label: "H9-903" },
+  ],
+  stairMessage: null,
+  ...overrides,
 });
 
 describe("IndoorNavigation", () => {
@@ -220,17 +291,12 @@ describe("IndoorNavigation", () => {
     expect(getByText("🚶 Use stairs between sections")).toBeTruthy();
   });
 
-  it("handles multi-floor routes and floor transition buttons", async () => {
-    (getIndoorDirections as jest.Mock).mockResolvedValue({
-      startFloor: "8",
-      endFloor: "9",
-      routePoints: [
-        { x: 10, y: 20, label: "TRANSITION_STAIRS" },
-        { x: 30, y: 40 },
-      ],
-    });
+  it("handles multi-floor step navigation and changes floors after the elevator step", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
 
-    const { getByTestId, getByText } = render(<IndoorNavigation />);
+    const { getByTestId } = render(<IndoorNavigation />);
 
     fireEvent.press(getByTestId("open-start"));
     fireEvent.press(getByTestId("pick-room-first"));
@@ -238,13 +304,19 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("pick-room-second"));
 
     await waitFor(() => {
-      expect(getByText("Go to Floor 9")).toBeTruthy();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(getByTestId("route-point-count").props.children).toBe("2");
     });
 
-    fireEvent.press(getByText("Go to Floor 9"));
+    fireEvent.press(getByTestId("next-step-button"));
+
+    expect(mockSetParams).not.toHaveBeenCalledWith({ floor: "9" });
+
+    fireEvent.press(getByTestId("next-step-button"));
 
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
+      expect(getByTestId("route-point-count").props.children).toBe("1");
     });
   });
 
@@ -327,6 +399,31 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
       expect(mockClearRoute).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps a cross-floor route when manually changing floors", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getByTestId("route-point-count").props.children).toBe("2");
+    });
+
+    fireEvent.press(getByTestId("change-floor"));
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
+      expect(getByTestId("route-point-count").props.children).toBe("1");
+      expect(getByTestId("next-step-button")).toBeTruthy();
     });
   });
 
@@ -434,25 +531,12 @@ describe("IndoorNavigation", () => {
     expect(getByTestId("end-room-value").props.children).toBe("");
   });
 
-  it("shows floor transition button when route spans multiple floors", async () => {
-    (getIndoorDirections as jest.Mock).mockResolvedValue({
-      distance: "50m",
-      duration: "3 min",
-      buildingName: "Hall Building",
-      buildingId: "Hall-8",
-      startFloor: "8",
-      endFloor: "9",
-      steps: [],
-      polyline: "",
-      routePoints: [
-        { x: 10, y: 20, label: "H8-801" },
-        { x: 15, y: 25, label: "TRANSITION_STAIRS_TO_9" },
-        { x: 20, y: 30, label: "H9-903" },
-      ],
-      stairMessage: null,
-    });
+  it("shows previous and next step buttons when route spans multiple floors", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
 
-    const { getByTestId, getByText } = render(<IndoorNavigation />);
+    const { getByTestId } = render(<IndoorNavigation />);
 
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
@@ -462,7 +546,70 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("pick-room-second"));
 
     await waitFor(() => {
-      expect(getByText("Go to Floor 9")).toBeTruthy();
+      expect(getByTestId("previous-step-button")).toBeTruthy();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+  });
+
+  it("hides the step buttons while the directions panel is open", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId, queryByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+
+    await waitFor(() => {
+      expect(queryByTestId("next-step-button")).toBeNull();
+      expect(queryByTestId("previous-step-button")).toBeNull();
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+  });
+
+  it("shows the step buttons again when the directions panel is collapsed", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId, queryByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+
+    await waitFor(() => {
+      expect(queryByTestId("next-step-button")).toBeNull();
+    });
+
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByTestId("previous-step-button")).toBeTruthy();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("expand-directions"));
+
+    await waitFor(() => {
+      expect(queryByTestId("next-step-button")).toBeNull();
+      expect(queryByTestId("previous-step-button")).toBeNull();
     });
   });
 
@@ -518,25 +665,12 @@ describe("IndoorNavigation", () => {
     expect(getByTestId("route-point-count").props.children).toBe("0");
   });
 
-  it("shows floor transition buttons for multi-floor route", async () => {
-    (getIndoorDirections as jest.Mock).mockResolvedValue({
-      distance: "50m",
-      duration: "3 min",
-      buildingName: "Hall Building",
-      buildingId: "Hall-8",
-      startFloor: "8",
-      endFloor: "9",
-      steps: [],
-      polyline: "",
-      routePoints: [
-        { x: 10, y: 20, label: "H8-801" },
-        { x: 15, y: 25, label: "TRANSITION_STAIRS_TO_9" },
-        { x: 20, y: 30, label: "H9-903" },
-      ],
-      stairMessage: null,
-    });
+  it("updates the visible segment when advancing and retracing steps", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
 
-    const { getByTestId, getByText } = render(<IndoorNavigation />);
+    const { getByTestId } = render(<IndoorNavigation />);
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
@@ -544,8 +678,23 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-second"));
 
-    await waitFor(() => expect(getByText("Go to Floor 9")).toBeTruthy());
-    fireEvent.press(getByText("Go to Floor 9"));
+    await waitFor(() => {
+      expect(getByTestId("route-point-count").props.children).toBe("2");
+    });
+
+    fireEvent.press(getByTestId("next-step-button"));
+    fireEvent.press(getByTestId("next-step-button"));
+
+    await waitFor(() => {
+      expect(getByTestId("route-point-count").props.children).toBe("1");
+    });
+
+    fireEvent.press(getByTestId("previous-step-button"));
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
+      expect(getByTestId("route-point-count").props.children).toBe("2");
+    });
   });
 
   it("displays Hall Building when buildingId is H and no route", async () => {
@@ -683,5 +832,887 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(getByTestId("selecting-for").props.children).toBe("start");
     });
+  });
+
+  it("poi tap sets destination and opens start picker when no start room exists", async () => {
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("sim-poi-tap"));
+
+    await waitFor(() => {
+      expect(getByTestId("end-room-value").props.children).toBe("VL-101");
+      expect(getByTestId("selecting-for").props.children).toBe("start");
+    });
+  });
+
+  it("falls back to split cross-floor routing when direct cross-floor response is incomplete", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "8",
+      startRoom: "H8-801",
+      endRoom: "H9-937",
+    };
+
+    (getAvailableRooms as jest.Mock).mockImplementation(
+      (_building: string, floor: string) => {
+        if (floor === "8")
+          return Promise.resolve(["H8-801", "H8-Main-Elevator"]);
+        if (floor === "9")
+          return Promise.resolve(["H9-937", "H9-Main-Elevator"]);
+        return Promise.resolve(["H8-801", "H9-937"]);
+      },
+    );
+    (getRoomPoints as jest.Mock).mockResolvedValue([
+      { id: "H9-Main-Elevator", x: 10, y: 10 },
+      { id: "H9-937", x: 25, y: 10 },
+    ]);
+    (getPointsOfInterest as jest.Mock).mockResolvedValue([]);
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (
+        _building: string,
+        origin: string,
+        destination: string,
+        startFloor: string,
+        endFloor: string,
+      ) => {
+        if (origin === "H8-801" && destination === "H9-937") {
+          return Promise.resolve({
+            distance: "15 m",
+            duration: "2 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (
+          origin === "H8-801" &&
+          destination === "H8-Main-Elevator" &&
+          startFloor === "8" &&
+          endFloor === "8"
+        ) {
+          return Promise.resolve({
+            distance: "20 m",
+            duration: "3 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "8",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (
+          origin === "H9-Main-Elevator" &&
+          destination === "H9-937" &&
+          startFloor === "9" &&
+          endFloor === "9"
+        ) {
+          return Promise.resolve({
+            distance: "40 m",
+            duration: "5 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 3, y: 3, label: "H9-Main-Elevator" },
+              { x: 20, y: 20, label: "H9-937" },
+            ],
+            stairMessage: null,
+          });
+        }
+        return Promise.reject(
+          new Error(`Unexpected path request: ${origin} -> ${destination}`),
+        );
+      },
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H8-801",
+        "H9-937",
+        "8",
+        "9",
+        false,
+      );
+    });
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H8-801",
+        "H8-Main-Elevator",
+        "8",
+        "8",
+        false,
+      );
+    });
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H9-Main-Elevator",
+        "H9-937",
+        "9",
+        "9",
+        false,
+      );
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+  });
+
+  it("retries split routing without avoid-stairs when avoid-stairs split cannot find a path", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "8",
+      startRoom: "H8-801",
+      endRoom: "H9-937",
+    };
+
+    (getAvailableRooms as jest.Mock).mockImplementation(
+      (_building: string, floor: string) => {
+        if (floor === "8")
+          return Promise.resolve(["H8-801", "H8-Main-Elevator"]);
+        if (floor === "9")
+          return Promise.resolve(["H9-937", "H9-Main-Elevator"]);
+        return Promise.resolve(["H8-801", "H9-937"]);
+      },
+    );
+    (getRoomPoints as jest.Mock).mockResolvedValue([
+      { id: "H9-Main-Elevator", x: 10, y: 10 },
+      { id: "H9-937", x: 25, y: 10 },
+    ]);
+    (getPointsOfInterest as jest.Mock).mockResolvedValue([]);
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (
+        _building: string,
+        origin: string,
+        destination: string,
+        _startFloor: string,
+        _endFloor: string,
+        avoidStairs: boolean,
+      ) => {
+        if (origin === "H8-801" && destination === "H9-937") {
+          return Promise.resolve({
+            distance: "15 m",
+            duration: "2 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H8-801" && destination === "H8-Main-Elevator") {
+          if (avoidStairs)
+            return Promise.reject(new Error("No elevator route"));
+          return Promise.resolve({
+            distance: "20 m",
+            duration: "3 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "8",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H9-Main-Elevator" && destination === "H9-937") {
+          if (avoidStairs)
+            return Promise.reject(new Error("No elevator route"));
+          return Promise.resolve({
+            distance: "40 m",
+            duration: "5 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 3, y: 3, label: "H9-Main-Elevator" },
+              { x: 20, y: 20, label: "H9-937" },
+            ],
+            stairMessage: null,
+          });
+        }
+        return Promise.reject(
+          new Error(`Unexpected path request: ${origin} -> ${destination}`),
+        );
+      },
+    );
+
+    const { UNSAFE_getByType } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H8-801",
+        "H9-937",
+        "8",
+        "9",
+        false,
+      );
+    });
+
+    (getIndoorDirections as jest.Mock).mockClear();
+
+    fireEvent(UNSAFE_getByType(Switch), "valueChange", true);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H8-801",
+        "H8-Main-Elevator",
+        "8",
+        "8",
+        true,
+      );
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H8-801",
+        "H8-Main-Elevator",
+        "8",
+        "8",
+        false,
+      );
+    });
+  });
+
+  it("builds a descending elevator transition when avoid-stairs split routing succeeds", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "9",
+      startRoom: "H9-937",
+      endRoom: "H8-801",
+    };
+
+    (getAvailableRooms as jest.Mock).mockImplementation(
+      (_building: string, floor: string) => {
+        if (floor === "9")
+          return Promise.resolve(["H9-937", "H9-Main-Elevator"]);
+        if (floor === "8")
+          return Promise.resolve(["H8-801", "H8-Main-Elevator"]);
+        return Promise.resolve(["H8-801", "H9-937"]);
+      },
+    );
+    (getRoomPoints as jest.Mock).mockResolvedValue([
+      { id: "H8-Main-Elevator", x: 10, y: 10 },
+      { id: "H8-801", x: 25, y: 10 },
+    ]);
+    (getPointsOfInterest as jest.Mock).mockResolvedValue([]);
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (
+        _building: string,
+        origin: string,
+        destination: string,
+        startFloor: string,
+        endFloor: string,
+        avoidStairs: boolean,
+      ) => {
+        if (origin === "H9-937" && destination === "H8-801") {
+          return Promise.resolve({
+            distance: "15 m",
+            duration: "2 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "8",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 20, y: 20, label: "H9-937" },
+              { x: 3, y: 3, label: "H9-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (
+          origin === "H9-937" &&
+          destination === "H9-Main-Elevator" &&
+          startFloor === "9" &&
+          endFloor === "9" &&
+          avoidStairs
+        ) {
+          return Promise.resolve({
+            distance: "20 m",
+            duration: "3 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 20, y: 20, label: "H9-937" },
+              { x: 3, y: 3, label: "H9-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (
+          origin === "H8-Main-Elevator" &&
+          destination === "H8-801" &&
+          startFloor === "8" &&
+          endFloor === "8" &&
+          avoidStairs
+        ) {
+          return Promise.resolve({
+            distance: "40 m",
+            duration: "5 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "8",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+              { x: 0, y: 0, label: "H8-801" },
+            ],
+            stairMessage: null,
+          });
+        }
+        return Promise.reject(
+          new Error(`Unexpected path request: ${origin} -> ${destination}`),
+        );
+      },
+    );
+
+    const { getByTestId, UNSAFE_getByType } = render(<IndoorNavigation />);
+
+    fireEvent(UNSAFE_getByType(Switch), "valueChange", true);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H9-937",
+        "H9-Main-Elevator",
+        "9",
+        "9",
+        true,
+      );
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H8-Main-Elevator",
+        "H8-801",
+        "8",
+        "8",
+        true,
+      );
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+  });
+
+  it("parses basement floor from room id and falls back to current floor for unknown room ids", async () => {
+    (getAvailableRooms as jest.Mock).mockResolvedValue(["UNKNOWN", "ZZ-S2"]);
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "12 m",
+      duration: "1 min",
+      buildingName: "Hall Building",
+      buildingId: "H",
+      startFloor: "S2",
+      endFloor: "8",
+      steps: [],
+      polyline: "",
+      routePoints: [
+        { x: 0, y: 0, label: "ZZ-S2" },
+        { x: 1, y: 1, label: "TRANSITION_S2_TO_8" },
+        { x: 2, y: 2, label: "UNKNOWN" },
+      ],
+      stairMessage: null,
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-unknown"));
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "ZZ-S2",
+        "UNKNOWN",
+        "S2",
+        "8",
+        false,
+      );
+    });
+  });
+
+  it("parses MB building floor from MB-floor-room ids such as MB-S2-330", async () => {
+    mockParams = {
+      buildingId: "MB",
+      floor: "S2",
+      startRoom: "MB-Elevator-Main",
+      endRoom: "MB-S2-330",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "20 m",
+      duration: "2 min",
+      buildingName: "John Molson Building",
+      buildingId: "MB",
+      startFloor: "S2",
+      endFloor: "S2",
+      steps: [],
+      polyline: "",
+      routePoints: [
+        { x: 0, y: 0, label: "MB-Elevator-Main" },
+        { x: 1, y: 1, label: "MB-S2-330" },
+      ],
+      stairMessage: null,
+    });
+
+    render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "MB",
+        "MB-Elevator-Main",
+        "MB-S2-330",
+        "S2",
+        "S2",
+        false,
+      );
+    });
+  });
+
+  it("parses compact MB basement room ids such as MBS2-Entrance-Exit", async () => {
+    mockParams = {
+      buildingId: "MB",
+      floor: "S2",
+      startRoom: "MBS2-Entrance-Exit",
+      endRoom: "MB-S2-330",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "20 m",
+      duration: "2 min",
+      buildingName: "John Molson Building",
+      buildingId: "MB",
+      startFloor: "S2",
+      endFloor: "S2",
+      steps: [],
+      polyline: "",
+      routePoints: [
+        { x: 0, y: 0, label: "MBS2-Entrance-Exit" },
+        { x: 1, y: 1, label: "MB-S2-330" },
+      ],
+      stairMessage: null,
+    });
+
+    render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "MB",
+        "MBS2-Entrance-Exit",
+        "MB-S2-330",
+        "S2",
+        "S2",
+        false,
+      );
+    });
+  });
+
+  it("uses reverse same-floor leg when direct destination leg is missing", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "8",
+      startRoom: "H8-801",
+      endRoom: "H9-937",
+    };
+
+    (getAvailableRooms as jest.Mock).mockImplementation(
+      (_building: string, floor: string) => {
+        if (floor === "8")
+          return Promise.resolve(["H8-801", "H8-Main-Elevator"]);
+        if (floor === "9")
+          return Promise.resolve(["H9-937", "H9-Main-Elevator"]);
+        return Promise.resolve(["H8-801", "H9-937"]);
+      },
+    );
+    (getPointsOfInterest as jest.Mock).mockResolvedValue([]);
+    (getRoomPoints as jest.Mock).mockResolvedValue([]);
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (_building: string, origin: string, destination: string) => {
+        if (origin === "H8-801" && destination === "H9-937") {
+          return Promise.resolve({
+            distance: "15 m",
+            duration: "2 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H8-801" && destination === "H8-Main-Elevator") {
+          return Promise.resolve({
+            distance: "20 m",
+            duration: "3 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "8",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H9-Main-Elevator" && destination === "H9-937") {
+          return Promise.resolve({
+            distance: "0 m",
+            duration: "0 sec",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H9-937" && destination === "H9-Main-Elevator") {
+          return Promise.resolve({
+            distance: "30 m",
+            duration: "4 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 20, y: 20, label: "H9-937" },
+              { x: 3, y: 3, label: "H9-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        return Promise.reject(
+          new Error(`Unexpected path request: ${origin} -> ${destination}`),
+        );
+      },
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H9-937",
+        "H9-Main-Elevator",
+        "9",
+        "9",
+        false,
+      );
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+  });
+
+  it("builds a synthetic destination leg when direct and reverse destination legs are unavailable", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "8",
+      startRoom: "H8-801",
+      endRoom: "H9-937",
+    };
+
+    (getAvailableRooms as jest.Mock).mockImplementation(
+      (_building: string, floor: string) => {
+        if (floor === "8")
+          return Promise.resolve(["H8-801", "H8-Main-Elevator"]);
+        if (floor === "9")
+          return Promise.resolve(["H9-937", "H9-Main-Elevator"]);
+        return Promise.resolve(["H8-801", "H9-937"]);
+      },
+    );
+    (getPointsOfInterest as jest.Mock).mockResolvedValue([]);
+    (getRoomPoints as jest.Mock).mockResolvedValue([
+      { id: "H9-Main-Elevator", x: 0, y: 0 },
+      { id: "H9-937", x: 1700, y: 0 },
+    ]);
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (_building: string, origin: string, destination: string) => {
+        if (origin === "H8-801" && destination === "H9-937") {
+          return Promise.resolve({
+            distance: "15 m",
+            duration: "2 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H8-801" && destination === "H8-Main-Elevator") {
+          return Promise.resolve({
+            distance: "1.2 km",
+            duration: "1 hour 5 mins",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "8",
+            endFloor: "8",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 0, y: 0, label: "H8-801" },
+              { x: 3, y: 3, label: "H8-Main-Elevator" },
+            ],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H9-Main-Elevator" && destination === "H9-937") {
+          return Promise.resolve({
+            distance: "0 m",
+            duration: "0 sec",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [],
+            stairMessage: null,
+          });
+        }
+        if (origin === "H9-937" && destination === "H9-Main-Elevator") {
+          return Promise.resolve({
+            distance: "0 m",
+            duration: "0 sec",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "9",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [],
+            stairMessage: null,
+          });
+        }
+        return Promise.reject(
+          new Error(`Unexpected path request: ${origin} -> ${destination}`),
+        );
+      },
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H9-Main-Elevator",
+        "H9-937",
+        "9",
+        "9",
+        false,
+      );
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+
+    await waitFor(() => {
+      expect(getByTestId("directions-panel").props.children).toContain(3);
+    });
+  });
+
+  it("returns to the origin floor when moving back before the elevator step", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "9",
+      startRoom: "H8-801",
+      endRoom: "H9-937",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
+    });
+
+    fireEvent.press(getByTestId("next-step-button"));
+    fireEvent.press(getByTestId("next-step-button"));
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
+      expect(getByTestId("route-point-count").props.children).toBe("1");
+    });
+
+    fireEvent.press(getByTestId("previous-step-button"));
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
+      expect(getByTestId("route-point-count").props.children).toBe("2");
+    });
+  });
+
+  it("syncs the displayed floor to the route start floor when a new route loads", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "2",
+      startRoom: "H8-801",
+      endRoom: "H9-937",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildCrossFloorRoute(),
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
+      expect(getByTestId("route-point-count").props.children).toBe("2");
+    });
+  });
+
+  it("closes room modal and directions panel from their onClose handlers", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "25m",
+      duration: "2 min",
+      buildingName: "Hall Building",
+      buildingId: "Hall-8",
+      startFloor: "8",
+      endFloor: "8",
+      steps: [{ instruction: "Go straight", distance: "10m", duration: "30s" }],
+      polyline: "",
+      routePoints: [{ x: 10, y: 20 }],
+      stairMessage: null,
+    });
+
+    const { getByTestId, queryByTestId } = render(<IndoorNavigation />);
+    await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("close-room-modal"));
+    expect(queryByTestId("selecting-for")).toBeNull();
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => expect(getIndoorDirections).toHaveBeenCalled());
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    expect(getByTestId("directions-panel")).toBeTruthy();
+
+    fireEvent.press(getByTestId("close-directions"));
+    await waitFor(() => {
+      expect(queryByTestId("directions-panel")).toBeNull();
+    });
+  });
+
+  it("draws destination indoor route after pressing the universal route transition CTA", async () => {
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: {
+        startFloor: "8",
+        endFloor: "8",
+        routePoints: [{ x: 1, y: 1, label: "H8-801" }],
+      },
+      endIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        routePoints: [{ x: 2, y: 2, label: "VL-101" }],
+      },
+      nextShuttleTime: null,
+      totalDuration: "10 min",
+    });
+
+    const { getByTestId, getByText } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-universal"));
+
+    await waitFor(() => {
+      expect(getByText("Exit Building & Go to VL")).toBeTruthy();
+    });
+
+    fireEvent.press(getByText("Exit Building & Go to VL"));
+
+    await waitFor(
+      () => {
+        expect(mockDrawRoute).toHaveBeenCalledWith([
+          { x: 2, y: 2, label: "VL-101" },
+        ]);
+      },
+      { timeout: 2000 },
+    );
+  });
+
+  it("handles university room aggregation failure by logging and clearing available rooms", async () => {
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    (getAvailableRooms as jest.Mock).mockRejectedValue(
+      new Error("aggregate fetch failed"),
+    );
+
+    render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to load university rooms:",
+        expect.any(Error),
+      );
+    });
+
+    consoleSpy.mockRestore();
   });
 });
