@@ -62,7 +62,7 @@
     { "id": "MBS2-AllowedPath25", "x": 528.10583, "y": 409.94101 }
   ],
   "pathfindingConfig": {
-    "searchRadius": 300.0,
+    "searchRadius": 100.0,
     "alignThreshold": 20.0,
     "maxNeighbors": 0,
     "strictAlignment": false
