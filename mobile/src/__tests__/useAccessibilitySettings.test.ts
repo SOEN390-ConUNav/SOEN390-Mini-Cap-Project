@@ -67,8 +67,6 @@ describe("useAccessibilitySettings", () => {
     beforeEach(() => {
       useAccessibilitySettingsStore.setState({
         colorBlindMode: false,
-        highContrastMode: false,
-        reduceMotion: false,
         wheelchairUser: false,
         fontSize: "medium",
         fontWeight: "regular",
@@ -98,29 +96,27 @@ describe("useAccessibilitySettings", () => {
     });
 
     it("toggleWheelchairUser toggles wheelchairUser", () => {
-      expect(useAccessibilitySettingsStore.getState().wheelchairUser).toBe(false);
+      expect(useAccessibilitySettingsStore.getState().wheelchairUser).toBe(
+        false,
+      );
       useAccessibilitySettingsStore.getState().toggleWheelchairUser();
-      expect(useAccessibilitySettingsStore.getState().wheelchairUser).toBe(true);
+      expect(useAccessibilitySettingsStore.getState().wheelchairUser).toBe(
+        true,
+      );
       useAccessibilitySettingsStore.getState().toggleWheelchairUser();
-      expect(useAccessibilitySettingsStore.getState().wheelchairUser).toBe(false);
+      expect(useAccessibilitySettingsStore.getState().wheelchairUser).toBe(
+        false,
+      );
     });
 
     it("toggleColorBlindMode toggles colorBlindMode", () => {
-      expect(useAccessibilitySettingsStore.getState().colorBlindMode).toBe(false);
+      expect(useAccessibilitySettingsStore.getState().colorBlindMode).toBe(
+        false,
+      );
       useAccessibilitySettingsStore.getState().toggleColorBlindMode();
-      expect(useAccessibilitySettingsStore.getState().colorBlindMode).toBe(true);
-    });
-
-    it("toggleHighContrastMode toggles highContrastMode", () => {
-      expect(useAccessibilitySettingsStore.getState().highContrastMode).toBe(false);
-      useAccessibilitySettingsStore.getState().toggleHighContrastMode();
-      expect(useAccessibilitySettingsStore.getState().highContrastMode).toBe(true);
-    });
-
-    it("toggleReduceMotion toggles reduceMotion", () => {
-      expect(useAccessibilitySettingsStore.getState().reduceMotion).toBe(false);
-      useAccessibilitySettingsStore.getState().toggleReduceMotion();
-      expect(useAccessibilitySettingsStore.getState().reduceMotion).toBe(true);
+      expect(useAccessibilitySettingsStore.getState().colorBlindMode).toBe(
+        true,
+      );
     });
   });
 });

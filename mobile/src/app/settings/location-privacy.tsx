@@ -16,17 +16,20 @@ export default function SettingsLocationPrivacy() {
   const { colors } = useTheme();
 
   const [locationEnabled, setLocationEnabled] = useState(true);
-  const [shareUsage, setShareUsage] = useState(false);
   const [backgroundLocation, setBackgroundLocation] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Pressable style={styles.backRow} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={24} color={colors.primary} />
-        <Text style={[styles.backLabel, { color: colors.primary }]}>Settings</Text>
+        <Text style={[styles.backLabel, { color: colors.primary }]}>
+          Settings
+        </Text>
       </Pressable>
 
-      <Text style={[styles.title, { color: colors.text }]}>Location & Privacy</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        Location & Privacy
+      </Text>
 
       <ScrollView
         style={styles.scroll}
@@ -35,11 +38,15 @@ export default function SettingsLocationPrivacy() {
       >
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.cardHeaderRow}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary }]}>
+            <View
+              style={[styles.iconCircle, { backgroundColor: colors.primary }]}
+            >
               <Ionicons name="location-outline" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Location Services</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
+                Location Services
+              </Text>
               <Text style={[styles.cardStatus, { color: colors.primary }]}>
                 {locationEnabled ? "On" : "Off"}
               </Text>
@@ -51,8 +58,8 @@ export default function SettingsLocationPrivacy() {
             />
           </View>
           <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-            Allow the app to access your location to provide accurate
-            navigation and directions.
+            Allow the app to access your location to provide accurate navigation
+            and directions.
           </Text>
         </View>
 
@@ -61,7 +68,9 @@ export default function SettingsLocationPrivacy() {
           onPress={() => router.push("/settings/location-permission-tutorial")}
         >
           <View>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>Location Permission Tutorial</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>
+              Location Permission Tutorial
+            </Text>
             <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
               How to enable location access
             </Text>
@@ -69,24 +78,16 @@ export default function SettingsLocationPrivacy() {
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
 
-        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Privacy Settings</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+          Privacy Settings
+        </Text>
 
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.cardHeaderRow}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Share Anonymous Usage Data</Text>
-              <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-                Help improve the app by sharing anonymous usage statistics.
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
+                Background Location Access
               </Text>
-            </View>
-            <Switch value={shareUsage} onValueChange={setShareUsage} trackColor={{ false: colors.border, true: colors.primary }} />
-          </View>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <View style={styles.cardHeaderRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Background Location Access</Text>
               <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
                 Allow location access even when the app is in the background.
               </Text>
@@ -103,7 +104,9 @@ export default function SettingsLocationPrivacy() {
           style={styles.privacyLinkRow}
           onPress={() => router.push("/settings/privacy-policy")}
         >
-          <Text style={[styles.privacyLinkText, { color: colors.primary }]}>View Privacy Policy</Text>
+          <Text style={[styles.privacyLinkText, { color: colors.primary }]}>
+            View Privacy Policy
+          </Text>
           <Ionicons name="open-outline" size={18} color={colors.primary} />
         </Pressable>
       </ScrollView>
@@ -203,5 +206,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-

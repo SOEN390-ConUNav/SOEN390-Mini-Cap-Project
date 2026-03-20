@@ -9,14 +9,10 @@ type FontWeightOption = "light" | "regular" | "bold";
 
 interface AccessibilitySettingsState {
   colorBlindMode: boolean;
-  highContrastMode: boolean;
-  reduceMotion: boolean;
   wheelchairUser: boolean;
   fontSize: FontSizeOption;
   fontWeight: FontWeightOption;
   toggleColorBlindMode: () => void;
-  toggleHighContrastMode: () => void;
-  toggleReduceMotion: () => void;
   toggleWheelchairUser: () => void;
   setFontSize: (value: FontSizeOption) => void;
   setFontWeight: (value: FontWeightOption) => void;
@@ -26,28 +22,12 @@ interface AccessibilitySettingsState {
 export const useAccessibilitySettingsStore = create<AccessibilitySettingsState>(
   (set, get) => ({
     colorBlindMode: false,
-    highContrastMode: false,
-    reduceMotion: false,
     wheelchairUser: false,
     fontSize: "medium",
     fontWeight: "regular",
     toggleColorBlindMode: () => {
       set((state) => {
         const next = { ...state, colorBlindMode: !state.colorBlindMode };
-        void persist(next);
-        return next;
-      });
-    },
-    toggleHighContrastMode: () => {
-      set((state) => {
-        const next = { ...state, highContrastMode: !state.highContrastMode };
-        void persist(next);
-        return next;
-      });
-    },
-    toggleReduceMotion: () => {
-      set((state) => {
-        const next = { ...state, reduceMotion: !state.reduceMotion };
         void persist(next);
         return next;
       });
@@ -87,18 +67,9 @@ export const useAccessibilitySettingsStore = create<AccessibilitySettingsState>(
 );
 
 async function persist(state: AccessibilitySettingsState) {
-  const {
-    colorBlindMode,
-    highContrastMode,
-    reduceMotion,
-    wheelchairUser,
-    fontSize,
-    fontWeight,
-  } = state;
+  const { colorBlindMode, wheelchairUser, fontSize, fontWeight } = state;
   await setCachedAccessibilityPrefs({
     colorBlindMode,
-    highContrastMode,
-    reduceMotion,
     wheelchairUser,
     fontSize,
     fontWeight,

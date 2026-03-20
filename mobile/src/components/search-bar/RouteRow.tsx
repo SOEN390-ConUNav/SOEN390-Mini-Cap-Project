@@ -9,7 +9,6 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { useAccessibilitySettings } from "../../hooks/useAccessibilitySettings";
 
 const SWAP_THRESHOLD = 42;
 
@@ -42,10 +41,8 @@ export default function RouteRow({
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
 
-  const { reduceMotion } = useAccessibilitySettings();
-
   const pan = Gesture.Pan()
-    .enabled(!reduceMotion)
+    .enabled(true)
     .runOnJS(true)
     .onBegin(() => {
       scale.value = withSpring(1.02);

@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  Pressable,
-} from "react-native";
+import { StyleSheet, Text, View, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import type { ComponentProps } from "react";
@@ -17,14 +11,48 @@ const SETTINGS_ITEMS: Array<{
   icon: ComponentProps<typeof Ionicons>["name"];
   href: Href;
 }> = [
-  { id: "general", label: "General", icon: "options-outline", href: "/settings/general" },
-  { id: "display", label: "Display & Brightness", icon: "sunny-outline", href: "/settings/display" },
-  { id: "notifications", label: "Notifications", icon: "notifications-outline", href: "/settings/notifications" },
-  { id: "location", label: "Location & Privacy", icon: "location-outline", href: "/settings/location-privacy" },
-  { id: "navigation", label: "Navigation", icon: "navigate-outline", href: "/settings/navigation" },
-  { id: "accessibility", label: "Accessibility", icon: "accessibility-outline", href: "/settings/accessibility" },
-  { id: "about", label: "About", icon: "information-circle-outline", href: "/settings/about" },
-  { id: "terms", label: "Terms", icon: "document-text-outline", href: "/settings/terms" },
+  {
+    id: "general",
+    label: "General",
+    icon: "options-outline",
+    href: "/settings/general",
+  },
+  {
+    id: "display",
+    label: "Display & Brightness",
+    icon: "sunny-outline",
+    href: "/settings/display",
+  },
+  {
+    id: "location",
+    label: "Location & Privacy",
+    icon: "location-outline",
+    href: "/settings/location-privacy",
+  },
+  {
+    id: "navigation",
+    label: "Navigation",
+    icon: "navigate-outline",
+    href: "/settings/navigation",
+  },
+  {
+    id: "accessibility",
+    label: "Accessibility",
+    icon: "accessibility-outline",
+    href: "/settings/accessibility",
+  },
+  {
+    id: "about",
+    label: "About",
+    icon: "information-circle-outline",
+    href: "/settings/about",
+  },
+  {
+    id: "terms",
+    label: "Terms",
+    icon: "document-text-outline",
+    href: "/settings/terms",
+  },
 ];
 
 export default function SettingsIndexPage() {
@@ -49,11 +77,25 @@ export default function SettingsIndexPage() {
             ]}
             onPress={() => router.push(item.href)}
           >
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary, borderColor: colors.primaryBorder }]}>
+            <View
+              style={[
+                styles.iconCircle,
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primaryBorder,
+                },
+              ]}
+            >
               <Ionicons name={item.icon} size={22} color="#fff" />
             </View>
-            <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            <Text style={[styles.label, { color: colors.text }]}>
+              {item.label}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textMuted}
+            />
           </Pressable>
         ))}
       </ScrollView>

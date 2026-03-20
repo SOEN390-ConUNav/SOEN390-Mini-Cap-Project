@@ -18,8 +18,6 @@ jest.mock("../services/accessibilitySettingsCache", () => ({
 
 const defaultPrefs: CachedAccessibilityPrefs = {
   colorBlindMode: false,
-  highContrastMode: false,
-  reduceMotion: false,
   wheelchairUser: false,
   fontSize: "medium",
   fontWeight: "regular",
@@ -28,8 +26,6 @@ const defaultPrefs: CachedAccessibilityPrefs = {
 function resetStoreToDefaults() {
   useAccessibilitySettingsStore.setState({
     colorBlindMode: false,
-    highContrastMode: false,
-    reduceMotion: false,
     wheelchairUser: false,
     fontSize: "medium",
     fontWeight: "regular",
@@ -75,21 +71,13 @@ describe("Accessibility settings local persistence (acceptance)", () => {
 
   it("Given the user has set accessibility preferences, when they close and restart the app, then their preferences are still saved on the device", async () => {
     useAccessibilitySettingsStore.getState().setFontSize("small");
-    useAccessibilitySettingsStore.getState().toggleHighContrastMode();
     expect(mockSavedPrefs?.fontSize).toBe("small");
-    expect(mockSavedPrefs?.highContrastMode).toBe(true);
 
     resetStoreToDefaults();
     expect(useAccessibilitySettingsStore.getState().fontSize).toBe("medium");
-    expect(useAccessibilitySettingsStore.getState().highContrastMode).toBe(
-      false,
-    );
 
     await useAccessibilitySettingsStore.getState().hydrateFromStorage();
     expect(useAccessibilitySettingsStore.getState().fontSize).toBe("small");
-    expect(useAccessibilitySettingsStore.getState().highContrastMode).toBe(
-      true,
-    );
   });
 
   it("Given no accessibility preferences were previously set, when the user opens settings, then default accessibility preferences are shown", async () => {
@@ -99,8 +87,6 @@ describe("Accessibility settings local persistence (acceptance)", () => {
 
     const state = useAccessibilitySettingsStore.getState();
     expect(state.colorBlindMode).toBe(false);
-    expect(state.highContrastMode).toBe(false);
-    expect(state.reduceMotion).toBe(false);
     expect(state.wheelchairUser).toBe(false);
     expect(state.fontSize).toBe("medium");
     expect(state.fontWeight).toBe("regular");

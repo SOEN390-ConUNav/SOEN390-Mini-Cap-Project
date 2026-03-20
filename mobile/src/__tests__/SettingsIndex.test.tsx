@@ -44,7 +44,6 @@ describe("SettingsIndexPage", () => {
     const { getByText } = render(<SettingsIndexPage />);
     expect(getByText("General")).toBeTruthy();
     expect(getByText("Display & Brightness")).toBeTruthy();
-    expect(getByText("Notifications")).toBeTruthy();
     expect(getByText("Location & Privacy")).toBeTruthy();
     expect(getByText("Navigation")).toBeTruthy();
     expect(getByText("Accessibility")).toBeTruthy();
@@ -64,6 +63,18 @@ describe("SettingsIndexPage", () => {
     expect(mockPush).toHaveBeenCalledWith("/settings/display");
   });
 
+  it("navigates to location privacy when Location & Privacy is pressed", () => {
+    const { getByText } = render(<SettingsIndexPage />);
+    fireEvent.press(getByText("Location & Privacy"));
+    expect(mockPush).toHaveBeenCalledWith("/settings/location-privacy");
+  });
+
+  it("navigates to navigation when Navigation is pressed", () => {
+    const { getByText } = render(<SettingsIndexPage />);
+    fireEvent.press(getByText("Navigation"));
+    expect(mockPush).toHaveBeenCalledWith("/settings/navigation");
+  });
+
   it("navigates to accessibility when Accessibility is pressed", () => {
     const { getByText } = render(<SettingsIndexPage />);
     fireEvent.press(getByText("Accessibility"));
@@ -74,5 +85,11 @@ describe("SettingsIndexPage", () => {
     const { getByText } = render(<SettingsIndexPage />);
     fireEvent.press(getByText("About"));
     expect(mockPush).toHaveBeenCalledWith("/settings/about");
+  });
+
+  it("navigates to terms when Terms is pressed", () => {
+    const { getByText } = render(<SettingsIndexPage />);
+    fireEvent.press(getByText("Terms"));
+    expect(mockPush).toHaveBeenCalledWith("/settings/terms");
   });
 });

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Appearance } from "react-native";
 import BottomNav from "../components/BottomNav";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -9,14 +9,28 @@ import { useAccessibilitySettingsStore } from "../hooks/useAccessibilitySettings
 
 function ThemedRoot() {
   const { colors } = useTheme();
-  const { brightness, hydrateFromStorage: hydrateDisplay } = useDisplaySettingsStore();
+  const {
+    brightness,
+    autoBrightness,
+    darkMode,
+    hydrateFromStorage: hydrateDisplay,
+  } = useDisplaySettingsStore();
 
   useEffect(() => {
     void hydrateDisplay();
     void useAccessibilitySettingsStore.getState().hydrateFromStorage();
   }, [hydrateDisplay]);
 
-  const dimOpacity = brightness < 100 ? ((100 - brightness) / 100) * 0.5 : 0;
+  useEffect(() => {
+    Appearance.setColorScheme(darkMode ? "dark" : "light");
+  }, [darkMode]);
+
+  const dimOpacity =
+    autoBrightness === true
+      ? 0
+      : brightness < 100
+        ? ((100 - brightness) / 100) * 0.5
+        : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -24,7 +38,10 @@ function ThemedRoot() {
       {dimOpacity > 0 && (
         <View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: dimOpacity }]}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: "#000", opacity: dimOpacity },
+          ]}
         />
       )}
     </View>

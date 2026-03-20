@@ -58,14 +58,10 @@ export function useTabBarStyle() {
 }
 
 export default function BottomNav() {
-  const { colorBlindMode, highContrastMode } = useAccessibilitySettings();
+  const { colorBlindMode } = useAccessibilitySettings();
   const { colors } = useTheme();
 
-  const primaryColor = highContrastMode
-    ? "#000000"
-    : colorBlindMode
-    ? "#005F99"
-    : colors.primary;
+  const primaryColor = colorBlindMode ? "#005F99" : colors.primary;
 
   return (
     <Tabs

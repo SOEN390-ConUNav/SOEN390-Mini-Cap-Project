@@ -29,14 +29,10 @@ jest.mock("../hooks/useAccessibilitySettings", () => {
     ...actual,
     useAccessibilitySettings: () => ({
       colorBlindMode: false,
-      highContrastMode: false,
-      reduceMotion: false,
       wheelchairUser: false,
       fontSize: "medium" as const,
       fontWeight: "regular" as const,
       toggleColorBlindMode: jest.fn(),
-      toggleHighContrastMode: jest.fn(),
-      toggleReduceMotion: jest.fn(),
       toggleWheelchairUser: jest.fn(),
       setFontSize: jest.fn(),
       setFontWeight: jest.fn(),
@@ -87,12 +83,6 @@ describe("SettingsAccessibility", () => {
     expect(getByText("Text Weight")).toBeTruthy();
     expect(getByText("Adjust how bold text appears")).toBeTruthy();
     expect(getByText("Bold preview text")).toBeTruthy();
-  });
-
-  it("renders High Contrast Mode and Reduce Motion", () => {
-    const { getByText } = render(<SettingsAccessibility />);
-    expect(getByText("High Contrast Mode")).toBeTruthy();
-    expect(getByText("Reduce Motion")).toBeTruthy();
   });
 
   it("calls router.back when back row is pressed", () => {

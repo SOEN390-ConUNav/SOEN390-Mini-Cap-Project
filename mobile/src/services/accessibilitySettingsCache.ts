@@ -7,8 +7,6 @@ const CACHE_KEY = "prefs";
 
 export interface CachedAccessibilityPrefs {
   colorBlindMode: boolean;
-  highContrastMode: boolean;
-  reduceMotion: boolean;
   wheelchairUser: boolean;
   fontSize: "small" | "medium" | "large";
   fontWeight: "light" | "regular" | "bold";

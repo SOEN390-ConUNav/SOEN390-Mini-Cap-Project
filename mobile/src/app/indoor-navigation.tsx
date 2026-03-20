@@ -504,19 +504,31 @@ export default function IndoorNavigation() {
       />
 
       {routeData?.stairMessage && (
-        <View style={[styles.stairBanner, { backgroundColor: colors.card, borderLeftColor: colors.primary }]}>
-          <Text style={[styles.stairBannerText, { color: colors.text }]}>🚶 {routeData.stairMessage}</Text>
+        <View
+          style={[
+            styles.stairBanner,
+            { backgroundColor: colors.card, borderLeftColor: colors.primary },
+          ]}
+        >
+          <Text style={[styles.stairBannerText, { color: colors.text }]}>
+            🚶 {routeData.stairMessage}
+          </Text>
         </View>
       )}
 
-      <View style={styles.accessibilityToggleContainer}>
-        <Text style={styles.accessibilityText}>
+      <View
+        style={[
+          styles.accessibilityToggleContainer,
+          { backgroundColor: colors.card },
+        ]}
+      >
+        <Text style={[styles.accessibilityText, { color: colors.text }]}>
           Avoid Stairs / Wheelchair Accessible
         </Text>
         <Switch
           value={avoidStairs}
           onValueChange={setAvoidStairs}
-          trackColor={{ false: "#ccc", true: "#8B1538" }}
+          trackColor={{ false: colors.border, true: colors.primary }}
           thumbColor={avoidStairs ? "#fff" : "#f4f3f4"}
         />
       </View>
@@ -528,7 +540,10 @@ export default function IndoorNavigation() {
           <View style={styles.floorTransitionContainer}>
             {currentFloor === routeData.startFloor && (
               <TouchableOpacity
-                style={styles.transitionButton}
+                style={[
+                  styles.transitionButton,
+                  { backgroundColor: colors.primary },
+                ]}
                 onPress={() => handleFloorChange(routeData.endFloor)}
               >
                 <Text style={styles.transitionButtonText}>
@@ -538,7 +553,10 @@ export default function IndoorNavigation() {
             )}
             {currentFloor === routeData.endFloor && (
               <TouchableOpacity
-                style={styles.transitionButton}
+                style={[
+                  styles.transitionButton,
+                  { backgroundColor: colors.primary },
+                ]}
                 onPress={() => handleFloorChange(routeData.startFloor)}
               >
                 <Text style={styles.transitionButtonText}>
@@ -553,10 +571,14 @@ export default function IndoorNavigation() {
         <View
           style={[
             styles.stairBanner,
-            { bottom: 230, borderLeftColor: "#8B1538" },
+            {
+              bottom: 230,
+              backgroundColor: colors.card,
+              borderLeftColor: colors.primary,
+            },
           ]}
         >
-          <Text style={[styles.stairBannerText, { color: "#8B1538" }]}>
+          <Text style={[styles.stairBannerText, { color: colors.primary }]}>
             Next Shuttle Bus: {universalRouteData.nextShuttleTime}
           </Text>
         </View>
@@ -565,7 +587,10 @@ export default function IndoorNavigation() {
       {universalRouteData && routePhase === "origin" && (
         <View style={styles.floorTransitionContainer}>
           <TouchableOpacity
-            style={styles.transitionButton}
+            style={[
+              styles.transitionButton,
+              { backgroundColor: colors.primary },
+            ]}
             onPress={() => {
               setRoutePhase("destination");
               setRouteData(universalRouteData.endIndoorRoute);
@@ -664,7 +689,6 @@ const styles = StyleSheet.create({
     top: 200,
     left: 16,
     right: 16,
-    backgroundColor: "#FFFFFF",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -681,7 +705,6 @@ const styles = StyleSheet.create({
   accessibilityText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
   },
 
   floorTransitionContainer: {
@@ -691,7 +714,6 @@ const styles = StyleSheet.create({
     zIndex: 15,
   },
   transitionButton: {
-    backgroundColor: "#8B1538",
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 30,

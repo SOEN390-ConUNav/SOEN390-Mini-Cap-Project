@@ -20,8 +20,6 @@ describe("accessibilitySettingsCache", () => {
   it("persists and returns prefs (memory then storage)", async () => {
     const prefs = {
       colorBlindMode: true,
-      highContrastMode: false,
-      reduceMotion: false,
       wheelchairUser: true,
       fontSize: "large" as const,
       fontWeight: "bold" as const,
@@ -38,8 +36,6 @@ describe("accessibilitySettingsCache", () => {
   it("survives memory clear (reads from AsyncStorage)", async () => {
     const prefs = {
       colorBlindMode: false,
-      highContrastMode: true,
-      reduceMotion: true,
       wheelchairUser: false,
       fontSize: "small" as const,
       fontWeight: "light" as const,

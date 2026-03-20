@@ -24,14 +24,10 @@ export default function SettingsDisplay() {
     autoBrightness,
     darkMode,
     colorIntensity,
-    screenTimeout,
-    displayZoom,
     setBrightness,
     setAutoBrightness,
     setDarkMode,
     setColorIntensity,
-    setScreenTimeout,
-    setDisplayZoom,
     hydrateFromStorage,
   } = useDisplaySettings();
 
@@ -46,9 +42,13 @@ export default function SettingsDisplay() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Pressable style={styles.backRow} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={24} color={colors.primary} />
-        <Text style={[styles.backLabel, { color: colors.primary }]}>Settings</Text>
+        <Text style={[styles.backLabel, { color: colors.primary }]}>
+          Settings
+        </Text>
       </Pressable>
-      <Text style={[styles.title, { color: colors.text }]}>Display & Brightness</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        Display & Brightness
+      </Text>
 
       <ScrollView
         style={styles.scroll}
@@ -57,7 +57,9 @@ export default function SettingsDisplay() {
       >
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.rowHeader}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>Brightness</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>
+              Brightness
+            </Text>
             <Text style={[styles.emphasisLabel, { color: colors.primary }]}>
               {getBrightnessLabel(brightness)}
             </Text>
@@ -80,7 +82,9 @@ export default function SettingsDisplay() {
 
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.rowHeader}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>Auto-Brightness</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>
+              Auto-Brightness
+            </Text>
             <Switch
               value={autoBrightness}
               onValueChange={setAutoBrightness}
@@ -93,11 +97,15 @@ export default function SettingsDisplay() {
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Appearance</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>
+            Appearance
+          </Text>
 
           <View style={[styles.rowHeader, { marginTop: 10 }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>Dark Mode</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>
+                Dark Mode
+              </Text>
               <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
                 Switch to a darker color scheme.
               </Text>
@@ -112,8 +120,12 @@ export default function SettingsDisplay() {
 
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.rowHeader}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>Color Intensity</Text>
-            <Text style={[styles.emphasisLabel, { color: colors.primary }]}>{colorIntensityLabel}</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>
+              Color Intensity
+            </Text>
+            <Text style={[styles.emphasisLabel, { color: colors.primary }]}>
+              {colorIntensityLabel}
+            </Text>
           </View>
           <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
             Adjust vibrancy of colors throughout the app.
@@ -129,42 +141,6 @@ export default function SettingsDisplay() {
             value={colorIntensity}
             onValueChange={setColorIntensity}
           />
-        </View>
-
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Display Settings</Text>
-
-          <Pressable
-            style={styles.inlineRow}
-            onPress={() => {
-              const next =
-                screenTimeout === "30s"
-                  ? "1m"
-                  : screenTimeout === "1m"
-                  ? "2m"
-                  : "30s";
-              setScreenTimeout(next);
-            }}
-          >
-            <Text style={[styles.inlineLabel, { color: colors.text }]}>Screen Timeout</Text>
-            <Text style={[styles.inlineValue, { color: colors.primary }]}>
-              {screenTimeout === "30s"
-                ? "30 seconds"
-                : screenTimeout === "1m"
-                ? "1 minute"
-                : "2 minutes"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.inlineRow}
-            onPress={() => {
-              setDisplayZoom(displayZoom === "Standard" ? "Large" : "Standard");
-            }}
-          >
-            <Text style={[styles.inlineLabel, { color: colors.text }]}>Display Zoom</Text>
-            <Text style={[styles.inlineValue, { color: colors.primary }]}>{displayZoom}</Text>
-          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -214,23 +190,4 @@ const styles = StyleSheet.create({
   slider: {
     marginTop: 4,
   },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  inlineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  inlineLabel: {
-    fontSize: 14,
-  },
-  inlineValue: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
 });
-

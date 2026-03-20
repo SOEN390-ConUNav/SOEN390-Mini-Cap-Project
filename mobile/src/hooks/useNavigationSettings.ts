@@ -2,8 +2,6 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface NavigationSettingsState {
-  voiceGuidance: boolean;
-  voiceVolume: number; // 0-100
   avoidStairs: boolean;
   indoorNavigation: boolean;
   autoRerouting: boolean;
@@ -13,8 +11,6 @@ interface NavigationSettingsState {
   distanceUnits: "Meters" | "Feet";
   mapStyle: "Standard" | "Satellite";
   northOrientation: "Fixed" | "Compass";
-  setVoiceGuidance: (value: boolean) => void;
-  setVoiceVolume: (value: number) => void;
   setAvoidStairs: (value: boolean) => void;
   setIndoorNavigation: (value: boolean) => void;
   setAutoRerouting: (value: boolean) => void;
@@ -29,10 +25,8 @@ interface NavigationSettingsState {
 
 const STORAGE_KEY = "navigationSettings.v1";
 
-export const useNavigationSettingsStore =
-  create<NavigationSettingsState>((set, get) => ({
-    voiceGuidance: true,
-    voiceVolume: 80,
+export const useNavigationSettingsStore = create<NavigationSettingsState>(
+  (set, get) => ({
     avoidStairs: false,
     indoorNavigation: true,
     autoRerouting: true,
@@ -42,18 +36,6 @@ export const useNavigationSettingsStore =
     distanceUnits: "Meters",
     mapStyle: "Standard",
     northOrientation: "Fixed",
-    setVoiceGuidance: (voiceGuidance) =>
-      set((state) => {
-        const next = { ...state, voiceGuidance };
-        void persist(next);
-        return next;
-      }),
-    setVoiceVolume: (voiceVolume) =>
-      set((state) => {
-        const next = { ...state, voiceVolume };
-        void persist(next);
-        return next;
-      }),
     setAvoidStairs: (avoidStairs) =>
       set((state) => {
         const next = { ...state, avoidStairs };
@@ -121,12 +103,11 @@ export const useNavigationSettingsStore =
         // ignore
       }
     },
-  }));
+  }),
+);
 
 async function persist(state: NavigationSettingsState) {
   const {
-    voiceGuidance,
-    voiceVolume,
     avoidStairs,
     indoorNavigation,
     autoRerouting,
@@ -142,8 +123,6 @@ async function persist(state: NavigationSettingsState) {
     await AsyncStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        voiceGuidance,
-        voiceVolume,
         avoidStairs,
         indoorNavigation,
         autoRerouting,
@@ -163,10 +142,3 @@ async function persist(state: NavigationSettingsState) {
 export function useNavigationSettings() {
   return useNavigationSettingsStore();
 }
-
-export function getVoiceVolumeLabel(value: number): string {
-  if (value <= 33) return "Low";
-  if (value >= 75) return "High";
-  return "Medium";
-}
-
