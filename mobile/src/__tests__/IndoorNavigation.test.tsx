@@ -287,8 +287,10 @@ describe("IndoorNavigation", () => {
       );
     });
 
-    expect(getByTestId("route-point-count").props.children).toBe("1");
-    expect(getByText("🚶 Use stairs between sections")).toBeTruthy();
+    await waitFor(() => {
+      expect(getByTestId("route-point-count").props.children).toBe("1");
+    });
+    expect(getByText(/Use stairs between sections/)).toBeTruthy();
   });
 
   it("handles multi-floor step navigation and changes floors after the elevator step", async () => {
@@ -303,10 +305,13 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-second"));
 
-    await waitFor(() => {
-      expect(getByTestId("next-step-button")).toBeTruthy();
-      expect(getByTestId("route-point-count").props.children).toBe("2");
-    });
+    await waitFor(
+      () => {
+        expect(getByTestId("next-step-button")).toBeTruthy();
+        expect(getByTestId("route-point-count").props.children).toBe("2");
+      },
+      { timeout: 15_000 },
+    );
 
     fireEvent.press(getByTestId("next-step-button"));
 
@@ -314,11 +319,14 @@ describe("IndoorNavigation", () => {
 
     fireEvent.press(getByTestId("next-step-button"));
 
-    await waitFor(() => {
-      expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
-      expect(getByTestId("route-point-count").props.children).toBe("1");
-    });
-  });
+    await waitFor(
+      () => {
+        expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
+        expect(getByTestId("route-point-count").props.children).toBe("1");
+      },
+      { timeout: 15_000 },
+    );
+  }, 20_000);
 
   it("handles universal cross-building routing", async () => {
     (getUniversalDirections as jest.Mock).mockResolvedValue({

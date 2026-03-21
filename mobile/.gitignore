@@ -33,6 +33,10 @@ yarn-error.*
 .env
 !mobile/.env.example
 
+# Jest / CI artifacts (local)
+test-results/
+coverage/
+
 # typescript
 *.tsbuildinfo
 

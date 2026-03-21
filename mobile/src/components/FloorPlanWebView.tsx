@@ -27,6 +27,8 @@ export interface RoomMarkerData {
 interface FloorPlanWebViewProps {
   buildingId?: BuildingId;
   floorNumber?: string;
+  backgroundColor?: string;
+  invertSvg?: boolean;
   onPoiTap?: (poi: PoiMarker) => void;
   onRoomTap?: (room: RoomMarkerData) => void;
   routePoints?: RoutePoint[];
@@ -84,6 +86,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
     {
       buildingId = "H",
       floorNumber = "8",
+      backgroundColor,
+      invertSvg = false,
       onPoiTap,
       onRoomTap,
       routePoints: propRoutePoints,
@@ -158,6 +162,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               );
             }
 
+            const bg = backgroundColor ?? "white";
+            const svgFilter = invertSvg ? "filter: invert(1);" : "";
             const html = `
             <!DOCTYPE html>
             <html>
@@ -165,10 +171,10 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, minimum-scale=0.1, user-scalable=yes">
                 <style>
                   * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { 
+                  html, body {
                     width: 100%;
                     height: 100%;
-                    background: white; 
+                    background: ${bg};
                     overflow: auto;
                     -webkit-overflow-scrolling: touch;
                   }
@@ -185,6 +191,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                     max-height: 100vh;
                     width: auto;
                     height: auto;
+                    ${svgFilter}
                   }
                 </style>
               </head>
@@ -474,7 +481,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       return () => {
         cancelled = true;
       };
-    }, [buildingId, floorNumber, markWebViewReady]);
+    }, [buildingId, floorNumber, backgroundColor, invertSvg, markWebViewReady]);
 
     const executeDrawRoute = React.useCallback(
       (routePoints: RoutePoint[], version: number, retryCount = 0) => {
@@ -639,9 +646,11 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       [isWebViewReady],
     );
 
+    const bgColor = backgroundColor ?? "white";
+
     if (!svgHtml) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: bgColor }]}>
           <ActivityIndicator size="large" color="#4285F4" />
           <Text style={styles.loadingText}>Loading floor plan...</Text>
         </View>
@@ -654,7 +663,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           key={`${buildingId}-${floorNumber}`}
           ref={webViewRef}
           source={{ html: svgHtml }}
-          style={styles.webView}
+          style={[styles.webView, { backgroundColor: bgColor }]}
           scalesPageToFit={true}
           bounces={true}
           scrollEnabled={true}

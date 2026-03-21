@@ -1,13 +1,63 @@
+import React, { useEffect } from "react";
+import { View, StyleSheet, Appearance } from "react-native";
 import BottomNav from "../components/BottomNav";
-import {GestureHandlerRootView} from "react-native-gesture-handler";
-import {BottomSheetModalProvider} from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { useTheme } from "../hooks/useTheme";
+import { useDisplaySettingsStore } from "../hooks/useDisplaySettings";
+import { useAccessibilitySettingsStore } from "../hooks/useAccessibilitySettings";
+import { getDimOverlayOpacity } from "../utils/layoutDimOpacity";
+
+function BrightnessDimLayer({
+  opacity,
+}: {
+  opacity: number;
+}): React.ReactElement | null {
+  if (opacity <= 0) {
+    return null;
+  }
+  return (
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity }]}
+    />
+  );
+}
+
+function ThemedRoot() {
+  const { colors } = useTheme();
+  const {
+    brightness,
+    autoBrightness,
+    darkMode,
+    hydrateFromStorage: hydrateDisplay,
+  } = useDisplaySettingsStore();
+
+  useEffect(() => {
+    void hydrateDisplay();
+    void useAccessibilitySettingsStore.getState().hydrateFromStorage();
+  }, [hydrateDisplay]);
+
+  useEffect(() => {
+    Appearance.setColorScheme(darkMode ? "dark" : "light");
+  }, [darkMode]);
+
+  const dimOpacity = getDimOverlayOpacity(brightness, autoBrightness);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <BottomNav />
+      <BrightnessDimLayer opacity={dimOpacity} />
+    </View>
+  );
+}
 
 export default function RootLayout() {
-    return (
-        <GestureHandlerRootView style={{flex: 1}}>
-            <BottomSheetModalProvider>
-                <BottomNav/>
-            </BottomSheetModalProvider>
-        </GestureHandlerRootView>
-    );
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <ThemedRoot />
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
+  );
 }

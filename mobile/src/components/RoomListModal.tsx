@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { useTheme } from "../hooks/useTheme";
 
 interface RoomListModalProps {
   visible: boolean;
@@ -34,6 +35,7 @@ export default function RoomListModal({
   onSelectRoom,
   onClose,
 }: Readonly<RoomListModalProps>) {
+  const { colors } = useTheme();
   const modalTitle = getModalTitle(selectingFor);
 
   return (
@@ -44,37 +46,46 @@ export default function RoomListModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{modalTitle}</Text>
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            {modalTitle}
+          </Text>
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                color: colors.text,
+              },
+            ]}
             placeholder="Search rooms..."
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={onSearchChange}
             autoFocus={true}
           />
           <ScrollView style={styles.roomList}>
             {filteredRooms.length === 0 ? (
-              <Text style={styles.noResults}>No rooms found</Text>
+              <Text style={[styles.noResults, { color: colors.textMuted }]}>No rooms found</Text>
             ) : (
               filteredRooms.map((room) => (
                 <TouchableOpacity
                   key={room}
-                  style={styles.roomItem}
+                  style={[styles.roomItem, { borderBottomColor: colors.border }]}
                   onPress={() => {
                     if (selectingFor) {
                       onSelectRoom(room);
                     }
-                    // If just viewing (selectingFor is null), don't do anything on press
                   }}
                   disabled={!selectingFor}
                 >
-                  <Text style={styles.roomText}>{room}</Text>
+                  <Text style={[styles.roomText, { color: colors.text }]}>{room}</Text>
                 </TouchableOpacity>
               ))
             )}
           </ScrollView>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.primary }]} onPress={onClose}>
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -90,7 +101,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -100,16 +110,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 16,
-    color: "#212121",
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: "#E0E0E0",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: "#F5F5F5",
   },
   roomList: {
     maxHeight: 400,
@@ -117,22 +124,18 @@ const styles = StyleSheet.create({
   roomItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
   },
   roomText: {
     fontSize: 16,
-    color: "#212121",
   },
   noResults: {
     textAlign: "center",
     padding: 20,
-    color: "#757575",
     fontSize: 16,
   },
   closeButton: {
     marginTop: 16,
     padding: 14,
-    backgroundColor: "#8B1538",
     borderRadius: 8,
     alignItems: "center",
   },

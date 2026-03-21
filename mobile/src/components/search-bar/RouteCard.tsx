@@ -5,6 +5,7 @@ import RouteRow from "./RouteRow";
 import SwapButton from "../SwapButton";
 import CircleIconButton from "../CircleIconButton";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
+import { useAccessibleTypography } from "../../hooks/useAccessibilitySettings";
 
 const BURGUNDY = "#800020";
 
@@ -23,6 +24,7 @@ export default function RouteCard({
 }: RouteCardProps) {
   const isLoading = useNavigationInfo((s) => s.isLoading);
   const setIsLoading = useNavigationInfo((s) => s.setIsLoading);
+  const { textStyle } = useAccessibleTypography();
 
   const originDragProgress = useSharedValue(0);
   const destDragProgress = useSharedValue(0);
@@ -42,7 +44,9 @@ export default function RouteCard({
         {isLoading ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={BURGUNDY} />
-            <Text style={styles.loadingText}>Calculating route...</Text>
+            <Text style={[styles.loadingText, textStyle(14)]}>
+              Calculating route…
+            </Text>
           </View>
         ) : (
           <>
