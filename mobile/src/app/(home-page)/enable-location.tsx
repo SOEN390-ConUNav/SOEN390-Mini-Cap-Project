@@ -73,31 +73,39 @@ export default function EnableLocation() {
     router.replace("/(home-page)");
   };
 
+  const headerEmoji = isRevoked ? "⚠️" : "📍";
+  const titleText = isRevoked
+    ? "Location Permission Revoked"
+    : "Enable Location Services";
+  const subtitleText = isRevoked
+    ? "Location access was previously granted but has been revoked. To continue using location features, please re-enable permission in your device settings."
+    : "To help you navigate Concordia's campus, we need access to your location. This allows us to show your position on the map and provide accurate directions.";
+  const skipLabelText = isRevoked
+    ? "Continue without location"
+    : "Skip for now";
+  const primaryButtonLabel = shouldShowOSPrompt
+    ? "Enable Location"
+    : "Open Settings";
+  const onPrimaryButtonPress = () => {
+    if (shouldShowOSPrompt) {
+      void onEnableLocation();
+      return;
+    }
+    void openSettings();
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.iconCircle, { backgroundColor: colors.primary + "2E" }]}>
-        <Text style={styles.icon}>{isRevoked ? "⚠️" : "📍"}</Text>
+      <View
+        style={[styles.iconCircle, { backgroundColor: colors.primary + "2E" }]}
+      >
+        <Text style={styles.icon}>{headerEmoji}</Text>
       </View>
 
-      {isRevoked ? (
-        <>
-          <Text style={[styles.title, { color: colors.text }]}>Location Permission Revoked</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Location access was previously granted but has been revoked. To
-            continue using location features, please re-enable permission in
-            your device settings.
-          </Text>
-        </>
-      ) : (
-        <>
-          <Text style={[styles.title, { color: colors.text }]}>Enable Location Services</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            To help you navigate Concordia's campus, we need access to your
-            location. This allows us to show your position on the map and
-            provide accurate directions.
-          </Text>
-        </>
-      )}
+      <Text style={[styles.title, { color: colors.text }]}>{titleText}</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+        {subtitleText}
+      </Text>
 
       <View style={styles.bullets}>
         <Bullet
@@ -117,25 +125,12 @@ export default function EnableLocation() {
         />
       </View>
 
-      {shouldShowOSPrompt ? (
-        <Pressable
-          style={[styles.enableBtn, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            void onEnableLocation();
-          }}
-        >
-          <Text style={styles.enableText}>Enable Location</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          style={[styles.enableBtn, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            void openSettings();
-          }}
-        >
-          <Text style={styles.enableText}>Open Settings</Text>
-        </Pressable>
-      )}
+      <Pressable
+        style={[styles.enableBtn, { backgroundColor: colors.primary }]}
+        onPress={onPrimaryButtonPress}
+      >
+        <Text style={styles.enableText}>{primaryButtonLabel}</Text>
+      </Pressable>
 
       <Pressable
         style={styles.skipBtn}
@@ -144,28 +139,30 @@ export default function EnableLocation() {
         }}
       >
         <Text style={[styles.skipText, { color: colors.textMuted }]}>
-          {isRevoked ? "Continue without location" : "Skip for now"}
+          {skipLabelText}
         </Text>
       </Pressable>
     </View>
   );
 }
 
-function Bullet({
-  colors,
-  title,
-  desc,
-}: {
+type BulletProps = Readonly<{
   colors: { text: string; textMuted: string; primary: string };
   title: string;
   desc: string;
-}) {
+}>;
+
+function Bullet({ colors, title, desc }: BulletProps) {
   return (
     <View style={styles.bulletRow}>
       <View style={[styles.dot, { backgroundColor: colors.primary }]} />
       <View style={{ flex: 1 }}>
-        <Text style={[styles.bulletTitle, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.bulletDesc, { color: colors.textMuted }]}>{desc}</Text>
+        <Text style={[styles.bulletTitle, { color: colors.text }]}>
+          {title}
+        </Text>
+        <Text style={[styles.bulletDesc, { color: colors.textMuted }]}>
+          {desc}
+        </Text>
       </View>
     </View>
   );

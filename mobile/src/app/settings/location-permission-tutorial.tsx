@@ -9,9 +9,9 @@ export default function LocationPermissionTutorial() {
   const router = useRouter();
   const { colors } = useTheme();
 
-  const openSettings = () => {
+  const openSettings = async () => {
     try {
-      Linking.openSettings();
+      await Linking.openSettings();
     } catch {
       // best-effort; if it fails, the copy below still explains what to do
     }
@@ -21,10 +21,14 @@ export default function LocationPermissionTutorial() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Pressable style={styles.backRow} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={24} color={colors.primary} />
-        <Text style={[styles.backLabel, { color: colors.primary }]}>Location & Privacy</Text>
+        <Text style={[styles.backLabel, { color: colors.primary }]}>
+          Location & Privacy
+        </Text>
       </Pressable>
 
-      <Text style={[styles.title, { color: colors.text }]}>Enable Location Services</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        Enable Location Services
+      </Text>
 
       <ScrollView
         style={styles.scroll}
@@ -33,12 +37,21 @@ export default function LocationPermissionTutorial() {
       >
         <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
           <View style={styles.stepHeaderRow}>
-            <View style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}>
+            <View
+              style={[
+                styles.stepIconCircle,
+                { backgroundColor: colors.primary },
+              ]}
+            >
               <Ionicons name="settings-outline" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>Step 1</Text>
-              <Text style={[styles.stepTitle, { color: colors.text }]}>Open your device Settings</Text>
+              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
+                Step 1
+              </Text>
+              <Text style={[styles.stepTitle, { color: colors.text }]}>
+                Open your device Settings
+              </Text>
             </View>
           </View>
           <Text style={[styles.stepBody, { color: colors.textMuted }]}>
@@ -48,56 +61,104 @@ export default function LocationPermissionTutorial() {
 
         <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
           <View style={styles.stepHeaderRow}>
-            <View style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}>
+            <View
+              style={[
+                styles.stepIconCircle,
+                { backgroundColor: colors.primary },
+              ]}
+            >
               <Ionicons name="shield-outline" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>Step 2</Text>
-              <Text style={[styles.stepTitle, { color: colors.text }]}>Go to Privacy & Location</Text>
+              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
+                Step 2
+              </Text>
+              <Text style={[styles.stepTitle, { color: colors.text }]}>
+                Go to Privacy & Location
+              </Text>
             </View>
           </View>
           <Text style={[styles.stepBody, { color: colors.textMuted }]}>
-            Find and select <Text style={[styles.bold, { color: colors.text }]}>Privacy</Text>, then{" "}
-            <Text style={[styles.bold, { color: colors.text }]}>Location Services</Text>.
+            Find and select{" "}
+            <Text style={[styles.bold, { color: colors.text }]}>Privacy</Text>,
+            then{" "}
+            <Text style={[styles.bold, { color: colors.text }]}>
+              Location Services
+            </Text>
+            .
           </Text>
         </View>
 
         <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
           <View style={styles.stepHeaderRow}>
-            <View style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}>
+            <View
+              style={[
+                styles.stepIconCircle,
+                { backgroundColor: colors.primary },
+              ]}
+            >
               <Ionicons name="apps-outline" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>Step 3</Text>
-              <Text style={[styles.stepTitle, { color: colors.text }]}>Select the campus navigation app</Text>
+              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
+                Step 3
+              </Text>
+              <Text style={[styles.stepTitle, { color: colors.text }]}>
+                Select the campus navigation app
+              </Text>
             </View>
           </View>
           <Text style={[styles.stepBody, { color: colors.textMuted }]}>
             Scroll through the list and select{" "}
-            <Text style={[styles.bold, { color: colors.text }]}>ConUNav</Text> (campus navigation app).
+            <Text style={[styles.bold, { color: colors.text }]}>ConUNav</Text>{" "}
+            (campus navigation app).
           </Text>
         </View>
 
         <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
           <View style={styles.stepHeaderRow}>
-            <View style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+            <View
+              style={[
+                styles.stepIconCircle,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#fff"
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>Step 4</Text>
-              <Text style={[styles.stepTitle, { color: colors.text }]}>Choose &quot;Allow While Using the App&quot;</Text>
+              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
+                Step 4
+              </Text>
+              <Text style={[styles.stepTitle, { color: colors.text }]}>
+                Choose &quot;Allow While Using the App&quot;
+              </Text>
             </View>
           </View>
           <Text style={[styles.stepBody, { color: colors.textMuted }]}>
-            Under <Text style={[styles.bold, { color: colors.text }]}>Location access</Text>, select{" "}
-            <Text style={[styles.bold, { color: colors.text }]}>Allow while using the app</Text> so
-            ConUNav can determine your position only when you&apos;re actively
-            using it.
+            Under{" "}
+            <Text style={[styles.bold, { color: colors.text }]}>
+              Location access
+            </Text>
+            , select{" "}
+            <Text style={[styles.bold, { color: colors.text }]}>
+              Allow while using the app
+            </Text>{" "}
+            so ConUNav can determine your position only when you&apos;re
+            actively using it.
           </Text>
         </View>
 
         <View style={styles.buttonRow}>
-          <Pressable style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={openSettings}>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              void openSettings();
+            }}
+          >
             <Text style={styles.primaryButtonText}>Open Device Settings</Text>
           </Pressable>
 
@@ -105,7 +166,11 @@ export default function LocationPermissionTutorial() {
             style={[styles.secondaryButton, { borderColor: colors.border }]}
             onPress={() => router.back()}
           >
-            <Text style={[styles.secondaryButtonText, { color: colors.textMuted }]}>Skip for Now</Text>
+            <Text
+              style={[styles.secondaryButtonText, { color: colors.textMuted }]}
+            >
+              Skip for Now
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -188,4 +253,3 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
-

@@ -2,8 +2,6 @@ import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Foundation from "@expo/vector-icons/Foundation";
 import { BuildingId } from "../data/buildings";
 import { hasIndoorMaps } from "../utils/buildingIndoorMaps";
 import { useTheme } from "../hooks/useTheme";
@@ -54,48 +52,96 @@ export default function BuildingPopup({
   const fontScale = getFontScale(fontSize);
   const weightValue = getFontWeightValue(fontWeight);
   const showIndoorMaps = hasIndoorMaps(buildingId);
-  const acc = accessibility ?? defaultAccessibility;
+  const resolvedAccessibility = accessibility ?? defaultAccessibility;
 
   const font = (base: number) => ({
     fontSize: Math.round(base * fontScale),
-    fontWeight: weightValue as "400" | "500" | "700",
+    fontWeight: weightValue,
   });
 
   return (
     <PopupTemplate
       title={name}
-      accessibility={accessibility}
+      accessibility={resolvedAccessibility}
       onClose={onClose}
       renderTopContent={() =>
         image == null ? null : (
           <Image source={image} style={styles.image} resizeMode="cover" />
         )
       }
-      renderBody={() => (
-        <>
-          {(addressLines ?? []).map((line, idx) => (
-            <Text key={idx} style={[styles.address, font(14), { color: colors.textMuted }]}>
-              {line}
-            </Text>
-          ))}
-          <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, font(14), { color: colors.text }]}>Hours:</Text>
-            <Text style={[styles.metaValue, font(14), { color: colors.textMuted }]}>{openingHours}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, font(14), { color: colors.text }]}>Study Spots:</Text>
-            <Text style={[styles.metaValue, font(14), { color: colors.textMuted }]}>{hasStudySpots ? "Yes" : "No"}</Text>
-          </View>
-        </>
-      )}
+      renderBody={() => {
+        const lines = addressLines ?? [];
+        return (
+          <>
+            {lines.map((line, lineIndex) => {
+              const occurrence = lines
+                .slice(0, lineIndex)
+                .filter((l) => l === line).length;
+              return (
+                <Text
+                  key={`${id}-${name}-${line}#${occurrence}`}
+                  style={[
+                    styles.address,
+                    font(14),
+                    { color: colors.textMuted },
+                  ]}
+                >
+                  {line}
+                </Text>
+              );
+            })}
+            <View style={styles.metaRow}>
+              <Text
+                style={[styles.metaLabel, font(14), { color: colors.text }]}
+              >
+                Hours:
+              </Text>
+              <Text
+                style={[
+                  styles.metaValue,
+                  font(14),
+                  { color: colors.textMuted },
+                ]}
+              >
+                {openingHours}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text
+                style={[styles.metaLabel, font(14), { color: colors.text }]}
+              >
+                Study Spots:
+              </Text>
+              <Text
+                style={[
+                  styles.metaValue,
+                  font(14),
+                  { color: colors.textMuted },
+                ]}
+              >
+                {hasStudySpots ? "Yes" : "No"}
+              </Text>
+            </View>
+          </>
+        );
+      }}
       renderButtons={() => (
         <View style={styles.buttonRow}>
-          <Pressable onPress={onDirections} style={[styles.directionsBtn, { backgroundColor: colors.primary }]}>
+          <Pressable
+            onPress={onDirections}
+            style={[styles.directionsBtn, { backgroundColor: colors.primary }]}
+          >
             <FontAwesome5 name="directions" size={18} color="white" />
             <Text style={[styles.directionsText, font(14)]}>Directions</Text>
           </Pressable>
           {showIndoorMaps && onIndoorMaps && (
-            <Pressable onPress={onIndoorMaps} style={[styles.indoorMapsBtn, { backgroundColor: colors.primary }]}>
+            <Pressable
+              onPress={onIndoorMaps}
+              style={[
+                styles.indoorMapsBtn,
+                { backgroundColor: colors.primary },
+              ]}
+            >
               <Ionicons name="map" size={18} color="white" />
               <Text style={[styles.indoorMapsText, font(14)]}>Indoor Maps</Text>
             </Pressable>

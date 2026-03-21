@@ -2,7 +2,7 @@
 
 FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-# Only file types Prettier can parse (avoids ".prettierignore", images, lockfiles, etc.)
+# Only file types Prettier can parse
 MOBILE_FILES=$(
   printf "%s\n" "$FILES" |
     sed -n '/^mobile\//p' |
@@ -11,18 +11,7 @@ MOBILE_FILES=$(
 
 if [ -n "$MOBILE_FILES" ]; then
   echo "📱 Formatting mobile files..."
-  OLD_IFS=$IFS
-  IFS=$(printf '\n')
-  for file in $MOBILE_FILES; do
-    [ -z "$file" ] && continue
-    npx prettier --write "$file" || {
-      IFS=$OLD_IFS
-      exit 1
-    }
-  done
-  for file in $MOBILE_FILES; do
-    [ -z "$file" ] && continue
-    git add "$file"
-  done
-  IFS=$OLD_IFS
+  # One path per Prettier run — avoids sh word-splitting bugs with newlines / (parens) in paths
+  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs -n 1 npx prettier --write || exit 1
+  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs -n 1 git add || exit 1
 fi
