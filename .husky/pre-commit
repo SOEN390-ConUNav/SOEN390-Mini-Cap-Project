@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+
 FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
 # Only file types Prettier can parse
