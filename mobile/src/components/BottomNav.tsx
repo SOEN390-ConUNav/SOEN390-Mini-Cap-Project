@@ -1,5 +1,4 @@
 import React from "react";
-import { StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useAccessibilitySettings } from "../hooks/useAccessibilitySettings";
@@ -90,15 +89,7 @@ export default function BottomNav() {
           }}
         />
       ))}
-      {/* Hide settings sub-screens from the tab bar so only the root appears */}
-      <Tabs.Screen name="settings/general" options={{ href: null }} />
-      <Tabs.Screen name="settings/display" options={{ href: null }} />
-      <Tabs.Screen name="settings/notifications" options={{ href: null }} />
-      <Tabs.Screen name="settings/location-privacy" options={{ href: null }} />
-      <Tabs.Screen name="settings/navigation" options={{ href: null }} />
-      <Tabs.Screen name="settings/accessibility" options={{ href: null }} />
-      <Tabs.Screen name="settings/about" options={{ href: null }} />
-      <Tabs.Screen name="settings/terms" options={{ href: null }} />
+      {/* Stack screens like settings/general live under settings/_layout — not tab siblings; do not register them here (causes Expo Router warnings). */}
       <Tabs.Screen name="indoor-navigation" options={{ href: null }} />
     </Tabs>
   );

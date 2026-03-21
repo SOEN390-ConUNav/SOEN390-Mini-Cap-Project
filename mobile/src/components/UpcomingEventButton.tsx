@@ -23,11 +23,7 @@ import {
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
 import { useTheme } from "../hooks/useTheme";
-import {
-  useAccessibilitySettings,
-  getFontScale,
-  getFontWeightValue,
-} from "../hooks/useAccessibilitySettings";
+import { useAccessibleTypography } from "../hooks/useAccessibilitySettings";
 
 interface CalendarItem {
   id: string;
@@ -73,13 +69,8 @@ export default function UpcomingEventButton({
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
   const { colors } = useTheme();
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
-  const buttonFontStyle = {
-    fontSize: Math.round(12 * fontScale),
-    fontWeight: weightValue as "400" | "500" | "700",
-  };
+  const { textStyle } = useAccessibleTypography();
+  const buttonFontStyle = textStyle(12);
 
   const clearLocalGoogleState = () => {
     setSelectedCalendar(null);
@@ -413,7 +404,9 @@ export default function UpcomingEventButton({
       <Modal visible={showCalendarPicker} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { borderColor: colors.primary }]}>
-            <Text style={[styles.modalTitle, { color: colors.primary }]}>Select a calendar</Text>
+            <Text style={[styles.modalTitle, { color: colors.primary }]}>
+              Select a calendar
+            </Text>
 
             {isCalendarLoading ? (
               <View
@@ -426,7 +419,12 @@ export default function UpcomingEventButton({
                 ]}
               >
                 <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={[styles.calendarLoadingText, { color: colors.primary }]}>
+                <Text
+                  style={[
+                    styles.calendarLoadingText,
+                    { color: colors.primary },
+                  ]}
+                >
                   Refreshing calendars...
                 </Text>
               </View>
@@ -461,7 +459,14 @@ export default function UpcomingEventButton({
                         {item.summary}
                       </Text>
                       {item.primary ? (
-                        <Text style={[styles.calendarMeta, { color: colors.primary }]}>Primary</Text>
+                        <Text
+                          style={[
+                            styles.calendarMeta,
+                            { color: colors.primary },
+                          ]}
+                        >
+                          Primary
+                        </Text>
                       ) : null}
                     </TouchableOpacity>
                   );

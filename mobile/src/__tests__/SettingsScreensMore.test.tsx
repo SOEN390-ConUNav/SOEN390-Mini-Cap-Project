@@ -95,6 +95,7 @@ jest.mock("../hooks/useNotificationSettings", () => ({
     setCampusAlerts: jest.fn(),
     setNavigationUpdates: jest.fn(),
     setPromotionsTips: jest.fn(),
+    setQuietHoursActive: jest.fn(),
     hydrateFromStorage: jest.fn().mockResolvedValue(undefined),
   }),
 }));

@@ -1,18 +1,17 @@
 import React, { useEffect } from "react";
 import { StyleSheet, Text, View, Pressable, Switch } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import {
   useAccessibilitySettings,
   getFontSizeLabel,
   getFontWeightLabel,
-  getFontScale,
-  getFontWeightValue,
+  useAccessibleTypography,
+  FONT_SIZE_OPTIONS,
+  FONT_WEIGHT_OPTIONS,
 } from "../../hooks/useAccessibilitySettings";
 import { useTheme } from "../../hooks/useTheme";
+import { SettingsScreenScaffold } from "../../components/settings/SettingsScreenScaffold";
 
 export default function SettingsAccessibility() {
-  const router = useRouter();
   const { colors } = useTheme();
   const {
     colorBlindMode,
@@ -26,39 +25,30 @@ export default function SettingsAccessibility() {
     hydrateFromStorage,
   } = useAccessibilitySettings();
 
+  const { textStyle } = useAccessibleTypography();
+
   useEffect(() => {
     void hydrateFromStorage();
   }, [hydrateFromStorage]);
 
-  const fontScale = getFontScale(fontSize);
-  const previewWeight = getFontWeightValue(fontWeight) as "400" | "500" | "700";
-  const font = (baseSize: number) => ({
-    fontSize: Math.round(baseSize * fontScale),
-    fontWeight: previewWeight,
-  });
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Pressable style={styles.backRow} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={24} color={colors.primary} />
-        <Text style={[styles.backLabel, font(17), { color: colors.primary }]}>
-          Settings
-        </Text>
-      </Pressable>
-      <Text style={[styles.title, font(28), { color: colors.text }]}>
-        Accessibility Settings
-      </Text>
-
+    <SettingsScreenScaffold
+      title="Accessibility Settings"
+      backLabelStyle={textStyle(17)}
+      titleStyle={[textStyle(28), { marginBottom: 20 }]}
+    >
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderText}>
-            <Text style={[styles.cardTitle, font(16), { color: colors.text }]}>
+            <Text
+              style={[styles.cardTitle, textStyle(16), { color: colors.text }]}
+            >
               I use a wheelchair
             </Text>
             <Text
               style={[
                 styles.cardSubtitle,
-                font(13),
+                textStyle(13),
                 { color: colors.textMuted },
               ]}
             >
@@ -76,13 +66,15 @@ export default function SettingsAccessibility() {
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderText}>
-            <Text style={[styles.cardTitle, font(16), { color: colors.text }]}>
+            <Text
+              style={[styles.cardTitle, textStyle(16), { color: colors.text }]}
+            >
               Color Blind Mode
             </Text>
             <Text
               style={[
                 styles.cardSubtitle,
-                font(13),
+                textStyle(13),
                 { color: colors.textMuted },
               ]}
             >
@@ -100,13 +92,15 @@ export default function SettingsAccessibility() {
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderText}>
-            <Text style={[styles.cardTitle, font(16), { color: colors.text }]}>
+            <Text
+              style={[styles.cardTitle, textStyle(16), { color: colors.text }]}
+            >
               Font Size
             </Text>
             <Text
               style={[
                 styles.cardSubtitle,
-                font(13),
+                textStyle(13),
                 { color: colors.textMuted },
               ]}
             >
@@ -114,13 +108,17 @@ export default function SettingsAccessibility() {
             </Text>
           </View>
           <Text
-            style={[styles.valueLabel, font(14), { color: colors.primary }]}
+            style={[
+              styles.valueLabel,
+              textStyle(14),
+              { color: colors.primary },
+            ]}
           >
             {getFontSizeLabel(fontSize)}
           </Text>
         </View>
         <View style={styles.sliderRow}>
-          {(["small", "medium", "large"] as const).map((option) => (
+          {FONT_SIZE_OPTIONS.map((option) => (
             <Pressable
               key={option}
               style={[
@@ -135,7 +133,9 @@ export default function SettingsAccessibility() {
             />
           ))}
         </View>
-        <Text style={[styles.previewText, font(16), { color: colors.primary }]}>
+        <Text
+          style={[styles.previewText, textStyle(16), { color: colors.primary }]}
+        >
           This is how text will look
         </Text>
       </View>
@@ -143,13 +143,15 @@ export default function SettingsAccessibility() {
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderText}>
-            <Text style={[styles.cardTitle, font(16), { color: colors.text }]}>
+            <Text
+              style={[styles.cardTitle, textStyle(16), { color: colors.text }]}
+            >
               Text Weight
             </Text>
             <Text
               style={[
                 styles.cardSubtitle,
-                font(13),
+                textStyle(13),
                 { color: colors.textMuted },
               ]}
             >
@@ -157,13 +159,17 @@ export default function SettingsAccessibility() {
             </Text>
           </View>
           <Text
-            style={[styles.valueLabel, font(14), { color: colors.primary }]}
+            style={[
+              styles.valueLabel,
+              textStyle(14),
+              { color: colors.primary },
+            ]}
           >
             {getFontWeightLabel(fontWeight)}
           </Text>
         </View>
         <View style={styles.sliderRow}>
-          {(["light", "regular", "bold"] as const).map((option) => (
+          {FONT_WEIGHT_OPTIONS.map((option) => (
             <Pressable
               key={option}
               style={[
@@ -178,27 +184,17 @@ export default function SettingsAccessibility() {
             />
           ))}
         </View>
-        <Text style={[styles.previewText, font(15), { color: colors.primary }]}>
+        <Text
+          style={[styles.previewText, textStyle(15), { color: colors.primary }]}
+        >
           Bold preview text
         </Text>
       </View>
-    </View>
+    </SettingsScreenScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 56,
-    paddingHorizontal: 20,
-  },
-  backRow: { flexDirection: "row", alignItems: "center", marginBottom: 24 },
-  backLabel: { fontSize: 17, marginLeft: 4 },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 20,
-  },
   card: {
     borderRadius: 14,
     paddingVertical: 14,

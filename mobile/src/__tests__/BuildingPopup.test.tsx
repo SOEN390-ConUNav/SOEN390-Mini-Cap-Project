@@ -22,6 +22,14 @@ jest.mock("../hooks/useAccessibilitySettings", () => ({
   }),
   getFontScale: () => 1,
   getFontWeightValue: () => "500" as const,
+  useAccessibleTypography: () => ({
+    fontScale: 1,
+    weightValue: "500" as const,
+    textStyle: (base: number) => ({
+      fontSize: Math.round(base),
+      fontWeight: "500" as const,
+    }),
+  }),
 }));
 
 jest.mock("../utils/buildingIndoorMaps", () => ({

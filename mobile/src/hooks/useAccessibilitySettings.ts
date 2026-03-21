@@ -1,11 +1,20 @@
+import { useMemo } from "react";
 import { create } from "zustand";
 import {
   getCachedAccessibilityPrefs,
   setCachedAccessibilityPrefs,
 } from "../services/accessibilitySettingsCache";
 
-type FontSizeOption = "small" | "medium" | "large";
-type FontWeightOption = "light" | "regular" | "bold";
+export type FontSizeOption = "small" | "medium" | "large";
+export type FontWeightOption = "light" | "regular" | "bold";
+
+/** Shared option lists (avoids duplicated `as const` assertions in UI). */
+export const FONT_SIZE_OPTIONS: FontSizeOption[] = ["small", "medium", "large"];
+export const FONT_WEIGHT_OPTIONS: FontWeightOption[] = [
+  "light",
+  "regular",
+  "bold",
+];
 
 interface AccessibilitySettingsState {
   colorBlindMode: boolean;
@@ -116,4 +125,21 @@ export function getFontWeightValue(
     default:
       return "500";
   }
+}
+
+/**
+ * Scaled text style for dynamic type (font size + weight from accessibility settings).
+ */
+export function useAccessibleTypography() {
+  const { fontSize, fontWeight } = useAccessibilitySettings();
+  const fontScale = getFontScale(fontSize);
+  const weightValue = getFontWeightValue(fontWeight);
+  const textStyle = useMemo(
+    () => (baseSize: number) => ({
+      fontSize: Math.round(baseSize * fontScale),
+      fontWeight: weightValue,
+    }),
+    [fontScale, weightValue],
+  );
+  return { fontScale, weightValue, textStyle };
 }

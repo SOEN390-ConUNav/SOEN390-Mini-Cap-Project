@@ -5,11 +5,7 @@ import RouteRow from "./RouteRow";
 import SwapButton from "../SwapButton";
 import CircleIconButton from "../CircleIconButton";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
-import {
-  useAccessibilitySettings,
-  getFontScale,
-  getFontWeightValue,
-} from "../../hooks/useAccessibilitySettings";
+import { useAccessibleTypography } from "../../hooks/useAccessibilitySettings";
 
 const BURGUNDY = "#800020";
 
@@ -28,10 +24,7 @@ export default function RouteCard({
 }: RouteCardProps) {
   const isLoading = useNavigationInfo((s) => s.isLoading);
   const setIsLoading = useNavigationInfo((s) => s.setIsLoading);
-
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
+  const { textStyle } = useAccessibleTypography();
 
   const originDragProgress = useSharedValue(0);
   const destDragProgress = useSharedValue(0);
@@ -51,12 +44,7 @@ export default function RouteCard({
         {isLoading ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={BURGUNDY} />
-            <Text
-              style={[
-                styles.loadingText,
-                { fontSize: 14 * fontScale, fontWeight: weightValue },
-              ]}
-            >
+            <Text style={[styles.loadingText, textStyle(14)]}>
               Calculating route…
             </Text>
           </View>

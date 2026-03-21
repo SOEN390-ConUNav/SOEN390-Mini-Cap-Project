@@ -1,23 +1,26 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from "react-native";
-import { useTheme } from "../hooks/useTheme";
 import {
-  useAccessibilitySettings,
-  getFontScale,
-  getFontWeightValue,
-} from "../hooks/useAccessibilitySettings";
+  Animated,
+  LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useTheme } from "../hooks/useTheme";
+import { useAccessibleTypography } from "../hooks/useAccessibilitySettings";
+
+type CampusSwitcherProps = Readonly<{
+  value: "SGW" | "LOYOLA";
+  onChange: (v: "SGW" | "LOYOLA") => void;
+}>;
 
 export default function CampusSwitcher({
   value,
   onChange,
-}: {
-  value: "SGW" | "LOYOLA";
-  onChange: (v: "SGW" | "LOYOLA") => void;
-}) {
+}: CampusSwitcherProps) {
   const { colors } = useTheme();
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
+  const { textStyle } = useAccessibleTypography();
   const [containerWidth, setContainerWidth] = useState(0);
 
   const translateX = useRef(new Animated.Value(0)).current;
@@ -41,18 +44,22 @@ export default function CampusSwitcher({
     setContainerWidth(e.nativeEvent.layout.width);
   };
 
-  const textStyle = {
-    fontSize: Math.round(13 * fontScale),
-    fontWeight: weightValue as "400" | "500" | "700",
-  };
+  const segmentLabelStyle = textStyle(13);
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: colors.surface }]} onLayout={onLayout}>
+    <View
+      style={[styles.wrapper, { backgroundColor: colors.surface }]}
+      onLayout={onLayout}
+    >
       <Animated.View
         pointerEvents="none"
         style={[
           styles.selector,
-          { width: segmentWidth ? segmentWidth - 8 : 0, transform: [{ translateX }], borderColor: colors.primary },
+          {
+            width: segmentWidth ? segmentWidth - 8 : 0,
+            transform: [{ translateX }],
+            borderColor: colors.primary,
+          },
         ]}
       />
 
@@ -60,9 +67,12 @@ export default function CampusSwitcher({
         <Text
           style={[
             styles.text,
-            textStyle,
+            segmentLabelStyle,
             { color: colors.textMuted },
-            value === "SGW" && [styles.textActive, { color: colors.primary, opacity: 1 }],
+            value === "SGW" && [
+              styles.textActive,
+              { color: colors.primary, opacity: 1 },
+            ],
           ]}
         >
           SGW Campus
@@ -73,9 +83,12 @@ export default function CampusSwitcher({
         <Text
           style={[
             styles.text,
-            textStyle,
+            segmentLabelStyle,
             { color: colors.textMuted },
-            value === "LOYOLA" && [styles.textActive, { color: colors.primary, opacity: 1 }],
+            value === "LOYOLA" && [
+              styles.textActive,
+              { color: colors.primary, opacity: 1 },
+            ],
           ]}
         >
           Loyola Campus

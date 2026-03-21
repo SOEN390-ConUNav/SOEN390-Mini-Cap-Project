@@ -15,11 +15,7 @@ import {
   getSchedule,
   DeparturesByDay,
 } from "../../services/shuttleScheduleCache";
-import {
-  useAccessibilitySettings,
-  getFontScale,
-  getFontWeightValue,
-} from "../../hooks/useAccessibilitySettings";
+import { useAccessibleTypography } from "../../hooks/useAccessibilitySettings";
 import { useTheme } from "../../hooks/useTheme";
 import { type ThemeColors, BURGUNDY } from "../../theme/theme";
 import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
@@ -42,14 +38,7 @@ export default function ShuttleInfoPage() {
   const router = useRouter();
   const { colors } = useTheme();
   const { defaultCampus } = useGeneralSettingsStore();
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
-
-  const font = (base: number) => ({
-    fontSize: base * fontScale,
-    fontWeight: weightValue,
-  });
+  const { textStyle } = useAccessibleTypography();
   const [campus, setCampus] = useState<Campus>("SGW");
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [schedule, setSchedule] = useState<DeparturesByDay | null>(null);
@@ -137,7 +126,7 @@ export default function ShuttleInfoPage() {
           </Pressable>
         )}
 
-        <Text style={[styles.title, font(30), { color: colors.text }]}>
+        <Text style={[styles.title, textStyle(30), { color: colors.text }]}>
           Shuttle Schedule
         </Text>
 
@@ -145,7 +134,7 @@ export default function ShuttleInfoPage() {
           <Text
             style={[
               styles.locationLabel,
-              font(13),
+              textStyle(13),
               { color: colors.textMuted },
             ]}
           >
@@ -153,7 +142,11 @@ export default function ShuttleInfoPage() {
           </Text>
           <View style={styles.locationLine}>
             <Text
-              style={[styles.locationText, font(14), { color: colors.text }]}
+              style={[
+                styles.locationText,
+                textStyle(14),
+                { color: colors.text },
+              ]}
             >
               {campusInfo.address}
             </Text>
@@ -179,13 +172,17 @@ export default function ShuttleInfoPage() {
         ) : (
           <>
             <Text
-              style={[styles.sectionTitle, font(18), { color: colors.text }]}
+              style={[
+                styles.sectionTitle,
+                textStyle(18),
+                { color: colors.text },
+              ]}
             >
               Next Departures
             </Text>
 
             {nextDepartures.length === 0 ? (
-              <Text style={[{ color: colors.textMuted }, font(14)]}>
+              <Text style={[{ color: colors.textMuted }, textStyle(14)]}>
                 No more departures today.
               </Text>
             ) : (
@@ -216,7 +213,11 @@ export default function ShuttleInfoPage() {
               onPress={() => setShowFullSchedule(true)}
             >
               <Text
-                style={[styles.fullButtonText, font(16), { color: "#fff" }]}
+                style={[
+                  styles.fullButtonText,
+                  textStyle(16),
+                  { color: "#fff" },
+                ]}
               >
                 View Full Schedule
               </Text>
@@ -245,14 +246,7 @@ function DepartureCard({
   countdownMin: number;
   colors: ThemeColors;
 }) {
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
-
-  const font = (base: number) => ({
-    fontSize: base * fontScale,
-    fontWeight: weightValue,
-  });
+  const { textStyle } = useAccessibleTypography();
 
   return (
     <Pressable
@@ -262,19 +256,23 @@ function DepartureCard({
       }}
     >
       <View style={styles.cardLeft}>
-        <Text style={[styles.cardTime, font(22), { color: colors.text }]}>
+        <Text style={[styles.cardTime, textStyle(22), { color: colors.text }]}>
           {time}
         </Text>
-        <Text style={[styles.cardFrom, font(13), { color: colors.textMuted }]}>
+        <Text
+          style={[styles.cardFrom, textStyle(13), { color: colors.textMuted }]}
+        >
           from {from}
         </Text>
-        <Text style={[styles.cardEta, font(13), { color: colors.textMuted }]}>
+        <Text
+          style={[styles.cardEta, textStyle(13), { color: colors.textMuted }]}
+        >
           {eta}
         </Text>
       </View>
 
       <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.badgeText, font(14)]}>{countdownMin}min</Text>
+        <Text style={[styles.badgeText, textStyle(14)]}>{countdownMin}min</Text>
       </View>
     </Pressable>
   );
@@ -290,15 +288,7 @@ function FullScheduleTable({
   colors: ThemeColors;
 }) {
   const rows = Math.max(monThu.length, fri.length);
-
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
-
-  const font = (base: number) => ({
-    fontSize: base * fontScale,
-    fontWeight: weightValue,
-  });
+  const { textStyle } = useAccessibleTypography();
 
   const rowAltBg = colors.surface;
   const rowMainBg = colors.card;
@@ -311,10 +301,10 @@ function FullScheduleTable({
       ]}
     >
       <View style={[styles.tableHeader, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.tableHeaderText, font(16)]}>
+        <Text style={[styles.tableHeaderText, textStyle(16)]}>
           Monday - Thursday
         </Text>
-        <Text style={[styles.tableHeaderText, font(16)]}>Friday</Text>
+        <Text style={[styles.tableHeaderText, textStyle(16)]}>Friday</Text>
       </View>
 
       {Array.from({ length: rows }).map((_, i) => {
@@ -327,10 +317,14 @@ function FullScheduleTable({
               { backgroundColor: zebra ? rowMainBg : rowAltBg },
             ]}
           >
-            <Text style={[styles.cellText, font(14), { color: colors.text }]}>
+            <Text
+              style={[styles.cellText, textStyle(14), { color: colors.text }]}
+            >
               {monThu[i] ?? ""}
             </Text>
-            <Text style={[styles.cellText, font(14), { color: colors.text }]}>
+            <Text
+              style={[styles.cellText, textStyle(14), { color: colors.text }]}
+            >
               {fri[i] ?? ""}
             </Text>
           </View>

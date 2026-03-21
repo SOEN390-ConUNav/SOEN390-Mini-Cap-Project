@@ -5,11 +5,7 @@ import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { BuildingId } from "../data/buildings";
 import { hasIndoorMaps } from "../utils/buildingIndoorMaps";
 import { useTheme } from "../hooks/useTheme";
-import {
-  useAccessibilitySettings,
-  getFontScale,
-  getFontWeightValue,
-} from "../hooks/useAccessibilitySettings";
+import { useAccessibleTypography } from "../hooks/useAccessibilitySettings";
 import PopupTemplate from "./PopupTemplate";
 
 const defaultAccessibility = {
@@ -48,16 +44,11 @@ export default function BuildingPopup({
   onIndoorMaps?: () => void;
 }) {
   const { colors } = useTheme();
-  const { fontSize, fontWeight } = useAccessibilitySettings();
-  const fontScale = getFontScale(fontSize);
-  const weightValue = getFontWeightValue(fontWeight);
+  const { textStyle } = useAccessibleTypography();
   const showIndoorMaps = hasIndoorMaps(buildingId);
   const resolvedAccessibility = accessibility ?? defaultAccessibility;
 
-  const font = (base: number) => ({
-    fontSize: Math.round(base * fontScale),
-    fontWeight: weightValue,
-  });
+  const font = textStyle;
 
   return (
     <PopupTemplate

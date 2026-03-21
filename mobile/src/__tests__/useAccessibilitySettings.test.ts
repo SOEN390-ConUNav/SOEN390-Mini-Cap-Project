@@ -1,9 +1,13 @@
+import { renderHook } from "@testing-library/react-native";
 import {
+  FONT_SIZE_OPTIONS,
+  FONT_WEIGHT_OPTIONS,
   getFontScale,
   getFontWeightValue,
   getFontSizeLabel,
   getFontWeightLabel,
   useAccessibilitySettingsStore,
+  useAccessibleTypography,
 } from "../hooks/useAccessibilitySettings";
 
 describe("useAccessibilitySettings", () => {
@@ -117,6 +121,32 @@ describe("useAccessibilitySettings", () => {
       expect(useAccessibilitySettingsStore.getState().colorBlindMode).toBe(
         true,
       );
+    });
+  });
+
+  describe("FONT_SIZE_OPTIONS and FONT_WEIGHT_OPTIONS", () => {
+    it("exhaustive font size keys", () => {
+      expect(FONT_SIZE_OPTIONS).toEqual(["small", "medium", "large"]);
+    });
+    it("exhaustive font weight keys", () => {
+      expect(FONT_WEIGHT_OPTIONS).toEqual(["light", "regular", "bold"]);
+    });
+  });
+
+  describe("useAccessibleTypography", () => {
+    beforeEach(() => {
+      useAccessibilitySettingsStore.setState({
+        fontSize: "medium",
+        fontWeight: "regular",
+      });
+    });
+
+    it("returns scaled textStyle from settings", () => {
+      const { result } = renderHook(() => useAccessibleTypography());
+      expect(result.current.textStyle(12)).toEqual({
+        fontSize: 12,
+        fontWeight: "500",
+      });
     });
   });
 });
