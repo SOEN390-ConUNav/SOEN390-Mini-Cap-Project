@@ -2,15 +2,27 @@
 
 FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-# Prettier has no parser for these — exclude or the hook exits 1
+# Only file types Prettier can parse (avoids ".prettierignore", images, lockfiles, etc.)
 MOBILE_FILES=$(
   printf "%s\n" "$FILES" |
     sed -n '/^mobile\//p' |
-    grep -vE '\.gitignore$|\.prettierignore$|package-lock\.json$|\.env(\.|$)'
+    grep -E '\.(tsx?|jsx?|json|cjs|mjs|md|ya?ml)$' || true
 )
 
 if [ -n "$MOBILE_FILES" ]; then
   echo "📱 Formatting mobile files..."
-  printf "%s\n" "$MOBILE_FILES" | xargs npx prettier --write
-  printf "%s\n" "$MOBILE_FILES" | xargs git add
+  OLD_IFS=$IFS
+  IFS=$(printf '\n')
+  for file in $MOBILE_FILES; do
+    [ -z "$file" ] && continue
+    npx prettier --write "$file" || {
+      IFS=$OLD_IFS
+      exit 1
+    }
+  done
+  for file in $MOBILE_FILES; do
+    [ -z "$file" ] && continue
+    git add "$file"
+  done
+  IFS=$OLD_IFS
 fi
