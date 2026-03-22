@@ -1,0 +1,5 @@
+# Prettier has no parser for these (pre-commit passes all staged mobile paths)
+.gitignore
+.env
+.env.*
+*.md

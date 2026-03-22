@@ -17,27 +17,33 @@ jest.mock("react-native-gesture-handler", () => {
   const { View } = require("react-native");
   return {
     Gesture: {
-      Pan: () => ({
-        runOnJS(_val: boolean) {
-          return this;
-        },
-        onBegin(fn: () => void) {
-          capturedCallbacks.onBegin = fn;
-          return this;
-        },
-        onUpdate(fn: (e: { translationY: number }) => void) {
-          capturedCallbacks.onUpdate = fn;
-          return this;
-        },
-        onEnd(fn: (e: { translationY: number }) => void) {
-          capturedCallbacks.onEnd = fn;
-          return this;
-        },
-        onFinalize(fn: () => void) {
-          capturedCallbacks.onFinalize = fn;
-          return this;
-        },
-      }),
+      Pan: () => {
+        const chain = {
+          enabled() {
+            return chain;
+          },
+          runOnJS(_val: boolean) {
+            return chain;
+          },
+          onBegin(fn: () => void) {
+            capturedCallbacks.onBegin = fn;
+            return chain;
+          },
+          onUpdate(fn: (e: { translationY: number }) => void) {
+            capturedCallbacks.onUpdate = fn;
+            return chain;
+          },
+          onEnd(fn: (e: { translationY: number }) => void) {
+            capturedCallbacks.onEnd = fn;
+            return chain;
+          },
+          onFinalize(fn: () => void) {
+            capturedCallbacks.onFinalize = fn;
+            return chain;
+          },
+        };
+        return chain;
+      },
     },
     GestureDetector: ({ children }: { children: React.ReactNode }) => (
       <View>{children}</View>

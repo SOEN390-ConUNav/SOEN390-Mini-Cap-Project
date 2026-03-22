@@ -1,11 +1,19 @@
 #!/usr/bin/env sh
 
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+
 FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-MOBILE_FILES=$(printf "%s\n" "$FILES" | sed -n '/^mobile\//p')
+# Only file types Prettier can parse
+MOBILE_FILES=$(
+  printf "%s\n" "$FILES" |
+    sed -n '/^mobile\//p' |
+    grep -E '\.(tsx?|jsx?|json|cjs|mjs|md|ya?ml)$' || true
+)
 
 if [ -n "$MOBILE_FILES" ]; then
   echo "📱 Formatting mobile files..."
-  printf "%s\n" "$MOBILE_FILES" | xargs npx prettier --write
-  printf "%s\n" "$MOBILE_FILES" | xargs git add
+  # One path per Prettier run — avoids sh word-splitting bugs with newlines / (parens) in paths
+  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs -n 1 npx prettier --write || exit 1
+  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs -n 1 git add || exit 1
 fi

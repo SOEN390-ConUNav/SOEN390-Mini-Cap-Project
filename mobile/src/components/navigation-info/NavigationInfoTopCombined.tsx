@@ -8,6 +8,7 @@ import {
   getManeuverIcon,
   getStreetOnlyInstruction,
 } from "../navigation-direction/navigationDirectionUtils";
+import { useTheme } from "../../hooks/useTheme";
 
 interface NavigationInfoTopCombinedProps {
   readonly destination: string;
@@ -22,40 +23,59 @@ export default function NavigationInfoTopCombined({
   showHudExtended,
   hudStep,
 }: NavigationInfoTopCombinedProps) {
+  const { colors } = useTheme();
   const distance = useNavigationInfo((state) => state.pathDistance);
   const duration = useNavigationInfo((state) => state.pathDuration);
   const street = getStreetOnlyInstruction(hudStep?.instruction);
   const showHud = showHudExtended && Boolean(hudStep && street);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topSection}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.card, borderColor: colors.primary },
+      ]}
+    >
+      <View style={[styles.topSection, { backgroundColor: colors.card }]}>
         <View style={styles.headerRow}>
-          <MaterialIcons name="place" size={18} color="#000" />
-          <Text style={styles.title} numberOfLines={1}>
+          <MaterialIcons name="place" size={18} color={colors.text} />
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {destination}
           </Text>
         </View>
 
         {showInfoExtended && (
           <>
-            <View style={styles.divider} />
+            <View
+              style={[styles.divider, { backgroundColor: colors.border }]}
+            />
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Arriving at</Text>
-              <Text style={styles.value}>{calculateETA(duration)}</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                Arriving at
+              </Text>
+              <Text style={[styles.value, { color: colors.text }]}>
+                {calculateETA(duration)}
+              </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Distance</Text>
-              <Text style={styles.value}>{distance}</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                Distance
+              </Text>
+              <Text style={[styles.value, { color: colors.text }]}>
+                {distance}
+              </Text>
             </View>
           </>
         )}
       </View>
 
       {showHud && (
-        <View style={styles.hudSection}>
+        <View style={[styles.hudSection, { backgroundColor: colors.primary }]}>
           <Ionicons
             name={getManeuverIcon(hudStep!.maneuverType)}
             size={16}
@@ -72,16 +92,13 @@ export default function NavigationInfoTopCombined({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#800020",
     elevation: 4,
     overflow: "hidden",
   },
   topSection: {
     padding: 14,
-    backgroundColor: "#fff",
   },
   headerRow: {
     flexDirection: "row",
@@ -95,7 +112,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#ccc",
     marginVertical: 8,
   },
   infoRow: {
@@ -104,7 +120,6 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   label: {
-    color: "#555",
     fontSize: 14,
   },
   value: {
@@ -115,7 +130,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#800020",
     paddingHorizontal: 14,
     paddingVertical: 10,
   },

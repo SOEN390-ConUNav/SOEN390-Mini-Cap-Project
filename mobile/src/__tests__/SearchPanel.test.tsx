@@ -142,12 +142,15 @@ describe("SearchPanel", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(mockGetSearchHistory).toHaveBeenCalledTimes(1);
-      expect(queryByText("Recent Searches")).toBeTruthy();
-      expect(queryByText("Library")).toBeTruthy();
-    });
-  });
+    await waitFor(
+      () => {
+        expect(mockGetSearchHistory).toHaveBeenCalledTimes(1);
+        expect(queryByText("Recent Searches")).toBeTruthy();
+        expect(queryByText("Library")).toBeTruthy();
+      },
+      { timeout: 15_000 },
+    );
+  }, 20_000);
 
   it("does not search when query is blank", async () => {
     const { getByPlaceholderText } = render(

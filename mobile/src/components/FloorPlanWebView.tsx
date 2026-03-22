@@ -27,6 +27,8 @@ export interface RoomMarkerData {
 interface FloorPlanWebViewProps {
   buildingId?: BuildingId;
   floorNumber?: string;
+  backgroundColor?: string;
+  invertSvg?: boolean;
   onPoiTap?: (poi: PoiMarker) => void;
   onRoomTap?: (room: RoomMarkerData) => void;
   routePoints?: RoutePoint[];
@@ -37,10 +39,6 @@ interface FloorPlanWebViewProps {
 export interface FloorPlanWebViewRef {
   drawRoute: (routePoints: RoutePoint[]) => void;
   clearRoute: () => void;
-  showWaypoints: (
-    waypoints: Array<{ x: number; y: number; id: string }>,
-  ) => void;
-  hideWaypoints: () => void;
   showRoomMarkers: (
     roomPoints: Array<{ x: number; y: number; id: string }>,
   ) => void;
@@ -88,6 +86,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
     {
       buildingId = "H",
       floorNumber = "8",
+      backgroundColor,
+      invertSvg = false,
       onPoiTap,
       onRoomTap,
       routePoints: propRoutePoints,
@@ -162,6 +162,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               );
             }
 
+            const bg = backgroundColor ?? "white";
+            const svgFilter = invertSvg ? "filter: invert(1);" : "";
             const html = `
             <!DOCTYPE html>
             <html>
@@ -169,10 +171,10 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, minimum-scale=0.1, user-scalable=yes">
                 <style>
                   * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { 
+                  html, body {
                     width: 100%;
                     height: 100%;
-                    background: white; 
+                    background: ${bg};
                     overflow: auto;
                     -webkit-overflow-scrolling: touch;
                   }
@@ -189,6 +191,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                     max-height: 100vh;
                     width: auto;
                     height: auto;
+                    ${svgFilter}
                   }
                 </style>
               </head>
@@ -306,51 +309,6 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                       });
                     };
                     
-                    window.showWaypoints = function(waypoints) {
-                      try {
-                        if (!waypoints || waypoints.length === 0) return;
-                        window.hideWaypoints();
-                        
-                        var g = document.createElementNS(SVG_NS, 'g');
-                        g.id = 'waypointsGroup';
-                        g.setAttribute('style', 'pointer-events: none;');
-                        
-                        waypoints.forEach(function(wp, index) {
-                          var circle = document.createElementNS(SVG_NS, 'circle');
-                          circle.setAttribute('cx', wp.x.toString());
-                          circle.setAttribute('cy', wp.y.toString());
-                          circle.setAttribute('r', '10');
-                          circle.setAttribute('fill', '#4285F4');
-                          circle.setAttribute('stroke', '#FFFFFF');
-                          circle.setAttribute('stroke-width', '3');
-                          
-                          var text = document.createElementNS(SVG_NS, 'text');
-                          text.setAttribute('x', wp.x.toString());
-                          text.setAttribute('y', (wp.y - 15).toString());
-                          text.setAttribute('font-size', '14');
-                          text.setAttribute('fill', '#FF0000');
-                          text.setAttribute('text-anchor', 'middle');
-                          text.setAttribute('font-weight', 'bold');
-                          text.setAttribute('style', 'pointer-events: none;');
-                          text.textContent = wp.id || ('WP' + index);
-                          
-                          g.appendChild(circle);
-                          g.appendChild(text);
-                        });
-                        
-                        svg.appendChild(g);
-                      } catch(e) {
-                        console.error('Error showing waypoints:', e);
-                      }
-                    };
-                    
-                    window.hideWaypoints = function() {
-                      try {
-                        var g = svg.querySelector('#waypointsGroup');
-                        if (g && g.parentNode) g.parentNode.removeChild(g);
-                      } catch(e) {}
-                    };
-                    
                     window.showRoomMarkers = function(roomPoints) {
                       try {
                         if (!roomPoints || roomPoints.length === 0) return;
@@ -427,12 +385,13 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                       'emergency-exit':  { bg: '#F44336', letter: '!',  color: '#fff' },
                       'bathroom-men':    { bg: '#2196F3', letter: 'M',  color: '#fff' },
                       'bathroom-women':  { bg: '#E91E63', letter: 'W',  color: '#fff' },
-                      'water-fountain':  { bg: '#00BCD4', letter: 'W',  color: '#fff' },
+                      'water-fountain':  { bg: '#00BCD4', letter: '💧', color: '#fff' },
                       'computer-station':{ bg: '#9C27B0', letter: 'C',  color: '#fff' },
                       'study-area':      { bg: '#FF9800', letter: 'A',  color: '#fff' },
                       'printer':         { bg: '#607D8B', letter: 'P',  color: '#fff' },
                       'bookshelf':       { bg: '#795548', letter: 'B',  color: '#fff' },
-                      'entrance-exit':   { bg: '#FF5722', letter: 'D',  color: '#fff' }
+                      'entrance-exit':   { bg: '#FF5722', letter: 'D',  color: '#fff' },
+                      'exit':            { bg: '#FF5722', letter: 'D',  color: '#fff' }
                     };
 
                     window.showPois = function(pois) {
@@ -522,7 +481,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       return () => {
         cancelled = true;
       };
-    }, [buildingId, floorNumber, markWebViewReady]);
+    }, [buildingId, floorNumber, backgroundColor, invertSvg, markWebViewReady]);
 
     const executeDrawRoute = React.useCallback(
       (routePoints: RoutePoint[], version: number, retryCount = 0) => {
@@ -646,25 +605,6 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
         (function() { if (window.clearRoute) window.clearRoute(); true; })();
       `);
         },
-        showWaypoints: (
-          waypoints: Array<{ x: number; y: number; id: string }>,
-        ) => {
-          if (!webViewRef.current || !isWebViewReady) return;
-          const waypointsJson = JSON.stringify(waypoints);
-          webViewRef.current.injectJavaScript(`
-        (function() {
-          try { if (typeof window.showWaypoints === 'function') window.showWaypoints(${waypointsJson}); }
-          catch(e) { console.error('Error in showWaypoints:', e); }
-          true;
-        })();
-      `);
-        },
-        hideWaypoints: () => {
-          if (!webViewRef.current) return;
-          webViewRef.current.injectJavaScript(`
-        (function() { if (typeof window.hideWaypoints === 'function') window.hideWaypoints(); true; })();
-      `);
-        },
         showRoomMarkers: (
           roomPoints: Array<{ x: number; y: number; id: string }>,
         ) => {
@@ -706,9 +646,11 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       [isWebViewReady],
     );
 
+    const bgColor = backgroundColor ?? "white";
+
     if (!svgHtml) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: bgColor }]}>
           <ActivityIndicator size="large" color="#4285F4" />
           <Text style={styles.loadingText}>Loading floor plan...</Text>
         </View>
@@ -721,7 +663,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           key={`${buildingId}-${floorNumber}`}
           ref={webViewRef}
           source={{ html: svgHtml }}
-          style={styles.webView}
+          style={[styles.webView, { backgroundColor: bgColor }]}
           scalesPageToFit={true}
           bounces={true}
           scrollEnabled={true}

@@ -74,8 +74,6 @@ describe("FloorPlanWebView Component", () => {
 
     expect(typeof ref.current?.drawRoute).toBe("function");
     expect(typeof ref.current?.clearRoute).toBe("function");
-    expect(typeof ref.current?.showWaypoints).toBe("function");
-    expect(typeof ref.current?.hideWaypoints).toBe("function");
     expect(typeof ref.current?.showRoomMarkers).toBe("function");
     expect(typeof ref.current?.hideRoomMarkers).toBe("function");
     expect(typeof ref.current?.showPois).toBe("function");
@@ -228,23 +226,6 @@ describe("FloorPlanWebView Component", () => {
       });
     });
     await waitFor(() => {}, { timeout: 500 });
-  });
-
-  it("showWaypoints and hideWaypoints are callable via ref", async () => {
-    const ref = createRef<FloorPlanWebViewRef>();
-    const { getByTestId } = render(
-      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
-    );
-    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
-    act(() => {
-      getByTestId("mock-webview").props.onMessage({
-        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
-      });
-    });
-    await waitFor(() => expect(ref.current).toBeTruthy());
-    ref.current?.showWaypoints([{ x: 10, y: 10, id: "wp1" }]);
-    ref.current?.hideWaypoints();
-    expect(ref.current?.showWaypoints).toBeDefined();
   });
 
   it("showRoomMarkers and hideRoomMarkers are callable via ref", async () => {
@@ -449,21 +430,6 @@ describe("FloorPlanWebView Component", () => {
     );
     await waitFor(() => {}, { timeout: 500 });
     expect(getByText("Loading floor plan...")).toBeTruthy();
-  });
-
-  it("showWaypoints before WebView ready returns early", async () => {
-    const ref = createRef<FloorPlanWebViewRef>();
-    const { getByTestId } = render(
-      <FloorPlanWebView ref={ref} buildingId="H" floorNumber="8" />,
-    );
-    await waitFor(() => expect(getByTestId("mock-webview")).toBeTruthy());
-    ref.current?.showWaypoints([{ x: 5, y: 5, id: "wp1" }]);
-    act(() => {
-      getByTestId("mock-webview").props.onMessage({
-        nativeEvent: { data: JSON.stringify({ type: "webViewReady" }) },
-      });
-    });
-    expect(ref.current?.showWaypoints).toBeDefined();
   });
 
   it("renders with VL building", async () => {

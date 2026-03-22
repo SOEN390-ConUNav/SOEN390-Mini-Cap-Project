@@ -1,13 +1,23 @@
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import DirectionsPanel from "../components/DirectionsPanel";
 import { IndoorDirectionResponse } from "../types/indoorDirections";
 
 jest.mock("../components/BottomDrawer", () => {
-  const { View } = require("react-native");
+  const { View, Pressable, Text } = require("react-native");
   return (props: any) => {
     if (!props.visible) return null;
-    return <View testID="mock-drawer">{props.children}</View>;
+    return (
+      <View testID="mock-drawer">
+        <Pressable
+          testID="mock-snap-change"
+          onPress={() => props.onSnapIndexChange?.(0)}
+        >
+          <Text>Snap Change</Text>
+        </Pressable>
+        {props.children}
+      </View>
+    );
   };
 });
 
@@ -92,6 +102,35 @@ describe("DirectionsPanel", () => {
     expect(getByText("Leave H8-843 and continue straight")).toBeTruthy();
     expect(getByText("30m")).toBeTruthy();
     expect(queryByText("30s")).toBeNull();
+  });
+
+  it("uses the provided currentStepIndex as the active step", () => {
+    const { getByText, queryByText } = render(
+      <DirectionsPanel
+        routeData={routeData}
+        currentStepIndex={1}
+        visible={true}
+        onClose={mockOnClose}
+      />,
+    );
+    expect(getByText("Turn left")).toBeTruthy();
+    expect(getByText("Arrive at H8-807")).toBeTruthy();
+    expect(queryByText("Leave H8-843 and continue straight")).toBeNull();
+  });
+
+  it("forwards snap index changes to the provided callback", () => {
+    const onSnapIndexChange = jest.fn();
+    const { getByTestId } = render(
+      <DirectionsPanel
+        routeData={routeData}
+        visible={true}
+        onClose={mockOnClose}
+        onSnapIndexChange={onSnapIndexChange}
+      />,
+    );
+
+    fireEvent.press(getByTestId("mock-snap-change"));
+    expect(onSnapIndexChange).toHaveBeenCalledWith(0);
   });
 
   it("renders remaining steps below the primary card", () => {

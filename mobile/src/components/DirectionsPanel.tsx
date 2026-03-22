@@ -14,8 +14,10 @@ const BURGUNDY_HIGHLIGHT = "rgba(255,255,255,0.12)";
 
 interface DirectionsPanelProps {
   routeData: IndoorDirectionResponse | null;
+  currentStepIndex?: number;
   visible: boolean;
   onClose: () => void;
+  onSnapIndexChange?: (index: number) => void;
 }
 
 function getIndoorManeuverIcon(
@@ -104,13 +106,20 @@ function StepRow({ step }: { readonly step: IndoorRouteStep }) {
 
 export default function DirectionsPanel({
   routeData,
+  currentStepIndex = 0,
   visible,
   onClose,
+  onSnapIndexChange,
 }: Readonly<DirectionsPanelProps>) {
   const steps = routeData?.steps;
   if (!steps || steps.length === 0) return null;
 
-  const [firstStep, ...remainingSteps] = steps;
+  const activeStepIndex = Math.max(
+    0,
+    Math.min(currentStepIndex, steps.length - 1),
+  );
+  const firstStep = steps[activeStepIndex];
+  const remainingSteps = steps.slice(activeStepIndex + 1);
 
   return (
     <BottomDrawer
@@ -125,6 +134,7 @@ export default function DirectionsPanel({
       handleColor="rgba(255,255,255,0.4)"
       contentContainerStyle={styles.drawerContent}
       onClose={onClose}
+      onSnapIndexChange={onSnapIndexChange}
     >
       <PrimaryStep step={firstStep} />
 
