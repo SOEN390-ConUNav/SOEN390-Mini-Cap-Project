@@ -1,0 +1,27 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "Loyola Campus"
+- tapOn:
+    point: "17%,95%"
+- tapOn: "Accessibility"
+- assertVisible: "I use a wheelchair"
+- assertVisible: "Color Blind Mode"
+- assertVisible: "Font Size"
+- assertVisible: "Text Weight"
+- tapOn:
+    point: "13%,46%"
+- assertVisible: "Small"
+- tapOn:
+    point: "50%,95%"
+- assertVisible: "Loyola Campus"
+- tapOn:
+    point: "17%,95%"
+- assertVisible: "Small"
+- stopApp
+- launchApp
+- assertVisible: "Loyola Campus"
+- tapOn:
+    point: "17%,95"
+- tapOn: "Accessibility"
+- assertVisible: "Small"
