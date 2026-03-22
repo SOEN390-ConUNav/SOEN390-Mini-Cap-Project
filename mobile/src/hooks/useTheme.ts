@@ -1,10 +1,6 @@
 import { useEffect } from "react";
 import { useDisplaySettings } from "./useDisplaySettings";
-import {
-  type ThemeColors,
-  LIGHT_THEME,
-  DARK_THEME,
-} from "../theme/theme";
+import { type ThemeColors, LIGHT_THEME, DARK_THEME } from "../theme/theme";
 
 export function useTheme(): { isDark: boolean; colors: ThemeColors } {
   const { darkMode, hydrateFromStorage } = useDisplaySettings();

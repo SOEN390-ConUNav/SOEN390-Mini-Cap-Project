@@ -1,0 +1,8 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "Loyola Campus"
+- assertVisible: "SGW Campus"
+- tapOn: "Map Marker"
+- tapOn: "Map Marker"
+- assertVisible: "CL Annex"

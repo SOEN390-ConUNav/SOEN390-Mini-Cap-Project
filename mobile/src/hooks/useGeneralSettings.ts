@@ -69,8 +69,5 @@ export function getLanguageLabel(lang: LanguageCode): string {
 }
 
 export function getCampusLabel(campus: CampusCode): string {
-  return campus === "LOYOLA"
-    ? "Loyola Campus"
-    : "Sir George Williams Campus";
+  return campus === "LOYOLA" ? "Loyola Campus" : "Sir George Williams Campus";
 }
-

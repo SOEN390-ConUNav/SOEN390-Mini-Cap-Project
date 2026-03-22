@@ -15,21 +15,34 @@ const NavigationInfoTopExt = ({ destination }: NavigationInfoTopExtProps) => {
   const duration = useNavigationInfo((state) => state.pathDuration);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.card, borderColor: colors.primary },
+      ]}
+    >
       <View style={styles.headerRow}>
         <MaterialIcons name="place" size={18} color={colors.text} />
-        <Text style={[styles.title, { color: colors.text }]}>{destination}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {destination}
+        </Text>
       </View>
 
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <View style={styles.infoRow}>
-        <Text style={[styles.label, { color: colors.textMuted }]}>Arriving at</Text>
-        <Text style={[styles.value, { color: colors.text }]}>{calculateETA(duration)}</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>
+          Arriving at
+        </Text>
+        <Text style={[styles.value, { color: colors.text }]}>
+          {calculateETA(duration)}
+        </Text>
       </View>
 
       <View style={styles.infoRow}>
-        <Text style={[styles.label, { color: colors.textMuted }]}>Distance</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>
+          Distance
+        </Text>
         <Text style={[styles.value, { color: colors.text }]}>{distance}</Text>
       </View>
     </View>

@@ -30,27 +30,45 @@ export default function NavigationInfoTopCombined({
   const showHud = showHudExtended && Boolean(hudStep && street);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.card, borderColor: colors.primary },
+      ]}
+    >
       <View style={[styles.topSection, { backgroundColor: colors.card }]}>
         <View style={styles.headerRow}>
           <MaterialIcons name="place" size={18} color={colors.text} />
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {destination}
           </Text>
         </View>
 
         {showInfoExtended && (
           <>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View
+              style={[styles.divider, { backgroundColor: colors.border }]}
+            />
 
             <View style={styles.infoRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Arriving at</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{calculateETA(duration)}</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                Arriving at
+              </Text>
+              <Text style={[styles.value, { color: colors.text }]}>
+                {calculateETA(duration)}
+              </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>Distance</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{distance}</Text>
+              <Text style={[styles.label, { color: colors.textMuted }]}>
+                Distance
+              </Text>
+              <Text style={[styles.value, { color: colors.text }]}>
+                {distance}
+              </Text>
             </View>
           </>
         )}

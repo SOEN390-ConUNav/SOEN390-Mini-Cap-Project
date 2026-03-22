@@ -67,12 +67,17 @@ export default function RoomListModal({
           />
           <ScrollView style={styles.roomList}>
             {filteredRooms.length === 0 ? (
-              <Text style={[styles.noResults, { color: colors.textMuted }]}>No rooms found</Text>
+              <Text style={[styles.noResults, { color: colors.textMuted }]}>
+                No rooms found
+              </Text>
             ) : (
               filteredRooms.map((room) => (
                 <TouchableOpacity
                   key={room}
-                  style={[styles.roomItem, { borderBottomColor: colors.border }]}
+                  style={[
+                    styles.roomItem,
+                    { borderBottomColor: colors.border },
+                  ]}
                   onPress={() => {
                     if (selectingFor) {
                       onSelectRoom(room);
@@ -80,12 +85,17 @@ export default function RoomListModal({
                   }}
                   disabled={!selectingFor}
                 >
-                  <Text style={[styles.roomText, { color: colors.text }]}>{room}</Text>
+                  <Text style={[styles.roomText, { color: colors.text }]}>
+                    {room}
+                  </Text>
                 </TouchableOpacity>
               ))
             )}
           </ScrollView>
-          <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.primary }]} onPress={onClose}>
+          <TouchableOpacity
+            style={[styles.closeButton, { backgroundColor: colors.primary }]}
+            onPress={onClose}
+          >
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>

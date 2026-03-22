@@ -1,0 +1,32 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "SGW Campus"
+- tapOn:
+    point: "83%,95%"
+- assertVisible: "SGW Campus"
+- tapOn: "SGW Campus"
+- assertVisible: "S.G.W Departures"
+- tapOn: "S.G.W Departures"
+- assertVisible:
+    text: "from Henry F. Hall"
+    index: 0
+- assertVisible: "Loyola Campus"
+- tapOn: "Loyola Campus"
+- assertVisible: "Loyola Departures"
+- tapOn: "Loyola Departures"
+- assertVisible:
+    text: "from Loyola Chapel"
+    index: 0
+- tapOn:
+    point: "50%,95%"
+- tapOn:
+    point: "90%,81%"
+- tapOn: "Loyola Campus"
+- tapOn: "Map Marker"
+- tapOn: "Map Marker"
+- tapOn: "Directions"
+- tapOn: "Outside"
+- assertVisible: "Shuttle"
+- tapOn: "Shuttle"
+- assertVisible: "Go"

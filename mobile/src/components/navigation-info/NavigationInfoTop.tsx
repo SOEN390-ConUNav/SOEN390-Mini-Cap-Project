@@ -10,7 +10,12 @@ interface NavigationInfoTopProps {
 const NavigationInfoTop = ({ destination }: NavigationInfoTopProps) => {
   const { colors } = useTheme();
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.card, borderColor: colors.primary },
+      ]}
+    >
       <MaterialIcons name="place" size={18} color={colors.text} />
 
       <Text style={[styles.text, { color: colors.text }]}>{destination}</Text>

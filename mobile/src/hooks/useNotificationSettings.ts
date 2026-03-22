@@ -28,8 +28,8 @@ interface NotificationSettingsState {
 
 const STORAGE_KEY = "notificationSettings.v1";
 
-export const useNotificationSettingsStore =
-  create<NotificationSettingsState>((set, get) => ({
+export const useNotificationSettingsStore = create<NotificationSettingsState>(
+  (set, get) => ({
     pushEnabled: true,
     soundEnabled: true,
     vibrationEnabled: true,
@@ -114,7 +114,8 @@ export const useNotificationSettingsStore =
         // ignore
       }
     },
-  }));
+  }),
+);
 
 async function persist(state: NotificationSettingsState) {
   const {
@@ -156,4 +157,3 @@ async function persist(state: NotificationSettingsState) {
 export function useNotificationSettings() {
   return useNotificationSettingsStore();
 }
-

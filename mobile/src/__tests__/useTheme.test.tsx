@@ -35,7 +35,9 @@ describe("useTheme", () => {
   it("returns light theme when darkMode is false", () => {
     const { getByTestId } = render(<TestConsumer />);
     expect(getByTestId("mode").props.children).toBe("light");
-    expect(getByTestId("background").props.children).toBe(LIGHT_THEME.background);
+    expect(getByTestId("background").props.children).toBe(
+      LIGHT_THEME.background,
+    );
     expect(getByTestId("text").props.children).toBe(LIGHT_THEME.text);
     expect(getByTestId("primary").props.children).toBe(LIGHT_THEME.primary);
   });
@@ -44,7 +46,9 @@ describe("useTheme", () => {
     mockDarkMode = true;
     const { getByTestId } = render(<TestConsumer />);
     expect(getByTestId("mode").props.children).toBe("dark");
-    expect(getByTestId("background").props.children).toBe(DARK_THEME.background);
+    expect(getByTestId("background").props.children).toBe(
+      DARK_THEME.background,
+    );
     expect(getByTestId("text").props.children).toBe(DARK_THEME.text);
     expect(getByTestId("primary").props.children).toBe(DARK_THEME.primary);
   });

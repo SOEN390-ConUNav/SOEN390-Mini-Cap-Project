@@ -114,4 +114,3 @@ export function getBrightnessLabel(value: number): string {
   if (value >= 75) return "High";
   return "Medium";
 }
-
