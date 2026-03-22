@@ -48,11 +48,11 @@ class ShuttleOutdoorDirectionsServiceTest {
             mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse walk1 = new OutdoorDirectionResponse(
-                    "1.0 km", "5 mins", "p1", TransportMode.walking, new ArrayList<>());
+                    "1.0 km", "5 mins", "p1", TransportMode.WALKING, new ArrayList<>());
             OutdoorDirectionResponse shuttle = new OutdoorDirectionResponse(
-                    "5.0 km", "10 mins", "p2", TransportMode.transit, new ArrayList<>());
+                    "5.0 km", "10 mins", "p2", TransportMode.TRANSIT, new ArrayList<>());
             OutdoorDirectionResponse walk2 = new OutdoorDirectionResponse(
-                    "0.5 km", "5 mins", "p3", TransportMode.walking, new ArrayList<>());
+                    "0.5 km", "5 mins", "p3", TransportMode.WALKING, new ArrayList<>());
 
             when(googleMapsService.getDirections(anyString(), anyString(), any(TransportMode.class)))
                     .thenReturn(walk1)
@@ -82,7 +82,7 @@ class ShuttleOutdoorDirectionsServiceTest {
             mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse dummy = new OutdoorDirectionResponse(
-                    "1 km", "5 mins", "p", TransportMode.walking, new ArrayList<>());
+                    "1 km", "5 mins", "p", TransportMode.WALKING, new ArrayList<>());
             when(googleMapsService.getDirections(anyString(), anyString(), any(TransportMode.class)))
                     .thenReturn(dummy);
 
@@ -105,11 +105,11 @@ class ShuttleOutdoorDirectionsServiceTest {
             mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse walk1 = new OutdoorDirectionResponse(
-                    "1.0 km", "5 mins", "p1", TransportMode.walking, new ArrayList<>());
+                    "1.0 km", "5 mins", "p1", TransportMode.WALKING, new ArrayList<>());
             OutdoorDirectionResponse shuttle = new OutdoorDirectionResponse(
-                    "5.0 km", "10 mins", "p2", TransportMode.transit, new ArrayList<>());
+                    "5.0 km", "10 mins", "p2", TransportMode.TRANSIT, new ArrayList<>());
             OutdoorDirectionResponse walk2 = new OutdoorDirectionResponse(
-                    "0.5 km", "5 mins", "p3", TransportMode.walking, new ArrayList<>());
+                    "0.5 km", "5 mins", "p3", TransportMode.WALKING, new ArrayList<>());
 
             when(googleMapsService.getDirections(anyString(), anyString(), any(TransportMode.class)))
                     .thenReturn(walk1)
@@ -137,7 +137,7 @@ class ShuttleOutdoorDirectionsServiceTest {
             mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(lateNight);
 
             OutdoorDirectionResponse dummy = new OutdoorDirectionResponse(
-                    "1 km", "5 mins", "p", TransportMode.walking, new ArrayList<>());
+                    "1 km", "5 mins", "p", TransportMode.WALKING, new ArrayList<>());
             when(googleMapsService.getDirections(anyString(), anyString(), any(TransportMode.class)))
                     .thenReturn(dummy);
 
@@ -160,11 +160,11 @@ class ShuttleOutdoorDirectionsServiceTest {
             mockedTime.when(() -> LocalTime.now(java.time.ZoneId.of("America/Montreal"))).thenReturn(tenAM);
 
             OutdoorDirectionResponse walk1 = new OutdoorDirectionResponse(
-                    "1.0 km", "5 mins", "p1", TransportMode.walking, new ArrayList<>());
+                    "1.0 km", "5 mins", "p1", TransportMode.WALKING, new ArrayList<>());
             OutdoorDirectionResponse shuttle = new OutdoorDirectionResponse(
-                    "5.0 km", "10 mins", "p2", TransportMode.transit, new ArrayList<>());
+                    "5.0 km", "10 mins", "p2", TransportMode.TRANSIT, new ArrayList<>());
             OutdoorDirectionResponse walk2 = new OutdoorDirectionResponse(
-                    "0.5 km", "5 mins", "p3", TransportMode.walking, new ArrayList<>());
+                    "0.5 km", "5 mins", "p3", TransportMode.WALKING, new ArrayList<>());
 
             when(googleMapsService.getDirections(anyString(), anyString(), any(TransportMode.class)))
                     .thenReturn(walk1)

@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(OutdoorDirectionsController.class)
 @Import(RestTemplateConfig.class)
-public class OutdoorDirectionsControllerTest {
+class OutdoorDirectionsControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,7 +45,7 @@ public class OutdoorDirectionsControllerTest {
                 "1.2 km",
                 "15 mins",
                 "dummy polyline",
-                TransportMode.walking,
+                TransportMode.WALKING,
                 mockSteps
         );
 

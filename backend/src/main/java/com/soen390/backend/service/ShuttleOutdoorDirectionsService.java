@@ -27,9 +27,9 @@ public class ShuttleOutdoorDirectionsService {
         String destShuttleCoords = (destinationCampus == Campus.LOYOLA) ? loyolaCoords : sgwCoords;
         String originShuttleCoords = (destinationCampus == Campus.LOYOLA) ? sgwCoords : loyolaCoords;
 
-        OutdoorDirectionResponse walkToBus = googleMapsService.getDirections(origin, originShuttleCoords, TransportMode.walking);
-        OutdoorDirectionResponse shuttleLeg = googleMapsService.getDirections(originShuttleCoords, destShuttleCoords, TransportMode.transit);
-        OutdoorDirectionResponse walkToDest = googleMapsService.getDirections(destShuttleCoords, destination, TransportMode.walking);
+        OutdoorDirectionResponse walkToBus = googleMapsService.getDirections(origin, originShuttleCoords, TransportMode.WALKING);
+        OutdoorDirectionResponse shuttleLeg = googleMapsService.getDirections(originShuttleCoords, destShuttleCoords, TransportMode.TRANSIT);
+        OutdoorDirectionResponse walkToDest = googleMapsService.getDirections(destShuttleCoords, destination, TransportMode.WALKING);
 
 
         int walkMins = (int) extractDouble(walkToBus.getDuration());
