@@ -1124,8 +1124,16 @@ export default function IndoorNavigation() {
     setStartRoom(endRoom);
     setEndRoom(tempRoom);
 
-    setStartBuildingId(getBuildingFromRoom(endRoom, buildingId));
-    setEndBuildingId(getBuildingFromRoom(tempRoom, buildingId));
+    const newStartBuilding = getBuildingFromRoom(endRoom, buildingId);
+    const newEndBuilding = getBuildingFromRoom(tempRoom, buildingId);
+
+    setStartBuildingId(newStartBuilding);
+    setEndBuildingId(newEndBuilding);
+
+    if (endRoom) {
+      setActiveBuildingId(newStartBuilding);
+      setCurrentFloor(getFloorFromRoom(endRoom, currentFloorRef.current));
+    }
   };
 
   const applyIndoorRouteResponse = useCallback(
@@ -1249,6 +1257,8 @@ export default function IndoorNavigation() {
 
   useEffect(() => {
     const loadRoomPoints = async () => {
+      if (!activeBuildingId || !currentFloor) return;
+
       try {
         const points = await getRoomPoints(activeBuildingId, currentFloor);
         setRoomPoints(points);
@@ -1262,6 +1272,8 @@ export default function IndoorNavigation() {
 
   useEffect(() => {
     const loadPois = async () => {
+      if (!activeBuildingId || !currentFloor) return;
+
       try {
         const items = await getPointsOfInterest(activeBuildingId, currentFloor);
         setPois(items);
