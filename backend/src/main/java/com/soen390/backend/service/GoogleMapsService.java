@@ -58,7 +58,10 @@ public class GoogleMapsService {
         } catch (GoogleMapsDirectionsApiException | GoogleMapsDirectionEmptyException  e) {
             throw e;
         } catch (NullPointerException | JsonProcessingException e) {
-            throw new RuntimeException("Map data format error: The response from the map service was incomplete or unexpected.", e);
+            throw new GoogleMapsDirectionsApiException(
+                    "Failed to parse Google Maps directions response: incomplete or unexpected data format.",
+                    e
+            );
         }
     }
 
