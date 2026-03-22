@@ -82,13 +82,17 @@ public class ShuttleOutdoorDirectionsService {
     private String findNextDeparture(LocalTime arrivalTime, String location) {
         DayOfWeek day = LocalDate.now().getDayOfWeek();
         List<String> schedule;
+        // the switch case does not need break because it uses the modern arrow form (case ... ->)
+        switch (day) {
+            case DayOfWeek.FRIDAY ->
+                schedule = location.equals("SGW") ? ShuttleConstants.SGW_FRIDAY : ShuttleConstants.LOY_FRIDAY;
 
-        if (day == DayOfWeek.FRIDAY) {
-            schedule = location.equals("SGW") ? ShuttleConstants.SGW_FRIDAY : ShuttleConstants.LOY_FRIDAY;
-        } else if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
-            return null;
-        } else {
-            schedule = location.equals("SGW") ? ShuttleConstants.SGW_WEEKDAY : ShuttleConstants.LOY_WEEKDAY;
+            case DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> {
+                return null;
+            }
+            default ->
+                schedule = location.equals("SGW") ? ShuttleConstants.SGW_WEEKDAY : ShuttleConstants.LOY_WEEKDAY;
+
         }
 
         return schedule.stream()
