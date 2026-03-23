@@ -25,6 +25,65 @@ const TABS = [
   },
 ] as const;
 
+type TabConfig = (typeof TABS)[number];
+
+type BottomNavIconProps = {
+  readonly focused: boolean;
+  readonly iconFocused: TabConfig["iconFocused"];
+  readonly iconOutline: TabConfig["iconOutline"];
+  readonly color: string;
+};
+
+type TabBarIconRendererProps = {
+  readonly focused: boolean;
+  readonly color: string;
+};
+
+function BottomNavIcon({
+  focused,
+  iconFocused,
+  iconOutline,
+  color,
+}: BottomNavIconProps) {
+  return (
+    <Ionicons
+      name={focused ? iconFocused : iconOutline}
+      color={color}
+      size={22}
+    />
+  );
+}
+
+const TAB_ICON_RENDERERS: Record<
+  TabConfig["name"],
+  ({ focused, color }: TabBarIconRendererProps) => React.JSX.Element
+> = {
+  settings: ({ focused, color }) => (
+    <BottomNavIcon
+      focused={focused}
+      iconFocused="settings"
+      iconOutline="settings-outline"
+      color={color}
+    />
+  ),
+  "(home-page)": ({ focused, color }) => (
+    <BottomNavIcon
+      focused={focused}
+      iconFocused="location"
+      iconOutline="location-outline"
+      color={color}
+    />
+  ),
+  "shuttle-info/index": ({ focused, color }) => (
+    <BottomNavIcon
+      focused={focused}
+      iconFocused="bus"
+      iconOutline="bus-outline"
+      color={color}
+    />
+  ),
+};
+
 const createTabBarStyle = (tabBarBackground: string) => ({
   position: "absolute" as const,
   bottom: 0,
@@ -79,13 +138,7 @@ export default function BottomNav() {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarIcon: ({ focused }) => (
-              <Ionicons
-                name={focused ? tab.iconFocused : tab.iconOutline}
-                color={primaryColor}
-                size={22}
-              />
-            ),
+            tabBarIcon: TAB_ICON_RENDERERS[tab.name],
           }}
         />
       ))}
