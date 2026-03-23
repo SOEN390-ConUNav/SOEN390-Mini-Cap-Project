@@ -23,7 +23,7 @@ export const getOutdoorDirections = async (
   mode: TransportModeApi = "walking",
 ): Promise<OutdoorDirectionResponse | null> => {
   try {
-    const url = `${API_BASE_URL}/api/directions/outdoor?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&transportMode=${mode}`;
+    const url = `${API_BASE_URL}/api/directions/outdoor?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&transportMode=${mode.toUpperCase()}`;
     const response = await fetch(url);
 
     if (response.status === 204) {

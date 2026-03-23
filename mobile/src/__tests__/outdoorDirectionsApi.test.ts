@@ -39,7 +39,7 @@ describe("outdoorDirectionsApi", () => {
 
     expect(result).toEqual(mockData);
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("transportMode=walking"),
+      expect.stringContaining("transportMode=WALKING"),
     );
   });
 
