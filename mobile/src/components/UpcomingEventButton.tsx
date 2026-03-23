@@ -36,6 +36,13 @@ interface EventItem {
   location?: string;
 }
 
+interface GoogleStateResponse {
+  calendarSelected?: boolean;
+  selectedCalendar?: CalendarItem | null;
+  nextEvent?: EventItem | null;
+  nextEventDetailsText?: string | null;
+}
+
 export default function UpcomingEventButton({
   onMainButtonPress,
   onOpenEventDetails,
@@ -125,7 +132,7 @@ export default function UpcomingEventButton({
     allowReauth = false,
     includeCalendars = false,
     reauthOptions?: { showPickerAfterSignIn?: boolean },
-  ): Promise<any | null> => {
+  ): Promise<GoogleStateResponse | null> => {
     try {
       let stateRes = await requestGoogleState(includeCalendars);
 
@@ -148,7 +155,7 @@ export default function UpcomingEventButton({
         throw new Error(await stateRes.text());
       }
 
-      const state = await stateRes.json();
+      const state = (await stateRes.json()) as GoogleStateResponse;
       const selected = state?.selectedCalendar?.id
         ? state.selectedCalendar
         : null;
@@ -175,7 +182,7 @@ export default function UpcomingEventButton({
     }
   };
 
-  const fetchCalendarsWithReauth = async (): Promise<any[]> => {
+  const fetchCalendarsWithReauth = async (): Promise<CalendarItem[]> => {
     let res = await requestGoogleCalendars();
 
     if (
@@ -191,7 +198,9 @@ export default function UpcomingEventButton({
     }
 
     const calendarsData = await res.json();
-    return Array.isArray(calendarsData) ? calendarsData : [];
+    return Array.isArray(calendarsData)
+      ? (calendarsData as CalendarItem[])
+      : [];
   };
 
   const startImportFlow = async (forceCalendarPicker = false) => {
@@ -221,7 +230,9 @@ export default function UpcomingEventButton({
     }
   };
 
-  const selectCalendarAndRefresh = async (calendar: any): Promise<boolean> => {
+  const selectCalendarAndRefresh = async (
+    calendar: CalendarItem,
+  ): Promise<boolean> => {
     setIsBusy(true);
     try {
       if (!calendar?.id) throw new Error("Missing calendar id.");
@@ -318,32 +329,7 @@ export default function UpcomingEventButton({
 
   return (
     <View style={{ width: "100%" }}>
-      {!showRedEventButton ? (
-        <TouchableOpacity
-          style={[
-            styles.upcomingBtn,
-            styles.importBtn,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.primary,
-            },
-          ]}
-          onPress={() => {
-            onMainButtonPress?.();
-            if (!isBusy) void startImportFlow();
-          }}
-        >
-          <Text
-            style={[
-              styles.upcomingBtnText,
-              buttonFontStyle,
-              { color: colors.primary },
-            ]}
-          >
-            Import Google Calendar Schedule
-          </Text>
-        </TouchableOpacity>
-      ) : (
+      {showRedEventButton ? (
         <TouchableOpacity
           style={[
             styles.upcomingBtn,
@@ -397,6 +383,31 @@ export default function UpcomingEventButton({
             ]}
           >
             {upcomingButtonLabel}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.upcomingBtn,
+            styles.importBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.primary,
+            },
+          ]}
+          onPress={() => {
+            onMainButtonPress?.();
+            if (!isBusy) void startImportFlow();
+          }}
+        >
+          <Text
+            style={[
+              styles.upcomingBtnText,
+              buttonFontStyle,
+              { color: colors.primary },
+            ]}
+          >
+            Import Google Calendar Schedule
           </Text>
         </TouchableOpacity>
       )}
