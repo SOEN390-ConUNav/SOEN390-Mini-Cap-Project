@@ -81,6 +81,11 @@ function getSvgAsset(buildingId: BuildingId, floorNumber: string): any {
   return SVG_ASSETS[buildingId]?.[floorNumber] ?? null;
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
   (
     {
@@ -144,7 +149,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           const response = await fetch(uri);
           const svgText = await response.text();
           if (cancelled || version !== floorVersionRef.current) return;
-          const svgMatch = svgText.match(/<svg[\s\S]*<\/svg>/i);
+          const svgMatch = new RegExp(/<svg[\s\S]*<\/svg>/i).exec(svgText);
 
           if (svgMatch) {
             let svgContent = svgMatch[0];
@@ -472,8 +477,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
             setSvgHtml(html);
             markWebViewReady(false);
           }
-        } catch (e) {
-          console.error("Error loading SVG:", e);
+        } catch (error) {
+          console.error("Error loading SVG:", getErrorMessage(error));
         }
       };
 
@@ -689,8 +694,11 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               } else if (data.type === "routeDrawError") {
                 console.error("Route draw error:", data.message);
               }
-            } catch (e) {
-              // Ignore non-JSON messages
+            } catch (error) {
+              console.error(
+                "Failed to parse WebView message:",
+                getErrorMessage(error),
+              );
             }
           }}
           onError={(syntheticEvent) => {
