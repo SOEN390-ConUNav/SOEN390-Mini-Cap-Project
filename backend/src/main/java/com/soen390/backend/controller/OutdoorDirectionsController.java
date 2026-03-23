@@ -10,7 +10,9 @@ import com.soen390.backend.service.ShuttleOutdoorDirectionsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -31,10 +33,17 @@ public class OutdoorDirectionsController {
     public ResponseEntity<Object> getDirections(
             @RequestParam String origin,
             @RequestParam String destination,
-            @RequestParam TransportMode transportMode) {
+            @RequestParam String transportMode) {
+        TransportMode normalizedTransportMode;
+        try {
+            normalizedTransportMode = TransportMode.valueOf(transportMode.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid transportMode: " + transportMode, ex);
+        }
+
         try {
             OutdoorDirectionResponse response =
-                    mapsService.getDirections(origin, destination, transportMode);
+                    mapsService.getDirections(origin, destination, normalizedTransportMode);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR_KEY, e.getMessage()));
