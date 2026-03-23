@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Switch } from "react-native";
 import IndoorNavigation from "../app/indoor-navigation";
 import {
