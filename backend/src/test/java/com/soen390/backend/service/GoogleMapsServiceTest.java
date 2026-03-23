@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 
-public class GoogleMapsServiceTest {
+class GoogleMapsServiceTest {
     private GoogleMapsService googleMapsService;
 
     String origin = "test origin";
@@ -193,19 +193,19 @@ public class GoogleMapsServiceTest {
     void testGetDirectionsSuccess(){
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(getMockJsonResponseSuccess());
 
-        OutdoorDirectionResponse outdoorDirectionResponse = googleMapsService.getDirections(origin,destination, TransportMode.walking);
+        OutdoorDirectionResponse outdoorDirectionResponse = googleMapsService.getDirections(origin,destination, TransportMode.WALKING);
 
         assertNotNull(outdoorDirectionResponse);
         assertEquals("26 m",outdoorDirectionResponse.getDistance());
         assertEquals("1 min",outdoorDirectionResponse.getDuration());
-        assertEquals(TransportMode.walking,outdoorDirectionResponse.getTransportMode());
+        assertEquals(TransportMode.WALKING,outdoorDirectionResponse.getTransportMode());
     }
 
     @Test
     void testGetDirectionsParsingException(){
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(getMockJsonResponseParsingException());
 
-        assertThrows(RuntimeException.class,()->googleMapsService.getDirections(origin,destination, TransportMode.driving));
+        assertThrows(RuntimeException.class,()->googleMapsService.getDirections(origin,destination, TransportMode.DRIVING));
     }
 
     @Test
@@ -214,7 +214,7 @@ public class GoogleMapsServiceTest {
                 .thenReturn(getMockJsonZeroResults());
 
         assertThrows(GoogleMapsDirectionEmptyException.class,
-                () -> googleMapsService.getDirections(origin, destination, TransportMode.walking));
+                () -> googleMapsService.getDirections(origin, destination, TransportMode.WALKING));
     }
 
     @Test
@@ -223,14 +223,14 @@ public class GoogleMapsServiceTest {
                 .thenReturn(getMockJsonNotFound());
 
         assertThrows(GoogleMapsDirectionsApiException.class,
-                () -> googleMapsService.getDirections(origin, destination, TransportMode.driving));
+                () -> googleMapsService.getDirections(origin, destination, TransportMode.DRIVING));
     }
 
     @Test
     void testEmptyJsonResponse() {
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn( getEmptyMockJson());
-        assertThrows(Exception.class, () -> googleMapsService.getDirections(origin, destination, TransportMode.walking));
+        assertThrows(Exception.class, () -> googleMapsService.getDirections(origin, destination, TransportMode.WALKING));
     }
 
 }

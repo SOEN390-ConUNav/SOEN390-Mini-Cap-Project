@@ -1,4 +1,20 @@
-export type BuildingId = string;
+export type BuildingId =
+  | "FB"
+  | "EV"
+  | "LB"
+  | "H"
+  | "CL"
+  | "MB"
+  | "LS"
+  | "ER"
+  | "VL"
+  | "HU"
+  | "SP"
+  | "AD"
+  | "CC"
+  | "SC"
+  | "HB"
+  | "VE";
 
 export type LatLng = { latitude: number; longitude: number };
 

@@ -27,9 +27,9 @@ public class ShuttleOutdoorDirectionsService {
         String destShuttleCoords = (destinationCampus == Campus.LOYOLA) ? loyolaCoords : sgwCoords;
         String originShuttleCoords = (destinationCampus == Campus.LOYOLA) ? sgwCoords : loyolaCoords;
 
-        OutdoorDirectionResponse walkToBus = googleMapsService.getDirections(origin, originShuttleCoords, TransportMode.walking);
-        OutdoorDirectionResponse shuttleLeg = googleMapsService.getDirections(originShuttleCoords, destShuttleCoords, TransportMode.transit);
-        OutdoorDirectionResponse walkToDest = googleMapsService.getDirections(destShuttleCoords, destination, TransportMode.walking);
+        OutdoorDirectionResponse walkToBus = googleMapsService.getDirections(origin, originShuttleCoords, TransportMode.WALKING);
+        OutdoorDirectionResponse shuttleLeg = googleMapsService.getDirections(originShuttleCoords, destShuttleCoords, TransportMode.TRANSIT);
+        OutdoorDirectionResponse walkToDest = googleMapsService.getDirections(destShuttleCoords, destination, TransportMode.WALKING);
 
 
         int walkMins = (int) extractDouble(walkToBus.getDuration());
@@ -82,13 +82,17 @@ public class ShuttleOutdoorDirectionsService {
     private String findNextDeparture(LocalTime arrivalTime, String location) {
         DayOfWeek day = LocalDate.now().getDayOfWeek();
         List<String> schedule;
+        // the switch case does not need break because it uses the modern arrow form (case ... ->)
+        switch (day) {
+            case DayOfWeek.FRIDAY ->
+                schedule = location.equals("SGW") ? ShuttleConstants.SGW_FRIDAY : ShuttleConstants.LOY_FRIDAY;
 
-        if (day == DayOfWeek.FRIDAY) {
-            schedule = location.equals("SGW") ? ShuttleConstants.SGW_FRIDAY : ShuttleConstants.LOY_FRIDAY;
-        } else if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
-            return null;
-        } else {
-            schedule = location.equals("SGW") ? ShuttleConstants.SGW_WEEKDAY : ShuttleConstants.LOY_WEEKDAY;
+            case DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> {
+                return null;
+            }
+            default ->
+                schedule = location.equals("SGW") ? ShuttleConstants.SGW_WEEKDAY : ShuttleConstants.LOY_WEEKDAY;
+
         }
 
         return schedule.stream()

@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, Pressable, View } from "react-native";
+import { StyleSheet, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TransportMode } from "../../type";
 
@@ -18,7 +18,7 @@ export default function NavigationTransportCard({
   duration,
   isSelected,
   onSelect,
-}: NavigationTransportCardProps) {
+}: Readonly<NavigationTransportCardProps>) {
   // Mapping mode to icon names
   const getIcon = () => {
     switch (mode) {

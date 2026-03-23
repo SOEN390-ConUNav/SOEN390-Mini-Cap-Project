@@ -10,9 +10,9 @@ import { getDimOverlayOpacity } from "../utils/layoutDimOpacity";
 
 function BrightnessDimLayer({
   opacity,
-}: {
+}: Readonly<{
   opacity: number;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   if (opacity <= 0) {
     return null;
   }

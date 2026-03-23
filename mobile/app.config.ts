@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-export default ({ config }: any) => {
+const app = ({ config }: any) => {
   const target = process.env.TARGET ?? "emulator";
 
   const apiBaseUrl =
@@ -16,20 +16,20 @@ export default ({ config }: any) => {
     plugins: [
       ...(config.plugins ?? []),
       "expo-router",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
     ],
     android: {
       ...config.android,
       config: {
-        ...(config.android?.config ?? {}),
+        ...config.android?.config,
         googleMaps: {
-          ...(config.android?.config?.googleMaps ?? {}),
+          ...config.android?.config?.googleMaps,
           apiKey: googleMapsAndroidKey,
         },
       },
     },
     extra: {
-      ...(config.extra ?? {}),
+      ...config.extra,
       API_BASE_URL: apiBaseUrl,
       TARGET: target,
       googleMapsApiKey: googleMapsAndroidKey,
@@ -37,3 +37,4 @@ export default ({ config }: any) => {
     },
   };
 };
+export default app;

@@ -2,7 +2,9 @@ import React from "react";
 import { StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function FloatingActionButton({ onPress }: { onPress: () => void }) {
+export default function FloatingActionButton({
+  onPress,
+}: Readonly<{ onPress: () => void }>) {
   return (
     <Pressable style={styles.fab} onPress={onPress}>
       <Ionicons name="navigate" size={18} color="#fff" />
@@ -26,7 +28,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 8, 
-    
+    elevation: 8,
   },
 });

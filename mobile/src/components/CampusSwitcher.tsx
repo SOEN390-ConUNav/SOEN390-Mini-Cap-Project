@@ -24,6 +24,7 @@ export default function CampusSwitcher({
   const [containerWidth, setContainerWidth] = useState(0);
 
   const translateX = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const selectedIndex = value === "SGW" ? 0 : 1;
   const segmentWidth = useMemo(() => {
     return containerWidth > 0 ? containerWidth / 2 : 0;
@@ -31,13 +32,28 @@ export default function CampusSwitcher({
 
   useEffect(() => {
     if (!segmentWidth) return;
-    Animated.spring(translateX, {
+
+    animationRef.current?.stop();
+    const animation = Animated.spring(translateX, {
       toValue: selectedIndex * segmentWidth,
-      useNativeDriver: true,
+      useNativeDriver: false,
       damping: 18,
       stiffness: 180,
       mass: 0.7,
-    }).start();
+    });
+    animationRef.current = animation;
+    animation.start(() => {
+      if (animationRef.current === animation) {
+        animationRef.current = null;
+      }
+    });
+
+    return () => {
+      animation.stop();
+      if (animationRef.current === animation) {
+        animationRef.current = null;
+      }
+    };
   }, [selectedIndex, segmentWidth, translateX]);
 
   const onLayout = (e: LayoutChangeEvent) => {
