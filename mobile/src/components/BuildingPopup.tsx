@@ -26,7 +26,7 @@ export default function BuildingPopup({
   onClose,
   onDirections,
   onIndoorMaps,
-}: {
+}: Readonly<{
   id: string;
   name: string;
   addressLines?: string[];
@@ -42,7 +42,7 @@ export default function BuildingPopup({
   onClose: () => void;
   onDirections: () => void;
   onIndoorMaps?: () => void;
-}) {
+}>) {
   const { colors } = useTheme();
   const { textStyle } = useAccessibleTypography();
   const showIndoorMaps = hasIndoorMaps(buildingId);

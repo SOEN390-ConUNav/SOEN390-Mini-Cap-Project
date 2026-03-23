@@ -26,7 +26,7 @@ export function SettingsScreenScaffold({
   children,
   backLabelStyle,
   titleStyle,
-}: SettingsScreenScaffoldProps) {
+}: Readonly<SettingsScreenScaffoldProps>) {
   const router = useRouter();
   const { colors } = useTheme();
   return (
