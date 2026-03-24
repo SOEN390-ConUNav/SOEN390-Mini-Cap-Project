@@ -17,6 +17,27 @@ export interface OutdoorDirectionResponse {
   steps: Step[];
 }
 
+const normalizeTransportMode = (mode: unknown): TransportModeApi => {
+  const normalized = typeof mode === "string" ? mode.toLowerCase() : "";
+  switch (normalized) {
+    case "walking":
+    case "driving":
+    case "bicycling":
+    case "transit":
+    case "shuttle":
+      return normalized;
+    default:
+      return "walking";
+  }
+};
+
+const normalizeOutdoorDirectionResponse = (
+  data: OutdoorDirectionResponse,
+): OutdoorDirectionResponse => ({
+  ...data,
+  transportMode: normalizeTransportMode(data.transportMode),
+});
+
 export const getOutdoorDirections = async (
   origin: string,
   destination: string,
@@ -35,7 +56,7 @@ export const getOutdoorDirections = async (
     }
 
     const data = (await response.json()) as OutdoorDirectionResponse;
-    return data;
+    return normalizeOutdoorDirectionResponse(data);
   } catch (error) {
     console.error("Failed to fetch directions:", error);
     return null;
@@ -62,7 +83,7 @@ export async function getOutdoorDirectionsWithShuttle(
     }
 
     const data = (await response.json()) as OutdoorDirectionResponse;
-    return data;
+    return normalizeOutdoorDirectionResponse(data);
   } catch (error) {
     console.error("Failed to fetch directions:", error);
     return null;

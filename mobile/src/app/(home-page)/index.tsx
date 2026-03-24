@@ -78,6 +78,24 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 const FREEZE_MARKERS_AFTER_MS = 800;
 const EVENT_INDOOR_HANDOFF_DISTANCE_METERS = 10;
 
+type IndoorExitTarget = {
+  buildingId: BuildingId;
+  floor: string;
+  exitRoom: string;
+};
+
+const INDOOR_EXIT_TARGETS: Partial<Record<BuildingId, IndoorExitTarget>> = {
+  H: { buildingId: "H", floor: "1", exitRoom: "H1-Maisonneuve-Entry" },
+  LB: { buildingId: "LB", floor: "2", exitRoom: "LB2-Emergency-Exit-1" },
+  MB: { buildingId: "MB", floor: "1", exitRoom: "MB1-Main-Entrance" },
+  VL: { buildingId: "VL", floor: "1", exitRoom: "VL-101" },
+  VE: { buildingId: "VE", floor: "1", exitRoom: "VE1-Entrance/exit" },
+  CC: { buildingId: "CC", floor: "1", exitRoom: "CC-Entrance-Exit" },
+};
+
+const getIndoorExitTarget = (buildingId: BuildingId): IndoorExitTarget | null =>
+  INDOOR_EXIT_TARGETS[buildingId] ?? null;
+
 type EventDetailsPayload = {
   title: string;
   detailsText: string;
@@ -218,6 +236,10 @@ export default function HomePageIndex() {
   } | null>(null);
   const [activeEventIndoorTarget, setActiveEventIndoorTarget] =
     useState<EventIndoorTarget | null>(null);
+  const [pendingIndoorExitTarget, setPendingIndoorExitTarget] =
+    useState<IndoorExitTarget | null>(null);
+  const [showIndoorFallbackNotice, setShowIndoorFallbackNotice] =
+    useState(false);
   const indoorHandoffInFlightRef = useRef(false);
 
   const mapRef = useRef<MapView>(null);
@@ -352,7 +374,14 @@ export default function HomePageIndex() {
       const defaultFloor = getDefaultFloor(selectedBuildingId);
       router.push({
         pathname: "/indoor-navigation",
-        params: { buildingId: selectedBuildingId, floor: defaultFloor },
+        params: {
+          buildingId: selectedBuildingId,
+          floor: defaultFloor,
+          startRoom: "",
+          endRoom: "",
+          resumeOutdoorNavigation: "0",
+          resumeOutdoorNavigationToken: "",
+        },
       });
     }
   };
@@ -489,6 +518,8 @@ export default function HomePageIndex() {
     setOutlineMode(false);
     setShowBuildingPopup(false);
     setShuttleStop(null);
+    setPendingIndoorExitTarget(null);
+    setShowIndoorFallbackNotice(false);
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
@@ -530,6 +561,7 @@ export default function HomePageIndex() {
     originCoords: { latitude: number; longitude: number; label: string },
     destCoords: { latitude: number; longitude: number; label: string },
     eventIndoorTarget: EventIndoorTarget | null = null,
+    indoorExitTarget: IndoorExitTarget | null = null,
   ) => {
     setIsLoading(true);
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
@@ -552,6 +584,8 @@ export default function HomePageIndex() {
         setPathDuration(walkRoute.duration);
       }
       setActiveEventIndoorTarget(eventIndoorTarget);
+      setPendingIndoorExitTarget(indoorExitTarget);
+      setShowIndoorFallbackNotice(false);
     } catch (error) {
       console.error("Error fetching directions:", error);
       Alert.alert(
@@ -559,6 +593,8 @@ export default function HomePageIndex() {
         "Could not fetch directions. Please try again.",
       );
       setActiveEventIndoorTarget(null);
+      setPendingIndoorExitTarget(null);
+      setShowIndoorFallbackNotice(false);
       setNavigationState(NAVIGATION_STATE.IDLE);
     } finally {
       setIsLoading(false);
@@ -574,11 +610,16 @@ export default function HomePageIndex() {
       longitude: nearestBuilding.marker.longitude,
       label: `${nearestBuilding.name} (Inside)`,
     };
+    const indoorExitTarget = hasIndoorMaps(nearestBuilding.id)
+      ? getIndoorExitTarget(nearestBuilding.id)
+      : null;
+    setShowIndoorFallbackNotice(indoorExitTarget == null);
 
     await proceedWithDirections(
       originCoords,
       pendingDestination,
       pendingDestination.eventIndoorTarget ?? null,
+      indoorExitTarget,
     );
     setPendingDestination(null);
   };
@@ -586,6 +627,7 @@ export default function HomePageIndex() {
   const handleLocationPromptOutside = async () => {
     setShowLocationPrompt(false);
     if (!pendingDestination || !currentLocation) return;
+    setShowIndoorFallbackNotice(false);
 
     const label = await reverseGeocode(currentLocation).catch(
       () => "Current Location",
@@ -855,6 +897,8 @@ export default function HomePageIndex() {
     if (!origin || !destination) return;
 
     setIsLoading(true);
+    setPendingIndoorExitTarget(null);
+    setShowIndoorFallbackNotice(false);
 
     const newOrigin = destination;
     const newDest = origin;
@@ -880,6 +924,36 @@ export default function HomePageIndex() {
   };
 
   const handleGoNavConfig = () => {
+    if (pendingIndoorExitTarget) {
+      const target = pendingIndoorExitTarget;
+      setPendingIndoorExitTarget(null);
+      setShowIndoorFallbackNotice(false);
+      setNavigationState(NAVIGATION_STATE.IDLE);
+      setToggleNavigationInfoState("minimize");
+      setToggleNavigationHUDState("minimize");
+      requestAnimationFrame(() => {
+        router.push({
+          pathname: "/indoor-navigation",
+          params: {
+            buildingId: target.buildingId,
+            floor: target.floor,
+            endRoom: target.exitRoom,
+            resumeOutdoorNavigation: "1",
+            resumeOutdoorNavigationToken: `${Date.now()}`,
+          },
+        });
+      });
+      return;
+    }
+
+    if (showIndoorFallbackNotice) {
+      Alert.alert(
+        "Indoor Maps Unavailable",
+        "No indoor maps for this building. Regular outdoor navigation started.",
+      );
+      setShowIndoorFallbackNotice(false);
+    }
+
     navigatingRef.current = true;
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
     setToggleNavigationInfoState("minimize");
@@ -913,6 +987,8 @@ export default function HomePageIndex() {
     setAllOutdoorRoutes([]);
     resetNavigationProgress();
     setActiveEventIndoorTarget(null);
+    setPendingIndoorExitTarget(null);
+    setShowIndoorFallbackNotice(false);
     clear();
   };
 
