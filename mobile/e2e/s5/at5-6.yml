@@ -1,0 +1,19 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Loyola Campus"
+- tapOn:
+    point: "52%,47%"
+- tapOn:
+    point: "50%,48%"
+- tapOn: "Indoor Maps"
+- tapOn: "Search"
+- assertVisible: "Select Start Room"
+- inputText: "H1-110"
+- assertVisible: "H1-110-2"
+- tapOn: "H1-110-2"
+- tapOn: "H1-110-2"
+- tapOn: "Choose destination"
+- assertVisible: "Select End Room"
+- tapOn: "CC-101"
+- assertVisible: "Show Directions"

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 const BURGUNDY = "#800020";
 
-export default function BuildingMarker({ label }: { label: string }) {
+export default function BuildingMarker({ label }: Readonly<{ label: string }>) {
   return (
     <View style={styles.pinWrap}>
       <View style={styles.pin}>

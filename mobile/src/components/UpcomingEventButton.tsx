@@ -22,6 +22,8 @@ import {
   requestSetGoogleSelectedCalendar,
 } from "../api";
 import { findBuildingFromLocationText } from "../utils/eventLocationBuildingMatcher";
+import { useTheme } from "../hooks/useTheme";
+import { useAccessibleTypography } from "../hooks/useAccessibilitySettings";
 
 interface CalendarItem {
   id: string;
@@ -34,7 +36,12 @@ interface EventItem {
   location?: string;
 }
 
-const BURGUNDY = "#800020";
+interface GoogleStateResponse {
+  calendarSelected?: boolean;
+  selectedCalendar?: CalendarItem | null;
+  nextEvent?: EventItem | null;
+  nextEventDetailsText?: string | null;
+}
 
 export default function UpcomingEventButton({
   onMainButtonPress,
@@ -68,6 +75,9 @@ export default function UpcomingEventButton({
   const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [eventDetailsText, setEventDetailsText] = useState<string>("");
   const [isBusy, setIsBusy] = useState(false);
+  const { colors } = useTheme();
+  const { textStyle } = useAccessibleTypography();
+  const buttonFontStyle = textStyle(12);
 
   const clearLocalGoogleState = () => {
     setSelectedCalendar(null);
@@ -122,7 +132,7 @@ export default function UpcomingEventButton({
     allowReauth = false,
     includeCalendars = false,
     reauthOptions?: { showPickerAfterSignIn?: boolean },
-  ): Promise<any | null> => {
+  ): Promise<GoogleStateResponse | null> => {
     try {
       let stateRes = await requestGoogleState(includeCalendars);
 
@@ -145,7 +155,7 @@ export default function UpcomingEventButton({
         throw new Error(await stateRes.text());
       }
 
-      const state = await stateRes.json();
+      const state = (await stateRes.json()) as GoogleStateResponse;
       const selected = state?.selectedCalendar?.id
         ? state.selectedCalendar
         : null;
@@ -172,7 +182,7 @@ export default function UpcomingEventButton({
     }
   };
 
-  const fetchCalendarsWithReauth = async (): Promise<any[]> => {
+  const fetchCalendarsWithReauth = async (): Promise<CalendarItem[]> => {
     let res = await requestGoogleCalendars();
 
     if (
@@ -188,7 +198,9 @@ export default function UpcomingEventButton({
     }
 
     const calendarsData = await res.json();
-    return Array.isArray(calendarsData) ? calendarsData : [];
+    return Array.isArray(calendarsData)
+      ? (calendarsData as CalendarItem[])
+      : [];
   };
 
   const startImportFlow = async (forceCalendarPicker = false) => {
@@ -218,7 +230,9 @@ export default function UpcomingEventButton({
     }
   };
 
-  const selectCalendarAndRefresh = async (calendar: any): Promise<boolean> => {
+  const selectCalendarAndRefresh = async (
+    calendar: CalendarItem,
+  ): Promise<boolean> => {
     setIsBusy(true);
     try {
       if (!calendar?.id) throw new Error("Missing calendar id.");
@@ -315,21 +329,16 @@ export default function UpcomingEventButton({
 
   return (
     <View style={{ width: "100%" }}>
-      {!showRedEventButton ? (
+      {showRedEventButton ? (
         <TouchableOpacity
-          style={[styles.upcomingBtn, styles.importBtn]}
-          onPress={() => {
-            onMainButtonPress?.();
-            if (!isBusy) void startImportFlow();
-          }}
-        >
-          <Text style={styles.upcomingBtnText}>
-            Import Google Calendar Schedule
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.upcomingBtn, styles.upcomingEventBtn]}
+          style={[
+            styles.upcomingBtn,
+            styles.upcomingEventBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.primary,
+            },
+          ]}
           onPress={() => {
             onMainButtonPress?.();
             onOpenEventDetails?.({
@@ -366,19 +375,67 @@ export default function UpcomingEventButton({
             });
           }}
         >
-          <Text style={styles.upcomingBtnText}>{upcomingButtonLabel}</Text>
+          <Text
+            style={[
+              styles.upcomingBtnText,
+              buttonFontStyle,
+              { color: colors.primary },
+            ]}
+          >
+            {upcomingButtonLabel}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.upcomingBtn,
+            styles.importBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.primary,
+            },
+          ]}
+          onPress={() => {
+            onMainButtonPress?.();
+            if (!isBusy) void startImportFlow();
+          }}
+        >
+          <Text
+            style={[
+              styles.upcomingBtnText,
+              buttonFontStyle,
+              { color: colors.primary },
+            ]}
+          >
+            Import Google Calendar Schedule
+          </Text>
         </TouchableOpacity>
       )}
 
       <Modal visible={showCalendarPicker} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Select a calendar</Text>
+          <View style={[styles.modalCard, { borderColor: colors.primary }]}>
+            <Text style={[styles.modalTitle, { color: colors.primary }]}>
+              Select a calendar
+            </Text>
 
             {isCalendarLoading ? (
-              <View style={styles.calendarLoadingBox}>
-                <ActivityIndicator size="small" color={BURGUNDY} />
-                <Text style={styles.calendarLoadingText}>
+              <View
+                style={[
+                  styles.calendarLoadingBox,
+                  {
+                    borderColor: colors.primary,
+                    backgroundColor: `${colors.primary}0D`,
+                  },
+                ]}
+              >
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text
+                  style={[
+                    styles.calendarLoadingText,
+                    { color: colors.primary },
+                  ]}
+                >
                   Refreshing calendars...
                 </Text>
               </View>
@@ -392,7 +449,11 @@ export default function UpcomingEventButton({
                     <TouchableOpacity
                       style={[
                         styles.calendarRow,
-                        isActive && styles.calendarRowActive,
+                        { borderColor: colors.primary },
+                        isActive && [
+                          styles.calendarRowActive,
+                          { backgroundColor: `${colors.primary}14` },
+                        ],
                       ]}
                       onPress={async () => {
                         setShowCalendarPicker(false);
@@ -402,13 +463,21 @@ export default function UpcomingEventButton({
                       <Text
                         style={[
                           styles.calendarName,
+                          { color: colors.primary },
                           isActive && styles.calendarNameActive,
                         ]}
                       >
                         {item.summary}
                       </Text>
                       {item.primary ? (
-                        <Text style={styles.calendarMeta}>Primary</Text>
+                        <Text
+                          style={[
+                            styles.calendarMeta,
+                            { color: colors.primary },
+                          ]}
+                        >
+                          Primary
+                        </Text>
                       ) : null}
                     </TouchableOpacity>
                   );
@@ -418,7 +487,7 @@ export default function UpcomingEventButton({
 
             <View style={{ height: 12 }} />
             <TouchableOpacity
-              style={styles.cancelBtn}
+              style={[styles.cancelBtn, { backgroundColor: colors.primary }]}
               onPress={() => setShowCalendarPicker(false)}
             >
               <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -450,8 +519,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: BURGUNDY,
-    backgroundColor: "white",
     alignItems: "center",
     width: "80%",
     alignSelf: "center",
@@ -463,10 +530,7 @@ const styles = StyleSheet.create({
     width: "67%",
   },
   upcomingBtnText: {
-    color: BURGUNDY,
-    fontWeight: "700",
     textAlign: "center",
-    fontSize: 12,
   },
 
   modalBackdrop: {
@@ -479,7 +543,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: BURGUNDY,
     padding: 14,
     maxHeight: "70%",
   },
@@ -487,7 +550,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12,
-    color: BURGUNDY,
     textAlign: "center",
   },
   calendarLoadingBox: {
@@ -495,30 +557,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 24,
     borderWidth: 1,
-    borderColor: BURGUNDY,
     borderRadius: 16,
-    backgroundColor: "rgba(128, 0, 32, 0.05)",
   },
   calendarLoadingText: {
     marginTop: 10,
     fontSize: 13,
-    color: BURGUNDY,
   },
   calendarRow: {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: BURGUNDY,
     borderRadius: 16,
     backgroundColor: "white",
     marginBottom: 10,
   },
-  calendarRowActive: {
-    backgroundColor: "rgba(128, 0, 32, 0.08)",
-  },
+  calendarRowActive: {},
   calendarName: {
     fontSize: 15,
-    color: BURGUNDY,
     fontWeight: "600",
   },
   calendarNameActive: {
@@ -526,7 +581,6 @@ const styles = StyleSheet.create({
   },
   calendarMeta: {
     fontSize: 12,
-    color: BURGUNDY,
     marginTop: 2,
   },
   cancelBtn: {
@@ -534,7 +588,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 9,
     alignItems: "center",
-    backgroundColor: BURGUNDY,
   },
   cancelBtnText: {
     color: "white",

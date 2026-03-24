@@ -1,0 +1,13 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "Loyola Campus"
+- tapOn:
+    point: "17%,95%"
+- assertVisible: "General"
+- assertVisible: "Display & Brightness"
+- assertVisible: "Location & Privacy"
+- assertVisible: "Navigation"
+- assertVisible: "Accessibility"
+- assertVisible: "About"
+- assertVisible: "Terms"

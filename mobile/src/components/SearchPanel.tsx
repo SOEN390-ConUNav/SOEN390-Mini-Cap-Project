@@ -20,6 +20,7 @@ import NearbyPlaceItem from "./NearbyPlaceItem";
 import useLocationStore from "../hooks/useLocationStore";
 import useLocationService from "../hooks/useLocationService";
 import cacheService from "../services/cacheService";
+import { useTheme } from "../hooks/useTheme";
 
 const BURGUNDY = "#800020";
 const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
@@ -50,6 +51,7 @@ export default function SearchPanel({
   onClose,
   onSelectLocation,
 }: SearchPanelProps) {
+  const { colors } = useTheme();
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -191,32 +193,33 @@ export default function SearchPanel({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      {/* backdrop */}
       <Pressable style={styles.backdrop} onPress={onClose} />
-      {/* panel */}
-      <View style={styles.panel}>
+      <View style={[styles.panel, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Search</Text>
+          <Text style={[styles.title, { color: colors.primary }]}>Search</Text>
           <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Text style={styles.closeText}>Close</Text>
+            <Text style={[styles.closeText, { color: colors.primary }]}>
+              Close
+            </Text>
           </Pressable>
         </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} />
+        <View
+          style={[styles.searchContainer, { backgroundColor: colors.surface }]}
+        >
+          <Ionicons name="search" size={20} color={colors.iconDefault} />
           <TextInput
             placeholder="Search"
+            placeholderTextColor={colors.textMuted}
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
           />
-          <Ionicons name="mic" size={20} />
+          <Ionicons name="mic" size={20} color={colors.iconDefault} />
         </View>
 
-        {/* Filters */}
         {query.length === 0 && (
           <View style={styles.filtersWrapper}>
             <ScrollView
@@ -230,13 +233,21 @@ export default function SearchPanel({
                   onPress={() => setActiveFilter(item.value)}
                   style={[
                     styles.filterChip,
-                    activeFilter === item.value && styles.activeChip,
+                    { backgroundColor: colors.surface },
+                    activeFilter === item.value && [
+                      styles.activeChip,
+                      { backgroundColor: colors.primary },
+                    ],
                   ]}
                 >
                   <Text
                     style={[
                       styles.filterText,
-                      activeFilter === item.value && styles.activeText,
+                      { color: colors.textMuted },
+                      activeFilter === item.value && [
+                        styles.activeText,
+                        { color: "#fff" },
+                      ],
                     ]}
                   >
                     {item.label}
@@ -247,10 +258,11 @@ export default function SearchPanel({
           </View>
         )}
 
-        {/* Recents */}
         {recentSearches.length > 0 && query.length === 0 && (
           <>
-            <Text style={styles.sectionTitle}>Recent Searches</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Recent Searches
+            </Text>
 
             {recentSearches.map((item, index) => (
               <TouchableOpacity
@@ -258,19 +270,28 @@ export default function SearchPanel({
                 onPress={() => handleSearch(item.query)}
                 style={styles.recentSearchItem}
               >
-                <Ionicons name="time-outline" size={18} color={BURGUNDY} />
-                <Text style={styles.recentSearchText}>{item.query}</Text>
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={[styles.recentSearchText, { color: colors.text }]}>
+                  {item.query}
+                </Text>
               </TouchableOpacity>
             ))}
           </>
         )}
 
-        {/* Search Results */}
         {query.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Search results</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Search results
+            </Text>
 
-            {searching && <Text>Searching…</Text>}
+            {searching && (
+              <Text style={{ color: colors.textMuted }}>Searching…</Text>
+            )}
 
             {!searching && (
               <FlatList
@@ -278,20 +299,26 @@ export default function SearchPanel({
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.poiItem}
+                    style={[styles.poiItem, { borderColor: colors.border }]}
                     onPress={() => {
                       onSelectLocation({ ...item.location, name: item.name });
                       onClose();
                     }}
                   >
                     <View style={styles.poiTextContainer}>
-                      <Text style={styles.placeName}>{item.name}</Text>
-                      <Text style={styles.address}>{item.address}</Text>
+                      <Text style={[styles.placeName, { color: colors.text }]}>
+                        {item.name}
+                      </Text>
+                      <Text
+                        style={[styles.address, { color: colors.textMuted }]}
+                      >
+                        {item.address}
+                      </Text>
                     </View>
                     <Ionicons
                       name="chevron-forward"
                       size={18}
-                      color={BURGUNDY}
+                      color={colors.textMuted}
                     />
                   </TouchableOpacity>
                 )}
@@ -300,18 +327,23 @@ export default function SearchPanel({
           </>
         )}
 
-        {/* Nearby Results */}
         {query.length === 0 && (
           <>
             <View style={styles.nearbyHeaderContainer}>
-              <Text style={styles.sectionTitle}>Nearby {activeFilter}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Nearby {activeFilter}
+              </Text>
               <TouchableOpacity
                 testID="distance-filter-button"
                 onPress={() => distance.setDistanceFilterVisible(true)}
                 style={styles.filterIconButton}
               >
-                <Ionicons name="funnel" size={18} color={BURGUNDY} />
-                <Text style={styles.filterButtonText}>Filter</Text>
+                <Ionicons name="funnel" size={18} color={colors.primary} />
+                <Text
+                  style={[styles.filterButtonText, { color: colors.primary }]}
+                >
+                  Filter
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -336,7 +368,7 @@ export default function SearchPanel({
                     onPress={() => distance.setDistanceFilterVisible(false)}
                     style={styles.closeBtn}
                   >
-                    <Ionicons name="close" size={24} color={BURGUNDY} />
+                    <Ionicons name="close" size={24} color={colors.primary} />
                   </Pressable>
                 </View>
 
@@ -429,7 +461,7 @@ export default function SearchPanel({
                     onPress={() => location.setLocationDetailVisible(false)}
                     style={styles.closeBtn}
                   >
-                    <Ionicons name="close" size={24} color={BURGUNDY} />
+                    <Ionicons name="close" size={24} color={colors.primary} />
                   </Pressable>
                 </View>
 
@@ -568,7 +600,10 @@ export default function SearchPanel({
                     )}
 
                     <TouchableOpacity
-                      style={styles.detailNavigateButton}
+                      style={[
+                        styles.detailNavigateButton,
+                        { backgroundColor: colors.primary },
+                      ]}
                       onPress={() => {
                         onSelectLocation({
                           ...location.selectedLocationDetail.location,
@@ -615,8 +650,13 @@ export default function SearchPanel({
               />
 
               {loading && (
-                <View style={styles.loadingOverlay}>
-                  <ActivityIndicator size="large" color={BURGUNDY} />
+                <View
+                  style={[
+                    styles.loadingOverlay,
+                    { backgroundColor: colors.background + "E6" },
+                  ]}
+                >
+                  <ActivityIndicator size="large" color={colors.primary} />
                 </View>
               )}
             </View>
@@ -631,12 +671,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#fff",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2f2f2",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -658,18 +696,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: "#eee",
     marginRight: 8,
   },
-  activeChip: {
-    backgroundColor: BURGUNDY,
-  },
-  filterText: {
-    color: "#555",
-  },
-  activeText: {
-    color: "#fff",
-  },
+  activeChip: {},
+  filterText: {},
+  activeText: {},
   sectionTitle: {
     fontWeight: "600",
     fontSize: 16,
@@ -686,10 +717,8 @@ const styles = StyleSheet.create({
   },
   address: {
     fontSize: 12,
-    color: "#777",
   },
   viewMore: {
-    color: BURGUNDY,
     marginTop: 4,
     alignSelf: "center",
   },
@@ -698,7 +727,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: "#eee",
   },
   poiTextContainer: {
     flex: 1,
@@ -707,14 +735,12 @@ const styles = StyleSheet.create({
   },
   directionsButton: {
     flexShrink: 0,
-    backgroundColor: BURGUNDY,
     padding: 10,
     borderRadius: 20,
     alignSelf: "center",
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -728,7 +754,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: "#fff",
     paddingTop: 60,
     paddingHorizontal: 16,
   },
@@ -741,21 +766,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: BURGUNDY,
   },
   closeBtn: {
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
   closeText: {
-    color: BURGUNDY,
     fontWeight: "600",
   },
   input: {
     height: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
     paddingHorizontal: 12,
     fontSize: 15,
   },
@@ -763,16 +785,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 16,
     borderRadius: 12,
-    backgroundColor: "#fff",
   },
   hint: {
-    color: "#999",
     marginTop: 8,
   },
   searchContainer: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",

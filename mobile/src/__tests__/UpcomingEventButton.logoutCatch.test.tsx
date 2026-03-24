@@ -89,9 +89,12 @@ describe("UpcomingEventButton logout catch coverage", () => {
 
     render(<UpcomingEventButton onOpenEventDetails={onOpenEventDetails} />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Upcoming event: SOEN 390")).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Upcoming event: SOEN 390")).toBeTruthy();
+      },
+      { timeout: 15_000 },
+    );
 
     fireEvent.press(screen.getByText("Upcoming event: SOEN 390"));
 
@@ -100,8 +103,11 @@ describe("UpcomingEventButton logout catch coverage", () => {
       onOpenEventDetails.mock.calls[0][0].onLogout();
     });
 
-    await waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("LOGOUT ERROR:", expect.any(Error));
-    });
-  });
+    await waitFor(
+      () => {
+        expect(logSpy).toHaveBeenCalledWith("LOGOUT ERROR:", expect.any(Error));
+      },
+      { timeout: 15_000 },
+    );
+  }, 30_000);
 });

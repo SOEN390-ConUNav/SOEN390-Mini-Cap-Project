@@ -27,6 +27,8 @@ export interface RoomMarkerData {
 interface FloorPlanWebViewProps {
   buildingId?: BuildingId;
   floorNumber?: string;
+  backgroundColor?: string;
+  invertSvg?: boolean;
   onPoiTap?: (poi: PoiMarker) => void;
   onRoomTap?: (room: RoomMarkerData) => void;
   routePoints?: RoutePoint[];
@@ -79,11 +81,18 @@ function getSvgAsset(buildingId: BuildingId, floorNumber: string): any {
   return SVG_ASSETS[buildingId]?.[floorNumber] ?? null;
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
   (
     {
       buildingId = "H",
       floorNumber = "8",
+      backgroundColor,
+      invertSvg = false,
       onPoiTap,
       onRoomTap,
       routePoints: propRoutePoints,
@@ -140,7 +149,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           const response = await fetch(uri);
           const svgText = await response.text();
           if (cancelled || version !== floorVersionRef.current) return;
-          const svgMatch = svgText.match(/<svg[\s\S]*<\/svg>/i);
+          const svgMatch = new RegExp(/<svg[\s\S]*<\/svg>/i).exec(svgText);
 
           if (svgMatch) {
             let svgContent = svgMatch[0];
@@ -158,6 +167,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               );
             }
 
+            const bg = backgroundColor ?? "white";
+            const svgFilter = invertSvg ? "filter: invert(1);" : "";
             const html = `
             <!DOCTYPE html>
             <html>
@@ -165,10 +176,10 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, minimum-scale=0.1, user-scalable=yes">
                 <style>
                   * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { 
+                  html, body {
                     width: 100%;
                     height: 100%;
-                    background: white; 
+                    background: ${bg};
                     overflow: auto;
                     -webkit-overflow-scrolling: touch;
                   }
@@ -185,6 +196,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                     max-height: 100vh;
                     width: auto;
                     height: auto;
+                    ${svgFilter}
                   }
                 </style>
               </head>
@@ -378,12 +390,13 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
                       'emergency-exit':  { bg: '#F44336', letter: '!',  color: '#fff' },
                       'bathroom-men':    { bg: '#2196F3', letter: 'M',  color: '#fff' },
                       'bathroom-women':  { bg: '#E91E63', letter: 'W',  color: '#fff' },
-                      'water-fountain':  { bg: '#00BCD4', letter: 'W',  color: '#fff' },
+                      'water-fountain':  { bg: '#00BCD4', letter: '💧', color: '#fff' },
                       'computer-station':{ bg: '#9C27B0', letter: 'C',  color: '#fff' },
                       'study-area':      { bg: '#FF9800', letter: 'A',  color: '#fff' },
                       'printer':         { bg: '#607D8B', letter: 'P',  color: '#fff' },
                       'bookshelf':       { bg: '#795548', letter: 'B',  color: '#fff' },
-                      'entrance-exit':   { bg: '#FF5722', letter: 'D',  color: '#fff' }
+                      'entrance-exit':   { bg: '#FF5722', letter: 'D',  color: '#fff' },
+                      'exit':            { bg: '#FF5722', letter: 'D',  color: '#fff' }
                     };
 
                     window.showPois = function(pois) {
@@ -464,8 +477,8 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
             setSvgHtml(html);
             markWebViewReady(false);
           }
-        } catch (e) {
-          console.error("Error loading SVG:", e);
+        } catch (error) {
+          console.error("Error loading SVG:", getErrorMessage(error));
         }
       };
 
@@ -473,7 +486,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       return () => {
         cancelled = true;
       };
-    }, [buildingId, floorNumber, markWebViewReady]);
+    }, [buildingId, floorNumber, backgroundColor, invertSvg, markWebViewReady]);
 
     const executeDrawRoute = React.useCallback(
       (routePoints: RoutePoint[], version: number, retryCount = 0) => {
@@ -638,9 +651,11 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
       [isWebViewReady],
     );
 
+    const bgColor = backgroundColor ?? "white";
+
     if (!svgHtml) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: bgColor }]}>
           <ActivityIndicator size="large" color="#4285F4" />
           <Text style={styles.loadingText}>Loading floor plan...</Text>
         </View>
@@ -653,7 +668,7 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
           key={`${buildingId}-${floorNumber}`}
           ref={webViewRef}
           source={{ html: svgHtml }}
-          style={styles.webView}
+          style={[styles.webView, { backgroundColor: bgColor }]}
           scalesPageToFit={true}
           bounces={true}
           scrollEnabled={true}
@@ -679,8 +694,11 @@ const FloorPlanWebView = forwardRef<FloorPlanWebViewRef, FloorPlanWebViewProps>(
               } else if (data.type === "routeDrawError") {
                 console.error("Route draw error:", data.message);
               }
-            } catch (e) {
-              // Ignore non-JSON messages
+            } catch (error) {
+              console.error(
+                "Failed to parse WebView message:",
+                getErrorMessage(error),
+              );
             }
           }}
           onError={(syntheticEvent) => {

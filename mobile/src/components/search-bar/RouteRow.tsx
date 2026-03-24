@@ -42,6 +42,7 @@ export default function RouteRow({
   const scale = useSharedValue(1);
 
   const pan = Gesture.Pan()
+    .enabled(true)
     .runOnJS(true)
     .onBegin(() => {
       scale.value = withSpring(1.02);

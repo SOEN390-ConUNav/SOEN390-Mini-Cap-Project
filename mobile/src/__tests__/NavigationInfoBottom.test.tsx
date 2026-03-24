@@ -29,6 +29,7 @@ describe("NavigationInfoBottom", () => {
   const baseProps = {
     visible: true,
     onClose: jest.fn(),
+    onSnapIndexChange: jest.fn(),
   };
 
   it("renders without crashing", () => {

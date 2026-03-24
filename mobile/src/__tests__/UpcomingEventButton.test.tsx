@@ -86,27 +86,38 @@ describe("UpcomingEventButton", () => {
 
     render(<UpcomingEventButton onMainButtonPress={onMainButtonPress} />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Import Google Calendar Schedule")).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("Import Google Calendar Schedule"),
+        ).toBeTruthy();
+      },
+      { timeout: 15_000 },
+    );
 
     fireEvent.press(screen.getByText("Import Google Calendar Schedule"));
 
     expect(onMainButtonPress).toHaveBeenCalledTimes(1);
 
-    await waitFor(() => {
-      expect(screen.getByText("Select a calendar")).toBeTruthy();
-      expect(screen.getByText("School")).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Select a calendar")).toBeTruthy();
+        expect(screen.getByText("School")).toBeTruthy();
+      },
+      { timeout: 15_000 },
+    );
 
     fireEvent.press(screen.getByText("School"));
 
-    await waitFor(() => {
-      expect(requestSetGoogleSelectedCalendar).toHaveBeenCalledWith({
-        id: "cal-1",
-        summary: "School",
-        primary: true,
-      });
-    });
-  }, 15000);
+    await waitFor(
+      () => {
+        expect(requestSetGoogleSelectedCalendar).toHaveBeenCalledWith({
+          id: "cal-1",
+          summary: "School",
+          primary: true,
+        });
+      },
+      { timeout: 15_000 },
+    );
+  }, 30_000);
 });

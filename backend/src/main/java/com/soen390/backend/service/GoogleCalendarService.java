@@ -34,6 +34,7 @@ public class GoogleCalendarService {
   private static final String NO_BUILDING = "(no building)";
   private static final String MISSING = "(missing)";
   private static final String NO_NAME = "(no name)";
+  private static final String NO_TITLE = "(no title)";
   private final RestTemplate restTemplate;
   private final GoogleSessionService sessionService;
 
@@ -92,71 +93,12 @@ public class GoogleCalendarService {
 
   public List<GoogleEventDto> importEvents(String sessionId, String calendarId, int days, String timeZone) {
       GoogleTokenSession session = sessionService.require(sessionId);
-
-      Instant timeMin = Instant.now();
-      Instant timeMax = timeMin.plusSeconds((long) days * 24 * 60 * 60);
-
-      // IMPORTANT: don't manually URLEncode calendarId in the path; let Spring encode it correctly
-      String url = UriComponentsBuilder
-          .fromUriString("https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events")
-          .queryParam("timeMin", timeMin.toString())
-          .queryParam("timeMax", timeMax.toString())
-          .queryParam("singleEvents", "true")
-          .queryParam("orderBy", "startTime")
-          .queryParam("maxResults", "250")
-          .queryParam("timeZone", timeZone)
-          .buildAndExpand(calendarId)
-          .encode()
-          .toUriString();
-
-      HttpHeaders headers = new HttpHeaders();
-      headers.setBearerAuth(session.getAccessToken());
+      String url = buildImportEventsUrl(calendarId, days, timeZone);
+      HttpHeaders headers = buildBearerHeaders(session.getAccessToken());
 
       try {
-        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
-            url,
-            HttpMethod.GET,
-            new HttpEntity<>(headers),
-            new ParameterizedTypeReference<Map<String, Object>>() {}
-        );
-
-        Object itemsObj = (res.getBody() != null) ? res.getBody().get("items") : null;
-        if (!(itemsObj instanceof List<?> items)) return List.of();
-
-        List<GoogleEventDto> out = new ArrayList<>();
-
-        for (Object o : items) {
-          if (!(o instanceof Map<?, ?> ev)) continue;
-
-          String id = (String) ev.get("id");
-          String summary = (String) ev.get("summary");
-          String location = (String) ev.get("location");
-
-          Map<?, ?> start = (Map<?, ?>) ev.get("start");
-          Map<?, ?> end = (Map<?, ?>) ev.get("end");
-
-          String startDateTime = start != null ? (String) start.get("dateTime") : null;
-          String endDateTime = end != null ? (String) end.get("dateTime") : null;
-
-          String startDate = start != null ? (String) start.get("date") : null;
-          String endDate = end != null ? (String) end.get("date") : null;
-
-          boolean allDay = startDate != null && endDate != null;
-          String startIso = allDay ? startDate : startDateTime;
-          String endIso = allDay ? endDate : endDateTime;
-
-          out.add(new GoogleEventDto(
-              id,
-              summary != null ? summary : "(no title)",
-              location,
-              startIso,
-              endIso,
-              allDay
-          ));
-        }
-
-        return out;
-
+        List<?> items = fetchEventItems(url, headers);
+        return toEventDtos(items);
       } catch (HttpStatusCodeException e) {
         // This is the key: expose what Google actually said
         throw new IllegalStateException(
@@ -165,6 +107,98 @@ public class GoogleCalendarService {
         );
       }
     }
+
+  private String buildImportEventsUrl(String calendarId, int days, String timeZone) {
+    Instant timeMin = Instant.now();
+    Instant timeMax = timeMin.plusSeconds((long) days * 24 * 60 * 60);
+
+    // IMPORTANT: don't manually URLEncode calendarId in the path; let Spring encode it correctly
+    return UriComponentsBuilder
+        .fromUriString("https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events")
+        .queryParam("timeMin", timeMin.toString())
+        .queryParam("timeMax", timeMax.toString())
+        .queryParam("singleEvents", "true")
+        .queryParam("orderBy", "startTime")
+        .queryParam("maxResults", "250")
+        .queryParam("timeZone", timeZone)
+        .buildAndExpand(calendarId)
+        .encode()
+        .toUriString();
+  }
+
+  private HttpHeaders buildBearerHeaders(String accessToken) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(accessToken);
+    return headers;
+  }
+
+  private List<?> fetchEventItems(String url, HttpHeaders headers) {
+    ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
+        url,
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        new ParameterizedTypeReference<Map<String, Object>>() {}
+    );
+
+    Map<String, Object> body = res.getBody();
+    Object itemsObj = (body != null) ? body.get("items") : null;
+    if (!(itemsObj instanceof List<?> items)) {
+      return List.of();
+    }
+
+    return items;
+  }
+
+  private List<GoogleEventDto> toEventDtos(List<?> items) {
+    List<GoogleEventDto> out = new ArrayList<>();
+    for (Object item : items) {
+      if (!(item instanceof Map<?, ?> event)) {
+        continue;
+      }
+      out.add(toEventDto(event));
+    }
+    return out;
+  }
+
+  private GoogleEventDto toEventDto(Map<?, ?> event) {
+    String id = (String) event.get("id");
+    String summary = (String) event.get("summary");
+    String location = (String) event.get("location");
+
+    Map<?, ?> start = (Map<?, ?>) event.get("start");
+    Map<?, ?> end = (Map<?, ?>) event.get("end");
+
+    String startDate = getStringValue(start, "date");
+    String endDate = getStringValue(end, "date");
+
+    boolean allDay = startDate != null && endDate != null;
+    String startIso;
+    String endIso;
+    if (allDay) {
+      startIso = startDate;
+      endIso = endDate;
+    } else {
+      startIso = getStringValue(start, "dateTime");
+      endIso = getStringValue(end, "dateTime");
+    }
+
+    return new GoogleEventDto(
+        id,
+        summary != null ? summary : NO_TITLE,
+        location,
+        startIso,
+        endIso,
+        allDay
+    );
+  }
+
+  private String getStringValue(Map<?, ?> source, String key) {
+    if (source == null || key == null) {
+      return null;
+    }
+    Object value = source.get(key);
+    return (value instanceof String str) ? str : null;
+  }
 
   public GoogleEventDto getNextEvent(String sessionId, String calendarId, int days, String timeZone) {
     List<GoogleEventDto> events = importEvents(sessionId, calendarId, days, timeZone);

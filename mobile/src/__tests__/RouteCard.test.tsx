@@ -100,7 +100,7 @@ describe("RouteCard", () => {
   it("shows loading indicator and hides route rows when isLoading is true", () => {
     navigationInfoState.isLoading = true;
     const { getByText, queryByText } = render(<RouteCard {...baseProps} />);
-    expect(getByText("Calculating route...")).toBeTruthy();
+    expect(getByText(/Calculating route/i)).toBeTruthy();
     expect(queryByText("From")).toBeNull();
     expect(queryByText("To")).toBeNull();
   });

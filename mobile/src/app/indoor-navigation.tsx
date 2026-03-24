@@ -39,6 +39,11 @@ import {
   getDefaultFloor,
   getAvailableFloors,
 } from "../utils/buildingIndoorMaps";
+import { useTheme } from "../hooks/useTheme";
+import {
+  inferPoiType,
+  getDisplayNameFromRoomId,
+} from "../utils/floorPlanPoiUtils";
 
 const MAX_DURATION_REGEX_INPUT_LENGTH = 128;
 const MAX_DISTANCE_REGEX_INPUT_LENGTH = 64;
@@ -839,25 +844,45 @@ const navigateStep = ({
   });
 };
 
-const getRoomMarkerData = (roomPoints: RoomPoint[]) =>
-  roomPoints.length > 0
-    ? roomPoints.map((room) => ({
-        x: room.x,
-        y: room.y,
-        id: room.id,
-      }))
-    : undefined;
+function splitRoomsAndPois(
+  roomPoints: RoomPoint[],
+  apiPois: PoiItem[],
+): {
+  roomData: RoomMarkerData[] | undefined;
+  poiData: PoiMarker[] | undefined;
+} {
+  const apiPoiIds = new Set(apiPois.map((p) => p.id.toUpperCase()));
+  const rooms: RoomMarkerData[] = [];
+  const pois: PoiMarker[] = [
+    ...apiPois.map((p) => ({
+      x: p.x,
+      y: p.y,
+      id: p.id,
+      displayName: p.displayName,
+      type: p.type,
+    })),
+  ];
 
-const getPoiMarkerData = (pois: PoiItem[]) =>
-  pois.length > 0
-    ? pois.map((poi) => ({
-        x: poi.x,
-        y: poi.y,
-        id: poi.id,
-        displayName: poi.displayName,
-        type: poi.type,
-      }))
-    : undefined;
+  for (const r of roomPoints) {
+    const type = inferPoiType(r.id);
+    if (type && !apiPoiIds.has(r.id.toUpperCase())) {
+      pois.push({
+        x: r.x,
+        y: r.y,
+        id: r.id,
+        displayName: getDisplayNameFromRoomId(r.id),
+        type,
+      });
+    } else if (!type) {
+      rooms.push({ x: r.x, y: r.y, id: r.id });
+    }
+  }
+
+  return {
+    roomData: rooms.length > 0 ? rooms : undefined,
+    poiData: pois.length > 0 ? pois : undefined,
+  };
+}
 
 type StepNavigationControlsProps = {
   totalSteps: number;
@@ -937,18 +962,34 @@ const StepNavigationControls = ({
 type ShuttleBannerProps = {
   nextShuttleTime?: string;
   routePhase: "origin" | "outdoor" | "destination";
+  cardBackground: string;
+  accentColor: string;
+  textColor: string;
 };
 
-const ShuttleBanner = ({ nextShuttleTime, routePhase }: ShuttleBannerProps) => {
+const ShuttleBanner = ({
+  nextShuttleTime,
+  routePhase,
+  cardBackground,
+  accentColor,
+  textColor,
+}: ShuttleBannerProps) => {
   if (!nextShuttleTime || routePhase !== "origin") {
     return null;
   }
 
   return (
     <View
-      style={[styles.stairBanner, { bottom: 230, borderLeftColor: "#8B1538" }]}
+      style={[
+        styles.stairBanner,
+        {
+          bottom: 230,
+          backgroundColor: cardBackground,
+          borderLeftColor: accentColor,
+        },
+      ]}
     >
-      <Text style={[styles.stairBannerText, { color: "#8B1538" }]}>
+      <Text style={[styles.stairBannerText, { color: textColor }]}>
         Next Shuttle Bus: {nextShuttleTime}
       </Text>
     </View>
@@ -958,12 +999,14 @@ const ShuttleBanner = ({ nextShuttleTime, routePhase }: ShuttleBannerProps) => {
 type UniversalTransitionProps = {
   visible: boolean;
   endBuildingId: string;
+  primaryColor: string;
   onPress: () => void;
 };
 
 const UniversalTransitionButton = ({
   visible,
   endBuildingId,
+  primaryColor,
   onPress,
 }: UniversalTransitionProps) => {
   if (!visible) {
@@ -972,7 +1015,10 @@ const UniversalTransitionButton = ({
 
   return (
     <View style={styles.universalTransitionContainer}>
-      <TouchableOpacity style={styles.transitionButton} onPress={onPress}>
+      <TouchableOpacity
+        style={[styles.transitionButton, { backgroundColor: primaryColor }]}
+        onPress={onPress}
+      >
         <Text style={styles.transitionButtonText}>
           Exit Building & Go to {endBuildingId}
         </Text>
@@ -989,6 +1035,7 @@ export default function IndoorNavigation() {
     startRoom?: string | string[];
     endRoom?: string | string[];
   }>();
+  const { colors, isDark } = useTheme();
 
   const buildingId = (params.buildingId as BuildingId) || "H";
   const defaultFloor = getDefaultFloor(buildingId);
@@ -1368,8 +1415,7 @@ export default function IndoorNavigation() {
     totalSteps > 0 ? Math.min(currentStepIndex, totalSteps - 1) : 0;
   const canGoToPreviousStep = visibleStepIndex > 0;
   const canGoToNextStep = visibleStepIndex < totalSteps - 1;
-  const roomData = getRoomMarkerData(roomPoints);
-  const poiData = getPoiMarkerData(pois);
+  const { roomData, poiData } = splitRoomsAndPois(roomPoints, pois);
   const showUniversalTransition =
     !!universalRouteData && routePhase === "origin";
 
@@ -1392,14 +1438,16 @@ export default function IndoorNavigation() {
   const displayBuildingName = getDisplayBuildingName(routeData, buildingId);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <View style={styles.mapContainer}>
         <FloorPlanWebView
           ref={mapViewRef}
           buildingId={activeBuildingId}
           floorNumber={currentFloor}
+          backgroundColor={colors.background}
+          invertSvg={isDark}
           routePoints={displayedRoutePoints}
           roomData={roomData}
           poiData={poiData}
@@ -1442,24 +1490,68 @@ export default function IndoorNavigation() {
       />
 
       {routeData?.stairMessage && (
-        <View style={styles.stairBanner}>
-          <Text style={styles.stairBannerText}>
+        <View
+          style={[
+            styles.stairBanner,
+            { backgroundColor: colors.card, borderLeftColor: colors.primary },
+          ]}
+        >
+          <Text style={[styles.stairBannerText, { color: colors.text }]}>
             🚶 {routeData.stairMessage}
           </Text>
         </View>
       )}
 
-      <View style={styles.accessibilityToggleContainer}>
-        <Text style={styles.accessibilityText}>
+      <View
+        style={[
+          styles.accessibilityToggleContainer,
+          { backgroundColor: colors.card },
+        ]}
+      >
+        <Text style={[styles.accessibilityText, { color: colors.text }]}>
           Avoid Stairs / Wheelchair Accessible
         </Text>
         <Switch
           value={avoidStairs}
           onValueChange={setAvoidStairs}
-          trackColor={{ false: "#ccc", true: "#8B1538" }}
+          trackColor={{ false: colors.border, true: colors.primary }}
           thumbColor={avoidStairs ? "#fff" : "#f4f3f4"}
         />
       </View>
+
+      {routeData &&
+        Boolean(routeData.startFloor) &&
+        Boolean(routeData.endFloor) &&
+        routeData.startFloor !== routeData.endFloor && (
+          <View style={styles.multiFloorTransitionContainer}>
+            {currentFloor === routeData.startFloor && (
+              <TouchableOpacity
+                style={[
+                  styles.transitionButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => handleFloorChange(routeData.endFloor)}
+              >
+                <Text style={styles.transitionButtonText}>
+                  Go to Floor {routeData.endFloor}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {currentFloor === routeData.endFloor && (
+              <TouchableOpacity
+                style={[
+                  styles.transitionButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => handleFloorChange(routeData.startFloor)}
+              >
+                <Text style={styles.transitionButtonText}>
+                  Back to Floor {routeData.startFloor}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
       <StepNavigationControls
         totalSteps={totalSteps}
@@ -1474,11 +1566,15 @@ export default function IndoorNavigation() {
       <ShuttleBanner
         nextShuttleTime={universalRouteData?.nextShuttleTime}
         routePhase={routePhase}
+        cardBackground={colors.card}
+        accentColor={colors.primary}
+        textColor={colors.primary}
       />
 
       <UniversalTransitionButton
         visible={showUniversalTransition}
         endBuildingId={endBuildingId}
+        primaryColor={colors.primary}
         onPress={() => {
           if (!universalRouteData) {
             return;
@@ -1546,7 +1642,6 @@ export default function IndoorNavigation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   mapContainer: {
     flex: 1,
@@ -1561,7 +1656,6 @@ const styles = StyleSheet.create({
     bottom: 180,
     left: 16,
     right: 16,
-    backgroundColor: "#FFF3E0",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -1572,10 +1666,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF9800",
   },
   stairBannerText: {
-    color: "#E65100",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1585,7 +1677,6 @@ const styles = StyleSheet.create({
     top: 200,
     left: 16,
     right: 16,
-    backgroundColor: "#FFFFFF",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -1602,13 +1693,19 @@ const styles = StyleSheet.create({
   accessibilityText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#333",
   },
   floorTransitionContainer: {
     position: "absolute",
     bottom: Platform.OS === "ios" ? 170 : 150,
     alignSelf: "center",
     zIndex: 15,
+  },
+  /** Sits above step navigation so both can show on multi-floor routes */
+  multiFloorTransitionContainer: {
+    position: "absolute",
+    bottom: Platform.OS === "ios" ? 240 : 220,
+    alignSelf: "center",
+    zIndex: 14,
   },
   universalTransitionContainer: {
     position: "absolute",
@@ -1655,7 +1752,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   transitionButton: {
-    backgroundColor: "#8B1538",
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 30,

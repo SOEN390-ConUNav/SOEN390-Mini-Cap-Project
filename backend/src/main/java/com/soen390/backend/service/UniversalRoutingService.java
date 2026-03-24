@@ -68,7 +68,7 @@ public class UniversalRoutingService {
                 startBuilding, startRoom, startExitId, startFloor, startGroundFloor, avoidStairs);
 
         boolean sameCampus = originLoc.campus.equals(destLoc.campus);
-        TransportMode mode = sameCampus ? TransportMode.walking : TransportMode.transit;
+        TransportMode mode = sameCampus ? TransportMode.WALKING : TransportMode.TRANSIT;
 
         OutdoorDirectionResponse leg2 = googleMapsService.getDirections(
                 originLoc.address, destLoc.address, mode);
