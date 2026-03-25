@@ -41,6 +41,10 @@ import {
 } from "../utils/buildingIndoorMaps";
 import { NAVIGATION_STATE } from "../const";
 import { useNavigationStore } from "../hooks/useNavigationState";
+import { useNavigationEndpointsStore } from "../hooks/useNavigationEndpoints";
+import useNavigationConfig from "../hooks/useNavigationConfig";
+import useNavigationInfo from "../hooks/useNavigationInfo";
+import useNavigationProgress from "../hooks/useNavigationProgress";
 import { useTheme } from "../hooks/useTheme";
 import {
   inferPoiType,
@@ -1070,11 +1074,6 @@ export default function IndoorNavigation() {
     routerRef.current = router;
   }, [router]);
 
-  const currentFloorRef = useRef(currentFloor);
-  useEffect(() => {
-    currentFloorRef.current = effectiveCurrentFloor;
-  }, [effectiveCurrentFloor]);
-
   useEffect(() => {}, [
     buildingId,
     currentFloor,
@@ -1116,6 +1115,11 @@ export default function IndoorNavigation() {
   const effectiveCurrentFloor = activeFloors.includes(currentFloor)
     ? currentFloor
     : getDefaultFloor(activeBuildingId);
+  const currentFloorRef = useRef(currentFloor);
+
+  useEffect(() => {
+    currentFloorRef.current = effectiveCurrentFloor;
+  }, [effectiveCurrentFloor]);
 
   const loadAllUniversityRooms = async () => {
     try {
@@ -1504,6 +1508,11 @@ export default function IndoorNavigation() {
     !!routeData &&
     !!startRoom &&
     !!endRoom;
+  const showArrivalAction =
+    !!routeData &&
+    !!endRoom &&
+    !showOutdoorContinuation &&
+    !showUniversalTransition;
 
   const handleStepNavigation = useCallback(
     (delta: -1 | 1) =>
@@ -1514,6 +1523,31 @@ export default function IndoorNavigation() {
       }),
     [routeData],
   );
+
+  const handleArrival = useCallback(() => {
+    invalidatePendingRouteRequests();
+    handleClearRoute();
+    setRouteData(null);
+    setUniversalRouteData(null);
+    setShowRouteDetails(false);
+    setDirectionsSnapIndex(1);
+    setCurrentStepIndex(0);
+    setStartRoom("");
+    setEndRoom("");
+    setSelectingFor(null);
+    setShowRoomList(false);
+    setSearchQuery("");
+
+    useNavigationStore.getState().setNavigationState(NAVIGATION_STATE.IDLE);
+    useNavigationEndpointsStore.getState().clear();
+    useNavigationConfig.getState().setAllOutdoorRoutes([]);
+    useNavigationInfo.getState().setPathDistance("0");
+    useNavigationInfo.getState().setPathDuration("0");
+    useNavigationInfo.getState().setIsLoading(false);
+    useNavigationProgress.getState().resetProgress();
+
+    router.replace("/(home-page)");
+  }, [handleClearRoute, invalidatePendingRouteRequests, router]);
 
   useEffect(() => {
     setActiveBuildingId(buildingId);
@@ -1612,7 +1646,11 @@ export default function IndoorNavigation() {
         visibleStepIndex={visibleStepIndex}
         onStepChange={handleStepNavigation}
         nextActionLabel={
-          showOutdoorContinuation ? "Continue Outside" : undefined
+          showOutdoorContinuation
+            ? "Continue Outside"
+            : showArrivalAction
+              ? "Arrived"
+              : undefined
         }
         onNextAction={
           showOutdoorContinuation
@@ -1622,7 +1660,9 @@ export default function IndoorNavigation() {
                   .setNavigationState(NAVIGATION_STATE.NAVIGATING);
                 router.replace("/(home-page)");
               }
-            : undefined
+            : showArrivalAction
+              ? handleArrival
+              : undefined
         }
       />
 
