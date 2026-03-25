@@ -42,9 +42,24 @@ export const getOutdoorDirections = async (
   origin: string,
   destination: string,
   mode: TransportModeApi = "walking",
+  options?: {
+    originBuildingId?: string;
+    destinationBuildingId?: string;
+  },
 ): Promise<OutdoorDirectionResponse | null> => {
   try {
-    const url = `${API_BASE_URL}/api/directions/outdoor?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&transportMode=${mode.toUpperCase()}`;
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      transportMode: mode.toUpperCase(),
+    });
+    if (options?.originBuildingId) {
+      params.append("originBuildingId", options.originBuildingId);
+    }
+    if (options?.destinationBuildingId) {
+      params.append("destinationBuildingId", options.destinationBuildingId);
+    }
+    const url = `${API_BASE_URL}/api/directions/outdoor?${params.toString()}`;
     const response = await fetch(url);
 
     if (response.status === 204) {
@@ -66,9 +81,24 @@ export async function getOutdoorDirectionsWithShuttle(
   origin: string,
   destination: string,
   dest_shuttle: string,
+  options?: {
+    originBuildingId?: string;
+    destinationBuildingId?: string;
+  },
 ): Promise<OutdoorDirectionResponse | null> {
   try {
-    const url = `${API_BASE_URL}/api/directions/outdoor/shuttle?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&destinationShuttle=${dest_shuttle}`;
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      destinationShuttle: dest_shuttle,
+    });
+    if (options?.originBuildingId) {
+      params.append("originBuildingId", options.originBuildingId);
+    }
+    if (options?.destinationBuildingId) {
+      params.append("destinationBuildingId", options.destinationBuildingId);
+    }
+    const url = `${API_BASE_URL}/api/directions/outdoor/shuttle?${params.toString()}`;
     const response = await fetch(url);
     const contentLength = response.headers.get("content-length");
     if (response.status === 204 || contentLength === "0") {

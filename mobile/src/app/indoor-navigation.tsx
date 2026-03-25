@@ -944,7 +944,7 @@ const StepNavigationControls = ({
   onNextAction,
 }: StepNavigationControlsProps) => {
   const isVisible =
-    totalSteps > 0 && (!showRouteDetails || directionsSnapIndex === 0);
+    totalSteps > 0 && showRouteDetails && directionsSnapIndex === 0;
 
   if (!isVisible) {
     return null;
@@ -1635,6 +1635,7 @@ export default function IndoorNavigation() {
     useNavigationEndpointsStore.getState().setDestination({
       ...destinationMarker,
       label: universalRouteData.endIndoorRoute.buildingName || endBuildingId,
+      buildingId: endBuildingId,
     });
     useNavigationConfig
       .getState()

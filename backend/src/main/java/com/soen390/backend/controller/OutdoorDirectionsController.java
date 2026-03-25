@@ -1,5 +1,6 @@
 package com.soen390.backend.controller;
 
+import com.soen390.backend.enums.BuildingLocation;
 import com.soen390.backend.enums.Campus;
 import com.soen390.backend.exception.GoogleMapsDirectionEmptyException;
 import com.soen390.backend.exception.GoogleMapsDirectionsApiException;
@@ -33,7 +34,9 @@ public class OutdoorDirectionsController {
     public ResponseEntity<Object> getDirections(
             @RequestParam String origin,
             @RequestParam String destination,
-            @RequestParam String transportMode) {
+            @RequestParam String transportMode,
+            @RequestParam(required = false) String originBuildingId,
+            @RequestParam(required = false) String destinationBuildingId) {
         TransportMode normalizedTransportMode;
         try {
             normalizedTransportMode = TransportMode.valueOf(transportMode.toUpperCase(Locale.ROOT));
@@ -41,9 +44,12 @@ public class OutdoorDirectionsController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid transportMode: " + transportMode, ex);
         }
 
+        String resolvedOrigin = resolveEndpoint(origin, originBuildingId);
+        String resolvedDestination = resolveEndpoint(destination, destinationBuildingId);
+
         try {
             OutdoorDirectionResponse response =
-                    mapsService.getDirections(origin, destination, normalizedTransportMode);
+                    mapsService.getDirections(resolvedOrigin, resolvedDestination, normalizedTransportMode);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR_KEY, e.getMessage()));
@@ -56,14 +62,28 @@ public class OutdoorDirectionsController {
     public ResponseEntity<Object> getDirectionsWithShuttle(
             @RequestParam String origin,
             @RequestParam String destination,
-            @RequestParam Campus destinationShuttle) {
+            @RequestParam Campus destinationShuttle,
+            @RequestParam(required = false) String originBuildingId,
+            @RequestParam(required = false) String destinationBuildingId) {
+        String resolvedOrigin = resolveEndpoint(origin, originBuildingId);
+        String resolvedDestination = resolveEndpoint(destination, destinationBuildingId);
+
         try {
-            OutdoorDirectionResponse response = shuttleOutdoorDirectionsService.getShuttleOutdoorDirections(origin, destination, destinationShuttle);
+            OutdoorDirectionResponse response =
+                    shuttleOutdoorDirectionsService.getShuttleOutdoorDirections(
+                            resolvedOrigin, resolvedDestination, destinationShuttle);
             return ResponseEntity.ok(response);
         } catch (GoogleMapsDirectionEmptyException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR_KEY, e.getMessage()));
         } catch (GoogleMapsDirectionsApiException e) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(ERROR_KEY, e.getMessage()));
         }
+    }
+
+    private String resolveEndpoint(String fallbackValue, String buildingId) {
+        if (buildingId == null || buildingId.isBlank()) {
+            return fallbackValue;
+        }
+        return BuildingLocation.fromId(buildingId).getDirectionsTarget();
     }
 }

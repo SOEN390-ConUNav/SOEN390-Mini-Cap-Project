@@ -356,7 +356,7 @@ describe("HomePageIndex event handoff coverage", () => {
     expect(searchLocations).not.toHaveBeenCalled();
   });
 
-  it("hands off to indoor navigation when near destination and floor is supported", async () => {
+  it("shows continue inside near the outdoor destination and opens indoor navigation when pressed", async () => {
     mockEventPayload = {
       locationText: "45.50000,-73.57000",
       detailsText: "Classroom: H-937",
@@ -381,6 +381,12 @@ describe("HomePageIndex event handoff coverage", () => {
     screen.rerender(<HomePageIndex />);
 
     await waitFor(() => {
+      expect(screen.getByText("Continue Inside")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith({
         pathname: "/indoor-navigation",
         params: {
@@ -393,7 +399,7 @@ describe("HomePageIndex event handoff coverage", () => {
     });
   });
 
-  it("shows unsupported-floor alert when handoff target floor is unavailable", async () => {
+  it("shows continue inside near the outdoor destination and alerts when indoor floor is unavailable", async () => {
     mockEventPayload = {
       locationText: "45.50000,-73.57000",
       detailsText: "Classroom: H-937",
@@ -418,11 +424,35 @@ describe("HomePageIndex event handoff coverage", () => {
     screen.rerender(<HomePageIndex />);
 
     await waitFor(() => {
+      expect(screen.getByText("Continue Inside")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
         "Indoor directions unavailable",
         "Floor for your next class is not supported.",
       );
     });
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("shows i have arrived near the outdoor destination when there is no indoor handoff target", async () => {
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+
+    const screen = render(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(screen.getByText("I Have Arrived")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    expect(mockNavStateStore.setNavigationState).toHaveBeenCalledWith(
+      NAVIGATION_STATE.IDLE,
+    );
+    expect(mockEndpointsStore.clear).toHaveBeenCalled();
   });
 });

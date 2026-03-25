@@ -30,6 +30,101 @@ export interface NearestBuildingResult {
   distance: number;
 }
 
+type XYPoint = { x: number; y: number };
+
+function toLocalMeters(origin: Coordinate, point: Coordinate): XYPoint {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const meanLat = toRad((origin.latitude + point.latitude) / 2);
+  const x =
+    toRad(point.longitude - origin.longitude) *
+    EARTH_RADIUS_METERS *
+    Math.cos(meanLat);
+  const y = toRad(point.latitude - origin.latitude) * EARTH_RADIUS_METERS;
+  return { x, y };
+}
+
+function isPointInsidePolygon(
+  point: Coordinate,
+  polygon: Coordinate[],
+): boolean {
+  if (polygon.length < 3) return false;
+
+  const localPolygon = polygon.map((vertex) => toLocalMeters(point, vertex));
+  let inside = false;
+
+  for (
+    let i = 0, j = localPolygon.length - 1;
+    i < localPolygon.length;
+    j = i++
+  ) {
+    const xi = localPolygon[i].x;
+    const yi = localPolygon[i].y;
+    const xj = localPolygon[j].x;
+    const yj = localPolygon[j].y;
+
+    const intersects =
+      yi > 0 !== yj > 0 &&
+      0 < ((xj - xi) * -yi) / (yj - yi === 0 ? Number.EPSILON : yj - yi) + xi;
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function distanceToSegmentMeters(
+  point: XYPoint,
+  segmentStart: XYPoint,
+  segmentEnd: XYPoint,
+): number {
+  const dx = segmentEnd.x - segmentStart.x;
+  const dy = segmentEnd.y - segmentStart.y;
+  const lengthSquared = dx * dx + dy * dy;
+
+  if (lengthSquared === 0) {
+    return Math.hypot(point.x - segmentStart.x, point.y - segmentStart.y);
+  }
+
+  const t = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.x - segmentStart.x) * dx + (point.y - segmentStart.y) * dy) /
+        lengthSquared,
+    ),
+  );
+  const projectionX = segmentStart.x + t * dx;
+  const projectionY = segmentStart.y + t * dy;
+
+  return Math.hypot(point.x - projectionX, point.y - projectionY);
+}
+
+function distanceToPolygonMeters(
+  point: Coordinate,
+  polygon: Coordinate[],
+): number {
+  if (polygon.length === 0) return Infinity;
+  if (polygon.length === 1) return haversineDistance(point, polygon[0]);
+  if (isPointInsidePolygon(point, polygon)) return 0;
+
+  const localPoint = { x: 0, y: 0 };
+  const localPolygon = polygon.map((vertex) => toLocalMeters(point, vertex));
+  let minDistance = Infinity;
+
+  for (let i = 0; i < localPolygon.length; i++) {
+    const start = localPolygon[i];
+    const end = localPolygon[(i + 1) % localPolygon.length];
+    const distance = distanceToSegmentMeters(localPoint, start, end);
+    if (distance < minDistance) {
+      minDistance = distance;
+    }
+  }
+
+  return minDistance;
+}
+
 export function findNearestBuilding(
   userLocation: Coordinate,
   buildings: Building[] = BUILDINGS,
@@ -39,7 +134,10 @@ export function findNearestBuilding(
   let nearest: NearestBuildingResult | null = null;
 
   for (const building of buildings) {
-    const distance = haversineDistance(userLocation, building.marker);
+    const distance =
+      building.polygon?.length > 0
+        ? distanceToPolygonMeters(userLocation, building.polygon)
+        : haversineDistance(userLocation, building.marker);
     if (!nearest || distance < nearest.distance) {
       nearest = { building, distance };
     }
@@ -114,27 +212,27 @@ const watcherStrategies: Record<MovementMode | "navigating", WatcherStrategy> =
     navigating: new StaticWatcherStrategy({
       accuracy: Location.Accuracy.BestForNavigation,
       timeInterval: 1000,
-      distanceInterval: 3,
+      distanceInterval: 1,
     }),
     idle: new StaticWatcherStrategy({
       accuracy: Location.Accuracy.Low,
-      timeInterval: 15000,
-      distanceInterval: 25,
+      timeInterval: 1000,
+      distanceInterval: 1,
     }),
     walking: new StaticWatcherStrategy({
       accuracy: Location.Accuracy.High,
-      timeInterval: 3000,
-      distanceInterval: 5,
+      timeInterval: 1000,
+      distanceInterval: 1,
     }),
     biking: new StaticWatcherStrategy({
       accuracy: Location.Accuracy.High,
-      timeInterval: 2000,
-      distanceInterval: 10,
+      timeInterval: 1000,
+      distanceInterval: 1,
     }),
     transit: new StaticWatcherStrategy({
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 5000,
-      distanceInterval: 50,
+      timeInterval: 1000,
+      distanceInterval: 1,
     }),
   };
 

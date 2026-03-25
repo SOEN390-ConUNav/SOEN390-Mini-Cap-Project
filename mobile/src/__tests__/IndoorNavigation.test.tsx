@@ -324,6 +324,12 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-universal"));
 
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
     await waitFor(() => {
       expect(getByText("Continue Outside")).toBeTruthy();
       expect(getByTestId("next-action-button")).toBeTruthy();
@@ -403,11 +409,20 @@ describe("IndoorNavigation", () => {
 
     await waitFor(
       () => {
-        expect(getByTestId("next-step-button")).toBeTruthy();
         expect(getByTestId("route-point-count").props.children).toBe("2");
       },
       { timeout: 15_000 },
     );
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
 
     fireEvent.press(getByTestId("next-step-button"));
 
@@ -470,6 +485,13 @@ describe("IndoorNavigation", () => {
     });
 
     expect(getByText("Next Shuttle Bus: 14:30")).toBeTruthy();
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
     expect(getByText("Continue Outside")).toBeTruthy();
 
     fireEvent.press(getByTestId("next-action-button"));
@@ -553,7 +575,6 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
       expect(getByTestId("route-point-count").props.children).toBe("1");
-      expect(getByTestId("next-step-button")).toBeTruthy();
     });
   });
 
@@ -675,6 +696,12 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-second"));
 
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
     await waitFor(() => {
       expect(getByTestId("previous-step-button")).toBeTruthy();
       expect(getByTestId("next-step-button")).toBeTruthy();
@@ -694,7 +721,7 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("pick-room-second"));
 
     await waitFor(() => {
-      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(queryByTestId("next-step-button")).toBeNull();
     });
 
     fireEvent.press(getByTestId("toggle-directions"));
@@ -719,7 +746,7 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("pick-room-second"));
 
     await waitFor(() => {
-      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(queryByTestId("next-step-button")).toBeNull();
     });
 
     fireEvent.press(getByTestId("toggle-directions"));
@@ -811,6 +838,12 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(getByTestId("route-point-count").props.children).toBe("2");
     });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
 
     fireEvent.press(getByTestId("next-step-button"));
     fireEvent.press(getByTestId("next-step-button"));
@@ -1104,6 +1137,15 @@ describe("IndoorNavigation", () => {
         "9",
         false,
       );
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
       expect(getByTestId("next-action-button")).toBeTruthy();
     });
   });
@@ -1358,6 +1400,15 @@ describe("IndoorNavigation", () => {
         "8",
         true,
       );
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
       expect(getByTestId("next-action-button")).toBeTruthy();
     });
   });
@@ -1580,7 +1631,6 @@ describe("IndoorNavigation", () => {
         "9",
         false,
       );
-      expect(getByTestId("next-step-button")).toBeTruthy();
     });
   });
 
@@ -1714,6 +1764,16 @@ describe("IndoorNavigation", () => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
     });
 
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-step-button")).toBeTruthy();
+    });
+
     fireEvent.press(getByTestId("next-step-button"));
     fireEvent.press(getByTestId("next-step-button"));
 
@@ -1827,6 +1887,12 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-universal"));
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
 
     await waitFor(() => {
       expect(getByText("Continue Outside")).toBeTruthy();

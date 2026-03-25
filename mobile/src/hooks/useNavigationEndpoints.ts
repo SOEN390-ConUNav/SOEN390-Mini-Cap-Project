@@ -1,9 +1,11 @@
+import { BuildingId } from "../data/buildings";
 import { Coordinate } from "../type";
 import { create } from "zustand";
 
 export interface LabeledCoordinate extends Coordinate {
   /** Human-readable name resolved by the geocoding service */
   label: string;
+  buildingId?: BuildingId;
 }
 interface NavigationEndpointsState {
   origin: LabeledCoordinate | null;

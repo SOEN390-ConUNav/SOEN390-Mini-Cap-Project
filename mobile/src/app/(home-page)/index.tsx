@@ -97,6 +97,21 @@ const INDOOR_EXIT_TARGETS: Partial<Record<BuildingId, IndoorExitTarget>> = {
 const getIndoorExitTarget = (buildingId: BuildingId): IndoorExitTarget | null =>
   INDOOR_EXIT_TARGETS[buildingId] ?? null;
 
+const normalizeCurrentLocationLabel = (label: string | null | undefined) => {
+  const trimmed = label?.trim();
+  if (!trimmed) {
+    return "Current Location";
+  }
+
+  // Reverse geocoding can return only the civic number (e.g. "1455"),
+  // which reads poorly in the route card.
+  if (/^\d+[A-Za-z]?$/.test(trimmed)) {
+    return "Current Location";
+  }
+
+  return trimmed;
+};
+
 type EventDetailsPayload = {
   title: string;
   detailsText: string;
@@ -233,6 +248,7 @@ export default function HomePageIndex() {
     latitude: number;
     longitude: number;
     label: string;
+    buildingId?: BuildingId;
     eventIndoorTarget?: EventIndoorTarget | null;
   } | null>(null);
   const [activeEventIndoorTarget, setActiveEventIndoorTarget] =
@@ -313,6 +329,39 @@ export default function HomePageIndex() {
     if (meterMatch) return Number(meterMatch[1]);
     return null;
   };
+  const outdoorArrivalDistance = useMemo(() => {
+    if (!isNavigating || !currentLocation) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const distanceToDestinationPin = destination
+      ? haversineDistance(currentLocation, {
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+        })
+      : Number.POSITIVE_INFINITY;
+    const distanceToRouteEnd = outdoorRouteEndCoordinate
+      ? haversineDistance(currentLocation, outdoorRouteEndCoordinate)
+      : Number.POSITIVE_INFINITY;
+    const remainingOutdoorMeters = parseDistanceMeters(pathDistance);
+
+    return Math.min(
+      distanceToDestinationPin,
+      distanceToRouteEnd,
+      remainingOutdoorMeters ?? Number.POSITIVE_INFINITY,
+    );
+  }, [
+    currentLocation,
+    destination,
+    isNavigating,
+    outdoorRouteEndCoordinate,
+    pathDistance,
+  ]);
+  const hasReachedOutdoorDestination =
+    outdoorArrivalDistance <= EVENT_INDOOR_HANDOFF_DISTANCE_METERS;
+  const outdoorArrivalActionLabel = activeEventIndoorTarget
+    ? "Continue Inside"
+    : "I Have Arrived";
   // ───────────────────────────────────────────────────────────────────────
 
   // When navigation starts, clear UI clutter + zoom to user ──────
@@ -444,7 +493,7 @@ export default function HomePageIndex() {
         return {
           latitude: fix.latitude,
           longitude: fix.longitude,
-          label,
+          label: normalizeCurrentLocationLabel(label),
         };
       } catch {
         // Fall back below when a GPS fix is temporarily unavailable.
@@ -564,6 +613,7 @@ export default function HomePageIndex() {
         longitude: b.marker.longitude,
         latitude: b.marker.latitude,
         label: b.name,
+        buildingId: b.id,
       });
       enterOutlineForBuilding(b);
       return;
@@ -625,6 +675,7 @@ export default function HomePageIndex() {
       latitude: nearestBuilding.marker.latitude,
       longitude: nearestBuilding.marker.longitude,
       label: `${nearestBuilding.name} (Inside)`,
+      buildingId: nearestBuilding.id,
     };
     const indoorExitTarget = hasIndoorMaps(nearestBuilding.id)
       ? getIndoorExitTarget(nearestBuilding.id)
@@ -652,7 +703,7 @@ export default function HomePageIndex() {
     const originCoords = {
       latitude: currentLocation.latitude,
       longitude: currentLocation.longitude,
-      label,
+      label: normalizeCurrentLocationLabel(label),
     };
 
     await proceedWithDirections(
@@ -676,6 +727,7 @@ export default function HomePageIndex() {
       latitude: selectedBuilding.marker.latitude,
       longitude: selectedBuilding.marker.longitude,
       label: selectedBuilding.name,
+      buildingId: selectedBuilding.id,
     };
 
     if (shouldPromptForSelectedBuilding(selectedBuilding.id, destCoords))
@@ -698,6 +750,7 @@ export default function HomePageIndex() {
       latitude: destCoords.latitude,
       longitude: destCoords.longitude,
       label: destinationLabel,
+      buildingId: destinationBuildingId as BuildingId | undefined,
     };
 
     if (
@@ -1040,45 +1093,19 @@ export default function HomePageIndex() {
   );
 
   useEffect(() => {
-    if (!isNavigating || !currentLocation || !activeEventIndoorTarget) {
+    if (!isNavigating) {
       indoorHandoffInFlightRef.current = false;
+    }
+  }, [isNavigating]);
+
+  const handleOutdoorArrivalAction = useCallback(() => {
+    if (activeEventIndoorTarget) {
+      triggerIndoorHandoff(activeEventIndoorTarget);
       return;
     }
 
-    if (indoorHandoffInFlightRef.current) {
-      return;
-    }
-
-    const distanceToDestinationPin = destination
-      ? haversineDistance(currentLocation, {
-          latitude: destination.latitude,
-          longitude: destination.longitude,
-        })
-      : Number.POSITIVE_INFINITY;
-    const distanceToRouteEnd = outdoorRouteEndCoordinate
-      ? haversineDistance(currentLocation, outdoorRouteEndCoordinate)
-      : Number.POSITIVE_INFINITY;
-    const remainingOutdoorMeters = parseDistanceMeters(pathDistance);
-    const arrivalDistance = Math.min(
-      distanceToDestinationPin,
-      distanceToRouteEnd,
-      remainingOutdoorMeters ?? Number.POSITIVE_INFINITY,
-    );
-
-    if (arrivalDistance > EVENT_INDOOR_HANDOFF_DISTANCE_METERS) {
-      return;
-    }
-
-    triggerIndoorHandoff(activeEventIndoorTarget);
-  }, [
-    activeEventIndoorTarget,
-    currentLocation,
-    destination,
-    isNavigating,
-    outdoorRouteEndCoordinate,
-    pathDistance,
-    triggerIndoorHandoff,
-  ]);
+    handleCancelTrip();
+  }, [activeEventIndoorTarget, handleCancelTrip, triggerIndoorHandoff]);
 
   const handleOpenSettings = () => {
     router.push("/settings");
@@ -1412,6 +1439,25 @@ export default function HomePageIndex() {
               <Text style={styles.reroutingText}>Recalculating route...</Text>
             </View>
           )}
+          {hasReachedOutdoorDestination && (
+            <View
+              style={styles.arrivalActionContainer}
+              pointerEvents="box-none"
+            >
+              <Pressable
+                testID="outdoor-arrival-action"
+                style={[
+                  styles.arrivalActionButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={handleOutdoorArrivalAction}
+              >
+                <Text style={styles.arrivalActionText}>
+                  {outdoorArrivalActionLabel}
+                </Text>
+              </Pressable>
+            </View>
+          )}
           <NavigationDirectionHUDBottom
             visible={isNavigating}
             steps={hudSteps}
@@ -1521,5 +1567,31 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 14,
+  },
+  arrivalActionContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 210,
+    alignItems: "center",
+    zIndex: 90,
+  },
+  arrivalActionButton: {
+    minWidth: 220,
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  arrivalActionText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 17,
   },
 });
