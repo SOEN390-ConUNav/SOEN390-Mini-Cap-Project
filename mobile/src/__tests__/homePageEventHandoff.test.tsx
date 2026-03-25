@@ -470,11 +470,30 @@ describe("HomePageIndex event handoff coverage", () => {
       NAVIGATION_STATE.IDLE,
     );
     expect(mockEndpointsStore.clear).toHaveBeenCalled();
+    mockNavStateStore.isNavigating = false;
+    mockNavStateStore.isIdle = true;
+    screen.rerender(<HomePageIndex />);
     await waitFor(() => {
       expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
         expect.objectContaining({ visible: false }),
       );
     });
+  });
+
+  it("restores the navigation UI when navigation resumes externally after being dismissed", async () => {
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+
+    const screen = render(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(screen.getByText("I Have Arrived")).toBeTruthy();
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: true }),
+      );
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
 
     mockNavStateStore.isNavigating = false;
     mockNavStateStore.isIdle = true;
@@ -483,6 +502,16 @@ describe("HomePageIndex event handoff coverage", () => {
     await waitFor(() => {
       expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
         expect.objectContaining({ visible: false }),
+      );
+    });
+
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+    screen.rerender(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: true }),
       );
     });
   });

@@ -1144,8 +1144,13 @@ export default function HomePageIndex() {
   useEffect(() => {
     if (!isNavigating) {
       indoorHandoffInFlightRef.current = false;
+      return;
     }
-  }, [isNavigating]);
+
+    if (navigationUiDismissed) {
+      setNavigationUiDismissed(false);
+    }
+  }, [isNavigating, navigationUiDismissed]);
 
   const handleOutdoorArrivalAction = useCallback(() => {
     if (activeEventIndoorTarget) {

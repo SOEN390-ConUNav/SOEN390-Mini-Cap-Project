@@ -210,6 +210,32 @@ const getOutdoorNavigationMode = (
   }
 };
 
+const ensureOutdoorRouteHasSteps = (
+  route: OutdoorDirectionResponse,
+  destinationLabel: string,
+): OutdoorDirectionResponse => {
+  if (route.steps?.length) {
+    return route;
+  }
+
+  if (!route.polyline) {
+    return route;
+  }
+
+  return {
+    ...route,
+    steps: [
+      {
+        instruction: `Continue to ${destinationLabel}`,
+        distance: route.distance,
+        duration: route.duration,
+        maneuverType: "STRAIGHT",
+        polyline: route.polyline,
+      },
+    ],
+  };
+};
+
 const getFirstRoomLabel = (
   route: IndoorDirectionResponse | null | undefined,
 ): string | null =>
@@ -2120,12 +2146,12 @@ export default function IndoorNavigation() {
     router.replace("/(home-page)");
   }, [router]);
 
-  const handleUniversalOutdoorContinuation = useCallback(() => {
+  const handleUniversalOutdoorContinuation = useCallback(async () => {
     if (!universalRouteData) {
       return;
     }
 
-    const outdoorRoute =
+    const fallbackOutdoorRoute =
       universalRouteData.outdoorRoute as OutdoorDirectionResponse | null;
     const originMarker = getBuildingMarker(startBuildingId);
     const destinationIndoorTarget = buildDestinationIndoorTarget({
@@ -2135,8 +2161,10 @@ export default function IndoorNavigation() {
     });
     const destinationBuildingId = destinationIndoorTarget.buildingId;
     const destinationMarker = getBuildingMarker(destinationBuildingId);
+    const destinationLabel =
+      universalRouteData.endIndoorRoute.buildingName || destinationBuildingId;
 
-    if (!outdoorRoute || !destinationMarker) {
+    if (!fallbackOutdoorRoute || !destinationMarker) {
       setRoutePhase("destination");
       setRouteData(universalRouteData.endIndoorRoute);
       setCurrentStepIndex(0);
@@ -2165,6 +2193,46 @@ export default function IndoorNavigation() {
         destinationIndoorTarget.destinationRoom || endRoom || null,
       globalDestinationBuildingId: destinationBuildingId,
     });
+
+    let routes: OutdoorDirectionResponse[] = [
+      ensureOutdoorRouteHasSteps(fallbackOutdoorRoute, destinationLabel),
+    ];
+    let preferredRoute: OutdoorDirectionResponse | null = routes[0];
+
+    if (originMarker) {
+      try {
+        const fetchedRoutes = await getAllOutdoorDirectionsInfo(
+          {
+            latitude: originMarker.latitude,
+            longitude: originMarker.longitude,
+            buildingId: startBuildingId,
+          },
+          {
+            latitude: destinationMarker.latitude,
+            longitude: destinationMarker.longitude,
+            buildingId: destinationBuildingId,
+          },
+        );
+
+        if (fetchedRoutes.length > 0) {
+          routes = fetchedRoutes.map((route) =>
+            ensureOutdoorRouteHasSteps(route, destinationLabel),
+          );
+          preferredRoute =
+            routes.find(
+              (route) =>
+                route.transportMode?.toLowerCase() ===
+                fallbackOutdoorRoute.transportMode?.toLowerCase(),
+            ) ?? routes[0];
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to rebuild universal outdoor continuation:",
+          error,
+        );
+      }
+    }
+
     useNavigationStore
       .getState()
       .setNavigationState(NAVIGATION_STATE.NAVIGATING);
@@ -2181,16 +2249,27 @@ export default function IndoorNavigation() {
     );
     useNavigationEndpointsStore.getState().setDestination({
       ...destinationMarker,
-      label:
-        universalRouteData.endIndoorRoute.buildingName || destinationBuildingId,
+      label: destinationLabel,
       buildingId: destinationBuildingId,
     });
     useNavigationConfig
       .getState()
-      .setNavigationMode(getOutdoorNavigationMode(outdoorRoute.transportMode));
-    useNavigationConfig.getState().setAllOutdoorRoutes([outdoorRoute]);
-    useNavigationInfo.getState().setPathDistance(outdoorRoute.distance);
-    useNavigationInfo.getState().setPathDuration(outdoorRoute.duration);
+      .setNavigationMode(
+        preferredRoute?.transportMode
+          ? getOutdoorNavigationMode(preferredRoute.transportMode)
+          : "WALK",
+      );
+    useNavigationConfig.getState().setAllOutdoorRoutes(routes);
+    useNavigationInfo
+      .getState()
+      .setPathDistance(
+        preferredRoute?.distance ?? fallbackOutdoorRoute.distance,
+      );
+    useNavigationInfo
+      .getState()
+      .setPathDuration(
+        preferredRoute?.duration ?? fallbackOutdoorRoute.duration,
+      );
     useNavigationInfo.getState().setIsLoading(false);
     useNavigationProgress.getState().resetProgress();
 

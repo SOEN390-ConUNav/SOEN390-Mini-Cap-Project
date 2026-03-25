@@ -371,6 +371,14 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/(home-page)");
       expect(useNavigationConfig.getState().allOutdoorRoutes).toHaveLength(1);
+      expect(useNavigationConfig.getState().allOutdoorRoutes[0]?.steps).toEqual(
+        [
+          expect.objectContaining({
+            instruction: "Continue to Vanier Libary Building",
+            polyline: "abc",
+          }),
+        ],
+      );
       expect(useNavigationInfo.getState().pathDistance).toBe("500 m");
       expect(useNavigationStore.getState().navigationState).toBe("NAVIGATING");
       expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual(
