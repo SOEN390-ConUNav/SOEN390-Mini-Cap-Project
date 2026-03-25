@@ -33,7 +33,8 @@ import FloorPlanWebView, {
   RoomMarkerData,
 } from "../components/FloorPlanWebView";
 import FloorSelector from "../components/FloorSelector";
-import { BuildingId } from "../data/buildings";
+import { BUILDINGS, BuildingId } from "../data/buildings";
+import { OutdoorDirectionResponse } from "../api/outdoorDirectionsApi";
 import {
   getBackendBuildingId,
   getDefaultFloor,
@@ -45,11 +46,14 @@ import { useNavigationEndpointsStore } from "../hooks/useNavigationEndpoints";
 import useNavigationConfig from "../hooks/useNavigationConfig";
 import useNavigationInfo from "../hooks/useNavigationInfo";
 import useNavigationProgress from "../hooks/useNavigationProgress";
+import { useIndoorHandoffStore } from "../hooks/useIndoorHandoffStore";
+import { EventIndoorTarget } from "../utils/eventIndoorNavigation";
 import { useTheme } from "../hooks/useTheme";
 import {
   inferPoiType,
   getDisplayNameFromRoomId,
 } from "../utils/floorPlanPoiUtils";
+import { TransportMode, TransportModeApi } from "../type";
 
 const MAX_DURATION_REGEX_INPUT_LENGTH = 128;
 const MAX_DISTANCE_REGEX_INPUT_LENGTH = 64;
@@ -146,6 +150,34 @@ const getBuildingFromRoom = (
 };
 
 const getStartRoomSearchSeed = (buildingId: BuildingId): string => buildingId;
+
+const getBuildingMarker = (buildingId: BuildingId) =>
+  BUILDINGS.find((building) => building.id === buildingId)?.marker ?? null;
+
+const getOutdoorNavigationMode = (
+  mode: TransportModeApi | undefined,
+): TransportMode => {
+  switch (mode) {
+    case "bicycling":
+      return "BIKE";
+    case "driving":
+      return "CAR";
+    case "transit":
+      return "BUS";
+    case "shuttle":
+      return "SHUTTLE";
+    case "walking":
+    default:
+      return "WALK";
+  }
+};
+
+const getFirstRoomLabel = (
+  route: IndoorDirectionResponse | null | undefined,
+): string | null =>
+  route?.routePoints.find(
+    (point) => point.label && !point.label.startsWith("TRANSITION_"),
+  )?.label ?? null;
 
 const parseDistanceMeters = (value: string): number => {
   const normalized = value.trim().slice(0, MAX_DISTANCE_REGEX_INPUT_LENGTH);
@@ -1111,6 +1143,7 @@ export default function IndoorNavigation() {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const routeRequestIdRef = useRef(0);
   const lastAutoOpenTokenRef = useRef<string | null>(null);
+  const manualFloorSelectionRef = useRef(false);
   const activeFloors = getAvailableFloors(activeBuildingId);
   const effectiveCurrentFloor = activeFloors.includes(currentFloor)
     ? currentFloor
@@ -1168,6 +1201,7 @@ export default function IndoorNavigation() {
     (newFloor: string) => {
       invalidatePendingRouteRequests();
       mapViewRef.current?.clearRoute();
+      manualFloorSelectionRef.current = true;
 
       syncFloorSelection(newFloor);
 
@@ -1439,6 +1473,11 @@ export default function IndoorNavigation() {
       return;
     }
 
+    if (manualFloorSelectionRef.current) {
+      manualFloorSelectionRef.current = false;
+      return;
+    }
+
     const stepIndex = Math.min(currentStepIndex, routeData.steps.length - 1);
     const nextFloor = getFloorForStepIndex(
       routeData,
@@ -1501,8 +1540,8 @@ export default function IndoorNavigation() {
   const canGoToPreviousStep = visibleStepIndex > 0;
   const canGoToNextStep = visibleStepIndex < totalSteps - 1;
   const { roomData, poiData } = splitRoomsAndPois(roomPoints, pois);
-  const showUniversalTransition =
-    !!universalRouteData && routePhase === "origin";
+  const showUniversalOutdoorContinuation =
+    !!universalRouteData && routePhase === "origin" && !!routeData;
   const showOutdoorContinuation =
     params.resumeOutdoorNavigation === "1" &&
     !!routeData &&
@@ -1512,7 +1551,7 @@ export default function IndoorNavigation() {
     !!routeData &&
     !!endRoom &&
     !showOutdoorContinuation &&
-    !showUniversalTransition;
+    !showUniversalOutdoorContinuation;
 
   const handleStepNavigation = useCallback(
     (delta: -1 | 1) =>
@@ -1548,6 +1587,66 @@ export default function IndoorNavigation() {
 
     router.replace("/(home-page)");
   }, [handleClearRoute, invalidatePendingRouteRequests, router]);
+
+  const handleUniversalOutdoorContinuation = useCallback(() => {
+    if (!universalRouteData) {
+      return;
+    }
+
+    const outdoorRoute =
+      universalRouteData.outdoorRoute as OutdoorDirectionResponse | null;
+    const destinationMarker = getBuildingMarker(endBuildingId);
+
+    if (!outdoorRoute || !destinationMarker) {
+      setRoutePhase("destination");
+      setRouteData(universalRouteData.endIndoorRoute);
+      setCurrentStepIndex(0);
+      setDirectionsSnapIndex(1);
+      setActiveBuildingId(endBuildingId);
+      handleFloorChange(universalRouteData.endIndoorRoute.startFloor);
+
+      setTimeout(() => {
+        if (mapViewRef.current) {
+          mapViewRef.current.drawRoute(
+            universalRouteData.endIndoorRoute.routePoints,
+          );
+        }
+      }, 500);
+      return;
+    }
+
+    const destinationIndoorTarget: EventIndoorTarget = {
+      buildingId: endBuildingId,
+      floor: universalRouteData.endIndoorRoute.endFloor,
+      startFloor: universalRouteData.endIndoorRoute.startFloor,
+      floorSupported: true,
+      destinationRoom:
+        endRoom || getFirstRoomLabel(universalRouteData.endIndoorRoute),
+      startRoom: getFirstRoomLabel(universalRouteData.endIndoorRoute),
+    };
+
+    useIndoorHandoffStore
+      .getState()
+      .setPendingIndoorTarget(destinationIndoorTarget);
+    useNavigationStore
+      .getState()
+      .setNavigationState(NAVIGATION_STATE.NAVIGATING);
+    useNavigationEndpointsStore.getState().setOrigin(null);
+    useNavigationEndpointsStore.getState().setDestination({
+      ...destinationMarker,
+      label: universalRouteData.endIndoorRoute.buildingName || endBuildingId,
+    });
+    useNavigationConfig
+      .getState()
+      .setNavigationMode(getOutdoorNavigationMode(outdoorRoute.transportMode));
+    useNavigationConfig.getState().setAllOutdoorRoutes([outdoorRoute]);
+    useNavigationInfo.getState().setPathDistance(outdoorRoute.distance);
+    useNavigationInfo.getState().setPathDuration(outdoorRoute.duration);
+    useNavigationInfo.getState().setIsLoading(false);
+    useNavigationProgress.getState().resetProgress();
+
+    router.replace("/(home-page)");
+  }, [endBuildingId, endRoom, handleFloorChange, router, universalRouteData]);
 
   useEffect(() => {
     setActiveBuildingId(buildingId);
@@ -1648,9 +1747,11 @@ export default function IndoorNavigation() {
         nextActionLabel={
           showOutdoorContinuation
             ? "Continue Outside"
-            : showArrivalAction
-              ? "Arrived"
-              : undefined
+            : showUniversalOutdoorContinuation
+              ? "Continue Outside"
+              : showArrivalAction
+                ? "Arrived"
+                : undefined
         }
         onNextAction={
           showOutdoorContinuation
@@ -1660,9 +1761,11 @@ export default function IndoorNavigation() {
                   .setNavigationState(NAVIGATION_STATE.NAVIGATING);
                 router.replace("/(home-page)");
               }
-            : showArrivalAction
-              ? handleArrival
-              : undefined
+            : showUniversalOutdoorContinuation
+              ? handleUniversalOutdoorContinuation
+              : showArrivalAction
+                ? handleArrival
+                : undefined
         }
       />
 
@@ -1672,32 +1775,6 @@ export default function IndoorNavigation() {
         cardBackground={colors.card}
         accentColor={colors.primary}
         textColor={colors.primary}
-      />
-
-      <UniversalTransitionButton
-        visible={showUniversalTransition}
-        label={`Exit Building & Go to ${endBuildingId}`}
-        primaryColor={colors.primary}
-        onPress={() => {
-          if (!universalRouteData) {
-            return;
-          }
-
-          setRoutePhase("destination");
-          setRouteData(universalRouteData.endIndoorRoute);
-          setCurrentStepIndex(0);
-          setDirectionsSnapIndex(1);
-          setActiveBuildingId(endBuildingId);
-          handleFloorChange(universalRouteData.endIndoorRoute.startFloor);
-
-          setTimeout(() => {
-            if (mapViewRef.current) {
-              mapViewRef.current.drawRoute(
-                universalRouteData.endIndoorRoute.routePoints,
-              );
-            }
-          }, 500);
-        }}
       />
 
       {!showRouteDetails && (

@@ -9,8 +9,15 @@ import {
   getRoomPoints,
   getUniversalDirections,
 } from "../api/indoorDirectionsApi";
+import { useNavigationEndpointsStore } from "../hooks/useNavigationEndpoints";
+import useNavigationConfig from "../hooks/useNavigationConfig";
+import useNavigationInfo from "../hooks/useNavigationInfo";
+import useNavigationProgress from "../hooks/useNavigationProgress";
+import { useIndoorHandoffStore } from "../hooks/useIndoorHandoffStore";
+import { useNavigationStore } from "../hooks/useNavigationState";
 
 const mockSetParams = jest.fn();
+const mockReplace = jest.fn();
 const mockDrawRoute = jest.fn();
 const mockClearRoute = jest.fn();
 
@@ -27,6 +34,7 @@ let mockParams: {
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     setParams: mockSetParams,
+    replace: mockReplace,
   }),
   useLocalSearchParams: () => mockParams,
 }));
@@ -234,6 +242,19 @@ describe("IndoorNavigation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockParams = { buildingId: "H", floor: "8" };
+    useNavigationEndpointsStore.getState().clear();
+    useNavigationConfig.setState({
+      navigationMode: "WALK",
+      allOutdoorRoutes: [],
+    });
+    useNavigationInfo.setState({
+      pathDistance: "0",
+      pathDuration: "0",
+      isLoading: false,
+    });
+    useNavigationProgress.getState().resetProgress();
+    useIndoorHandoffStore.getState().clearPendingIndoorTarget();
+    useNavigationStore.getState().setNavigationState("IDLE");
 
     (getAvailableRooms as jest.Mock).mockResolvedValue(["H-801", "H-820"]);
     (getRoomPoints as jest.Mock).mockResolvedValue([
@@ -248,6 +269,81 @@ describe("IndoorNavigation", () => {
       endIndoorRoute: null,
       nextShuttleTime: null,
       totalDuration: "0 min",
+    });
+  });
+
+  it("hands manual cross-building routes off to outdoor navigation before the destination indoor leg", async () => {
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        steps: [
+          {
+            instruction: "Proceed to the main entrance",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [{ x: 1, y: 1, label: "MB1-Main-Entrance" }],
+      },
+      outdoorRoute: {
+        distance: "500 m",
+        duration: "7 min",
+        polyline: "abc",
+        transportMode: "walking",
+        steps: [],
+      },
+      endIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        buildingName: "Vanier Libary Building",
+        steps: [
+          {
+            instruction: "Proceed to VL-101",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [
+          { x: 2, y: 2, label: "VL-Entrance-Exit" },
+          { x: 4, y: 4, label: "VL-101" },
+        ],
+      },
+      nextShuttleTime: null,
+      totalDuration: "12 min",
+    });
+
+    const { getByTestId, getByText } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-universal"));
+
+    await waitFor(() => {
+      expect(getByText("Continue Outside")).toBeTruthy();
+      expect(getByTestId("next-action-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("next-action-button"));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/(home-page)");
+      expect(useNavigationConfig.getState().allOutdoorRoutes).toHaveLength(1);
+      expect(useNavigationInfo.getState().pathDistance).toBe("500 m");
+      expect(useNavigationStore.getState().navigationState).toBe("NAVIGATING");
+      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual({
+        buildingId: "VL",
+        floor: "1",
+        startFloor: "1",
+        floorSupported: true,
+        destinationRoom: "VL-101",
+        startRoom: "VL-Entrance-Exit",
+      });
     });
   });
 
@@ -330,8 +426,34 @@ describe("IndoorNavigation", () => {
 
   it("handles universal cross-building routing", async () => {
     (getUniversalDirections as jest.Mock).mockResolvedValue({
-      startIndoorRoute: { startFloor: "8", endFloor: "1", routePoints: [] },
-      endIndoorRoute: { startFloor: "1", endFloor: "1", routePoints: [] },
+      startIndoorRoute: {
+        startFloor: "8",
+        endFloor: "1",
+        steps: [
+          {
+            instruction: "Head to the exit",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "8",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [{ x: 1, y: 1, label: "H8-801" }],
+      },
+      endIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        steps: [
+          {
+            instruction: "Proceed to VL-101",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [{ x: 2, y: 2, label: "VL-101" }],
+      },
       nextShuttleTime: "14:30",
     });
 
@@ -348,9 +470,9 @@ describe("IndoorNavigation", () => {
     });
 
     expect(getByText("Next Shuttle Bus: 14:30")).toBeTruthy();
-    expect(getByText("Exit Building & Go to VL")).toBeTruthy();
+    expect(getByText("Continue Outside")).toBeTruthy();
 
-    fireEvent.press(getByText("Exit Building & Go to VL"));
+    fireEvent.press(getByTestId("next-action-button"));
 
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "1" });
@@ -982,7 +1104,7 @@ describe("IndoorNavigation", () => {
         "9",
         false,
       );
-      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(getByTestId("next-action-button")).toBeTruthy();
     });
   });
 
@@ -1236,7 +1358,7 @@ describe("IndoorNavigation", () => {
         "8",
         true,
       );
-      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(getByTestId("next-action-button")).toBeTruthy();
     });
   });
 
@@ -1665,16 +1787,34 @@ describe("IndoorNavigation", () => {
     });
   });
 
-  it("draws destination indoor route after pressing the universal route transition CTA", async () => {
+  it("shows continue outside in the step row for the universal origin leg", async () => {
     (getUniversalDirections as jest.Mock).mockResolvedValue({
       startIndoorRoute: {
         startFloor: "8",
         endFloor: "8",
+        steps: [
+          {
+            instruction: "Head to the building exit",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "8",
+            maneuverType: "STRAIGHT",
+          },
+        ],
         routePoints: [{ x: 1, y: 1, label: "H8-801" }],
       },
       endIndoorRoute: {
         startFloor: "1",
         endFloor: "1",
+        steps: [
+          {
+            instruction: "Proceed to VL-101",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
         routePoints: [{ x: 2, y: 2, label: "VL-101" }],
       },
       nextShuttleTime: null,
@@ -1689,19 +1829,9 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("pick-room-universal"));
 
     await waitFor(() => {
-      expect(getByText("Exit Building & Go to VL")).toBeTruthy();
+      expect(getByText("Continue Outside")).toBeTruthy();
+      expect(getByTestId("next-action-button")).toBeTruthy();
     });
-
-    fireEvent.press(getByText("Exit Building & Go to VL"));
-
-    await waitFor(
-      () => {
-        expect(mockDrawRoute).toHaveBeenCalledWith([
-          { x: 2, y: 2, label: "VL-101" },
-        ]);
-      },
-      { timeout: 2000 },
-    );
   });
 
   it("handles university room aggregation failure by logging and clearing available rooms", async () => {

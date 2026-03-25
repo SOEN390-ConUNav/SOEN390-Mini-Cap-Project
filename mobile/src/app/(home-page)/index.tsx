@@ -54,6 +54,7 @@ import useLocationService from "../../hooks/useLocationService";
 import useLocationStore from "../../hooks/useLocationStore";
 import useRerouting from "../../hooks/useRerouting";
 import useNavigationProgress from "../../hooks/useNavigationProgress";
+import { useIndoorHandoffStore } from "../../hooks/useIndoorHandoffStore";
 import LocationPromptModal from "../../components/LocationPromptModal";
 import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
 import { useTheme } from "../../hooks/useTheme";
@@ -240,11 +241,26 @@ export default function HomePageIndex() {
     useState<IndoorExitTarget | null>(null);
   const [showIndoorFallbackNotice, setShowIndoorFallbackNotice] =
     useState(false);
+  const pendingIndoorHandoffTarget = useIndoorHandoffStore(
+    (s) => s.pendingIndoorTarget,
+  );
+  const clearPendingIndoorHandoffTarget = useIndoorHandoffStore(
+    (s) => s.clearPendingIndoorTarget,
+  );
   const indoorHandoffInFlightRef = useRef(false);
 
   const mapRef = useRef<MapView>(null);
 
   const navigatingRef = useRef(false);
+
+  useEffect(() => {
+    if (!pendingIndoorHandoffTarget) {
+      return;
+    }
+
+    setActiveEventIndoorTarget(pendingIndoorHandoffTarget);
+    clearPendingIndoorHandoffTarget();
+  }, [clearPendingIndoorHandoffTarget, pendingIndoorHandoffTarget]);
 
   // Re-check permission when initialized - handles return from settings
   useEffect(() => {
