@@ -59,6 +59,8 @@ jest.mock("../components/FloorPlanWebView", () => {
 
     return (
       <View testID="floor-plan-webview">
+        <Text testID="floor-plan-building">{props.buildingId}</Text>
+        <Text testID="floor-plan-floor">{props.floorNumber}</Text>
         <Text testID="route-point-count">
           {String(props.routePoints?.length ?? 0)}
         </Text>
@@ -350,6 +352,79 @@ describe("IndoorNavigation", () => {
         destinationRoom: "VL-101",
         startRoom: "VL-Entrance-Exit",
       });
+    });
+  });
+
+  it("switches the displayed indoor map to the route origin building for manual cross-building routes", async () => {
+    mockParams = {
+      buildingId: "VL",
+      floor: "1",
+    };
+
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: {
+        startFloor: "8",
+        endFloor: "1",
+        buildingName: "Hall Building",
+        steps: [
+          {
+            instruction: "Head to the exit",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "8",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [{ x: 1, y: 1, label: "H8-801" }],
+      },
+      outdoorRoute: {
+        distance: "500 m",
+        duration: "7 min",
+        polyline: "abc",
+        transportMode: "walking",
+        steps: [],
+      },
+      endIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        buildingName: "Vanier Library Building",
+        steps: [
+          {
+            instruction: "Proceed to VL-101",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [
+          { x: 2, y: 2, label: "VL-Entrance-Exit" },
+          { x: 4, y: 4, label: "VL-101" },
+        ],
+      },
+      nextShuttleTime: null,
+      totalDuration: "12 min",
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-universal"));
+
+    await waitFor(() => {
+      expect(getUniversalDirections).toHaveBeenCalledWith(
+        "H",
+        "H-801",
+        "8",
+        "VL",
+        "VL-101",
+        "1",
+        false,
+      );
+      expect(getByTestId("floor-plan-building").props.children).toBe("H");
+      expect(getByTestId("floor-plan-floor").props.children).toBe("8");
     });
   });
 

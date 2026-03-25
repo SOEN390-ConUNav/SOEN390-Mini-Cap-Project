@@ -1279,10 +1279,11 @@ export default function IndoorNavigation() {
         setRoutePhase("origin");
         setCurrentStepIndex(0);
         setDirectionsSnapIndex(1);
+        setActiveBuildingId(startBuildingId);
         syncFloorSelection(response.startIndoorRoute.startFloor);
       }
     },
-    [syncFloorSelection],
+    [startBuildingId, syncFloorSelection],
   );
 
   const fetchRoute = useCallback(async () => {
