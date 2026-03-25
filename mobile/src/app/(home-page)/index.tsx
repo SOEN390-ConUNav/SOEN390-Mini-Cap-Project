@@ -85,6 +85,13 @@ type IndoorExitTarget = {
   exitRoom: string;
 };
 
+type OutdoorResumeEndpoint = {
+  latitude: number;
+  longitude: number;
+  label: string;
+  buildingId?: BuildingId;
+};
+
 const INDOOR_EXIT_TARGETS: Partial<Record<BuildingId, IndoorExitTarget>> = {
   H: { buildingId: "H", floor: "1", exitRoom: "H1-Maisonneuve-Entry" },
   LB: { buildingId: "LB", floor: "2", exitRoom: "LB2-Emergency-Exit-1" },
@@ -1063,6 +1070,10 @@ export default function HomePageIndex() {
 
   const triggerIndoorHandoff = useCallback(
     (target: EventIndoorTarget) => {
+      const outdoorOrigin = origin;
+      const outdoorDestination = destination;
+      const outdoorMode = navigationMode;
+
       indoorHandoffInFlightRef.current = true;
       handleCancelTrip();
 
@@ -1078,9 +1089,28 @@ export default function HomePageIndex() {
       const params: Record<string, string> = {
         buildingId: target.buildingId,
         floor: initialIndoorFloor,
+        forceBuildingId: "1",
       };
       if (target.startRoom) params.startRoom = target.startRoom;
       if (target.destinationRoom) params.endRoom = target.destinationRoom;
+      if (outdoorOrigin && outdoorDestination) {
+        params.returnOutdoorOriginLat = `${outdoorOrigin.latitude}`;
+        params.returnOutdoorOriginLng = `${outdoorOrigin.longitude}`;
+        params.returnOutdoorOriginLabel = outdoorOrigin.label;
+        if (outdoorOrigin.buildingId) {
+          params.returnOutdoorOriginBuildingId = outdoorOrigin.buildingId;
+        }
+
+        params.returnOutdoorDestinationLat = `${outdoorDestination.latitude}`;
+        params.returnOutdoorDestinationLng = `${outdoorDestination.longitude}`;
+        params.returnOutdoorDestinationLabel = outdoorDestination.label;
+        if (outdoorDestination.buildingId) {
+          params.returnOutdoorDestinationBuildingId =
+            outdoorDestination.buildingId;
+        }
+
+        params.returnOutdoorMode = outdoorMode;
+      }
 
       requestAnimationFrame(() => {
         router.push({
@@ -1089,7 +1119,7 @@ export default function HomePageIndex() {
         });
       });
     },
-    [handleCancelTrip, router],
+    [destination, handleCancelTrip, navigationMode, origin, router],
   );
 
   useEffect(() => {
@@ -1448,11 +1478,16 @@ export default function HomePageIndex() {
                 testID="outdoor-arrival-action"
                 style={[
                   styles.arrivalActionButton,
-                  { backgroundColor: colors.primary },
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.primary,
+                  },
                 ]}
                 onPress={handleOutdoorArrivalAction}
               >
-                <Text style={styles.arrivalActionText}>
+                <Text
+                  style={[styles.arrivalActionText, { color: colors.primary }]}
+                >
                   {outdoorArrivalActionLabel}
                 </Text>
               </Pressable>
@@ -1572,15 +1607,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 210,
+    bottom: 160,
     alignItems: "center",
-    zIndex: 90,
   },
   arrivalActionButton: {
     minWidth: 220,
-    borderRadius: 999,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
     paddingHorizontal: 24,
-    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -1590,8 +1625,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   arrivalActionText: {
-    color: "#fff",
     fontWeight: "700",
-    fontSize: 17,
+    fontSize: 16,
+    textAlign: "center",
   },
 });

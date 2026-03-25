@@ -199,16 +199,22 @@ const resetStores = () => {
       longitude: -73.57,
       label: "Selected Location",
     },
-    setOrigin: jest.fn(),
-    setDestination: jest.fn(),
+    setOrigin: jest.fn((endpoint) => {
+      mockEndpointsStore.origin = endpoint;
+    }),
+    setDestination: jest.fn((endpoint) => {
+      mockEndpointsStore.destination = endpoint;
+    }),
     swap: jest.fn(),
     clear: jest.fn(),
   };
 
   mockNavConfigStore = {
     allOutdoorRoutes: [],
-    setAllOutdoorRoutes: jest.fn(),
-    navigationMode: "walking",
+    setAllOutdoorRoutes: jest.fn((routes) => {
+      mockNavConfigStore.allOutdoorRoutes = routes;
+    }),
+    navigationMode: "WALK",
   };
 
   mockNavInfoStore = {
@@ -392,8 +398,17 @@ describe("HomePageIndex event handoff coverage", () => {
         params: {
           buildingId: "H",
           floor: "1",
+          forceBuildingId: "1",
           startRoom: "Hall-Elevator-Main",
           endRoom: "H9-937",
+          returnOutdoorOriginLat: "45.5",
+          returnOutdoorOriginLng: "-73.58",
+          returnOutdoorOriginLat: "45.49",
+          returnOutdoorOriginLabel: "Current Location",
+          returnOutdoorDestinationLat: "45.5",
+          returnOutdoorDestinationLng: "-73.57",
+          returnOutdoorDestinationLabel: "Selected Location",
+          returnOutdoorMode: "WALK",
         },
       });
     });

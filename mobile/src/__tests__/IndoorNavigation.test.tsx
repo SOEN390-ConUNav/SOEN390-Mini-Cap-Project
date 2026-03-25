@@ -2,6 +2,7 @@ import React from "react";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Switch } from "react-native";
 import IndoorNavigation from "../app/indoor-navigation";
+import { getAllOutdoorDirectionsInfo } from "../api";
 import {
   getAvailableRooms,
   getIndoorDirections,
@@ -45,6 +46,10 @@ jest.mock("../api/indoorDirectionsApi", () => ({
   getRoomPoints: jest.fn(),
   getPointsOfInterest: jest.fn(),
   getUniversalDirections: jest.fn(),
+}));
+
+jest.mock("../api", () => ({
+  getAllOutdoorDirectionsInfo: jest.fn(),
 }));
 
 jest.mock("../components/FloorPlanWebView", () => {
@@ -272,6 +277,15 @@ describe("IndoorNavigation", () => {
       nextShuttleTime: null,
       totalDuration: "0 min",
     });
+    (getAllOutdoorDirectionsInfo as jest.Mock).mockResolvedValue([
+      {
+        distance: "500 m",
+        duration: "7 min",
+        polyline: "abc",
+        transportMode: "walking",
+        steps: [],
+      },
+    ]);
   });
 
   it("hands manual cross-building routes off to outdoor navigation before the destination indoor leg", async () => {
@@ -355,6 +369,175 @@ describe("IndoorNavigation", () => {
     });
   });
 
+  it("builds the destination indoor handoff from the destination leg, not stale end-room state", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "1",
+      startRoom: "H1-Maisonneuve-Entry",
+      endRoom: "VL-101",
+    };
+
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        steps: [
+          {
+            instruction: "Proceed to the main entrance",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [{ x: 1, y: 1, label: "H1-Maisonneuve-Entry" }],
+      },
+      outdoorRoute: {
+        distance: "500 m",
+        duration: "7 min",
+        polyline: "abc",
+        transportMode: "walking",
+        steps: [],
+      },
+      endIndoorRoute: {
+        startFloor: "1",
+        endFloor: "S2",
+        buildingName: "John Molson Building",
+        steps: [
+          {
+            instruction: "Proceed to MB-S2-330",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [
+          { x: 2, y: 2, label: "MB1-Main-Entrance" },
+          { x: 4, y: 4, label: "MB-S2-330" },
+        ],
+      },
+      nextShuttleTime: null,
+      totalDuration: "12 min",
+    });
+
+    const { getByTestId, getByText } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByText("Continue Outside")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("next-action-button"));
+
+    await waitFor(() => {
+      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual({
+        buildingId: "MB",
+        floor: "S2",
+        startFloor: "1",
+        floorSupported: true,
+        destinationRoom: "MB-S2-330",
+        startRoom: "MB1-Main-Entrance",
+      });
+    });
+  });
+
+  it("reorients the destination indoor handoff when the destination leg route points are reversed", async () => {
+    mockParams = {
+      buildingId: "MB",
+      floor: "1",
+      startRoom: "MB1-Main-Entrance",
+      endRoom: "H9-937",
+    };
+
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: {
+        startFloor: "1",
+        endFloor: "1",
+        buildingName: "John Molson Building",
+        steps: [
+          {
+            instruction: "Proceed to the main entrance",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "1",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [{ x: 1, y: 1, label: "MB1-Main-Entrance" }],
+      },
+      outdoorRoute: {
+        distance: "500 m",
+        duration: "7 min",
+        polyline: "abc",
+        transportMode: "walking",
+        steps: [],
+      },
+      endIndoorRoute: {
+        startFloor: "9",
+        endFloor: "1",
+        buildingName: "Hall Building",
+        steps: [
+          {
+            instruction: "Proceed to H1-Maisonneuve-Entry",
+            distance: "10 m",
+            duration: "1 min",
+            floor: "9",
+            maneuverType: "STRAIGHT",
+          },
+        ],
+        routePoints: [
+          { x: 2, y: 2, label: "H9-937" },
+          { x: 4, y: 4, label: "H1-Maisonneuve-Entry" },
+        ],
+      },
+      nextShuttleTime: null,
+      totalDuration: "12 min",
+    });
+
+    const { getByTestId, getByText } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getUniversalDirections).toHaveBeenCalledWith(
+        "MB",
+        "MB1-Main-Entrance",
+        "1",
+        "H",
+        "H9-937",
+        "9",
+        false,
+      );
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByText("Continue Outside")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("next-action-button"));
+
+    await waitFor(() => {
+      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual({
+        buildingId: "H",
+        floor: "9",
+        startFloor: "1",
+        floorSupported: true,
+        destinationRoom: "H9-937",
+        startRoom: "H1-Maisonneuve-Entry",
+      });
+    });
+  });
+
   it("switches the displayed indoor map to the route origin building for manual cross-building routes", async () => {
     mockParams = {
       buildingId: "VL",
@@ -425,6 +608,126 @@ describe("IndoorNavigation", () => {
       );
       expect(getByTestId("floor-plan-building").props.children).toBe("H");
       expect(getByTestId("floor-plan-floor").props.children).toBe("8");
+    });
+  });
+
+  it("does not reuse the previous building route when a param-driven continue-inside handoff opens a new target building", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "1",
+      startRoom: "H1-Maisonneuve-Entry",
+      endRoom: "H9-937",
+      forceBuildingId: "1",
+    };
+
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (building: string, origin: string, destination: string) => {
+        if (
+          building === "H" &&
+          origin === "H1-Maisonneuve-Entry" &&
+          destination === "H9-937"
+        ) {
+          return Promise.resolve({
+            distance: "100 m",
+            duration: "5 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "1",
+            endFloor: "9",
+            steps: [
+              {
+                instruction: "Walk to H9-937",
+                distance: "100 m",
+                duration: "5 min",
+                floor: "1",
+                maneuverType: "STRAIGHT",
+              },
+            ],
+            polyline: "",
+            routePoints: [
+              { x: 1, y: 1, label: "H1-Maisonneuve-Entry" },
+              { x: 2, y: 2, label: "H9-937" },
+            ],
+            stairMessage: null,
+          });
+        }
+
+        if (
+          building === "MB" &&
+          origin === "MB1-Main-Entrance" &&
+          destination === "MB-S2-330"
+        ) {
+          return Promise.resolve({
+            distance: "120 m",
+            duration: "6 min",
+            buildingName: "John Molson Building",
+            buildingId: "MB",
+            startFloor: "1",
+            endFloor: "S2",
+            steps: [
+              {
+                instruction: "Walk to MB-S2-330",
+                distance: "120 m",
+                duration: "6 min",
+                floor: "1",
+                maneuverType: "STRAIGHT",
+              },
+            ],
+            polyline: "",
+            routePoints: [
+              { x: 3, y: 3, label: "MB1-Main-Entrance" },
+              { x: 4, y: 4, label: "MB-S2-330" },
+            ],
+            stairMessage: null,
+          });
+        }
+
+        return Promise.reject(
+          new Error(
+            `Unexpected path request: ${building} ${origin} -> ${destination}`,
+          ),
+        );
+      },
+    );
+
+    const screen = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H1-Maisonneuve-Entry",
+        "H9-937",
+        "1",
+        "9",
+        false,
+      );
+      expect(screen.getByTestId("floor-plan-building").props.children).toBe(
+        "H",
+      );
+    });
+
+    mockParams = {
+      buildingId: "MB",
+      floor: "1",
+      startRoom: "MB1-Main-Entrance",
+      endRoom: "MB-S2-330",
+      forceBuildingId: "1",
+    };
+    screen.rerender(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "MB",
+        "MB1-Main-Entrance",
+        "MB-S2-330",
+        "1",
+        "S2",
+        false,
+      );
+      expect(screen.getByTestId("floor-plan-building").props.children).toBe(
+        "MB",
+      );
+      expect(screen.getByTestId("floor-plan-floor").props.children).toBe("1");
     });
   });
 
@@ -1972,6 +2275,158 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(getByText("Continue Outside")).toBeTruthy();
       expect(getByTestId("next-action-button")).toBeTruthy();
+    });
+  });
+
+  it("shows continue outside instead of arrived for forced target-building exit routes", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "1",
+      startRoom: "H9-937",
+      endRoom: "H1-Maisonneuve-Entry",
+      forceBuildingId: "1",
+      returnOutdoorOriginLat: "45.497122",
+      returnOutdoorOriginLng: "-73.578471",
+      returnOutdoorOriginLabel: "Building MB",
+      returnOutdoorOriginBuildingId: "MB",
+      returnOutdoorDestinationLat: "45.497339",
+      returnOutdoorDestinationLng: "-73.57903",
+      returnOutdoorDestinationLabel: "Hall Building",
+      returnOutdoorDestinationBuildingId: "H",
+      returnOutdoorMode: "WALK",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "100 m",
+      duration: "5 min",
+      buildingName: "Hall Building",
+      buildingId: "H",
+      startFloor: "9",
+      endFloor: "1",
+      steps: [
+        {
+          instruction: "Walk to the exit",
+          distance: "100 m",
+          duration: "5 min",
+          floor: "1",
+          maneuverType: "STRAIGHT",
+        },
+      ],
+      polyline: "",
+      routePoints: [
+        { x: 1, y: 1, label: "H9-937" },
+        { x: 2, y: 2, label: "H1-Maisonneuve-Entry" },
+      ],
+      stairMessage: null,
+    });
+
+    const { getByTestId, getByText, queryByText } = render(
+      <IndoorNavigation />,
+    );
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalled();
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByText("Continue Outside")).toBeTruthy();
+      expect(queryByText("Arrived")).toBeNull();
+    });
+  });
+
+  it("rebuilds the outdoor route in reverse when forced target-building exit routes continue outside", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "1",
+      startRoom: "H9-937",
+      endRoom: "H1-Maisonneuve-Entry",
+      forceBuildingId: "1",
+      returnOutdoorOriginLat: "45.497122",
+      returnOutdoorOriginLng: "-73.578471",
+      returnOutdoorOriginLabel: "Building MB",
+      returnOutdoorOriginBuildingId: "MB",
+      returnOutdoorDestinationLat: "45.497339",
+      returnOutdoorDestinationLng: "-73.57903",
+      returnOutdoorDestinationLabel: "Hall Building",
+      returnOutdoorDestinationBuildingId: "H",
+      returnOutdoorMode: "WALK",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "100 m",
+      duration: "5 min",
+      buildingName: "Hall Building",
+      buildingId: "H",
+      startFloor: "9",
+      endFloor: "1",
+      steps: [
+        {
+          instruction: "Walk to the exit",
+          distance: "100 m",
+          duration: "5 min",
+          floor: "1",
+          maneuverType: "STRAIGHT",
+        },
+      ],
+      polyline: "",
+      routePoints: [
+        { x: 1, y: 1, label: "H9-937" },
+        { x: 2, y: 2, label: "H1-Maisonneuve-Entry" },
+      ],
+      stairMessage: null,
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalled();
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    await waitFor(() => {
+      expect(getByTestId("next-action-button")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("next-action-button"));
+
+    await waitFor(() => {
+      expect(getAllOutdoorDirectionsInfo).toHaveBeenCalledWith(
+        {
+          latitude: 45.497339,
+          longitude: -73.57903,
+          buildingId: "H",
+        },
+        {
+          latitude: 45.497122,
+          longitude: -73.578471,
+          buildingId: "MB",
+        },
+      );
+      expect(useNavigationEndpointsStore.getState().origin).toEqual({
+        latitude: 45.497339,
+        longitude: -73.57903,
+        label: "Hall Building",
+        buildingId: "H",
+      });
+      expect(useNavigationEndpointsStore.getState().destination).toEqual({
+        latitude: 45.497122,
+        longitude: -73.578471,
+        label: "Building MB",
+        buildingId: "MB",
+      });
+      expect(useNavigationStore.getState().navigationState).toBe("NAVIGATING");
+      expect(mockReplace).toHaveBeenCalledWith("/(home-page)");
     });
   });
 
