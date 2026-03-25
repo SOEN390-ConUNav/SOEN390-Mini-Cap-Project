@@ -98,6 +98,31 @@ const parseOutdoorResumeEndpoint = (
   };
 };
 
+const extractFloorMatch = (value: string, pattern: RegExp) =>
+  pattern.exec(value)?.[1] ?? null;
+
+const getCompactOrExplicitFloor = (normalizedRoom: string) =>
+  extractFloorMatch(normalizedRoom, /^[A-Z]{1,4}-(S\d{1,2}|\d{1,2})-/) ??
+  extractFloorMatch(normalizedRoom, /^[A-Z]{1,4}(S\d+)-/) ??
+  extractFloorMatch(normalizedRoom, /^[A-Z]{1,4}(\d+)-/);
+
+const getTrailingBasementFloor = (lastPart: string) =>
+  /^S\d/.test(lastPart) ? lastPart.slice(0, 2) : null;
+
+const getNormalizedRoomPart = (normalizedRoom: string) => {
+  const rawRoomPart = normalizedRoom.split("-")[1] ?? "";
+  return rawRoomPart.split(".")[0].replace(/[A-Z]{1,16}$/, "");
+};
+
+const getFloorFromRoomPart = (roomPart: string) => {
+  if (!roomPart) return null;
+  if (/^\d{3,4}$/.test(roomPart)) return roomPart[0];
+  if (roomPart.length >= 3) return roomPart.slice(0, -2);
+  return roomPart;
+};
+
+const getFirstDigitFloor = (value: string) => value.match(/\d/)?.[0] ?? null;
+
 const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
   if (!roomId) return fallbackFloor;
   const normalizedRoom = roomId.trim().toUpperCase();
@@ -106,64 +131,25 @@ const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
     return "1";
   }
 
-  // Explicit building-floor-room format, e.g. MB-S2-330 or MB-1-210.
-  // Limit the floor token so room ids like CC-106-2 are not misread as floor 106.
-  const explicitFloorMatch = /^[A-Z]{1,4}-(S\d{1,2}|\d{1,2})-/.exec(
-    normalizedRoom,
+  const matchedFloor = getCompactOrExplicitFloor(normalizedRoom);
+  if (matchedFloor) {
+    return matchedFloor;
+  }
+
+  const lastPart = normalizedRoom.split("-").at(-1) ?? normalizedRoom;
+  const basementFloor = getTrailingBasementFloor(lastPart);
+  if (basementFloor) {
+    return basementFloor;
+  }
+
+  const roomPartFloor = getFloorFromRoomPart(
+    getNormalizedRoomPart(normalizedRoom),
   );
-  if (explicitFloorMatch?.[1]) {
-    return explicitFloorMatch[1];
+  if (roomPartFloor) {
+    return roomPartFloor;
   }
 
-  // Compact prefix floor format, e.g. MBS2-Entrance-Exit.
-  const compactBasementMatch = /^[A-Z]{1,4}(S\d+)-/.exec(normalizedRoom);
-  if (compactBasementMatch?.[1]) {
-    return compactBasementMatch[1];
-  }
-
-  // Compact prefix floor format, e.g. H8-801 or MB3-330.
-  const compactFloorMatch = /^[A-Z]{1,4}(\d+)-/.exec(normalizedRoom);
-  if (compactFloorMatch?.[1]) {
-    return compactFloorMatch[1];
-  }
-
-  const parts = normalizedRoom.split("-");
-  const lastPart = parts.at(-1) ?? normalizedRoom;
-  if (
-    lastPart.startsWith("S") &&
-    lastPart.length >= 2 &&
-    lastPart[1] >= "0" &&
-    lastPart[1] <= "9"
-  ) {
-    return lastPart.slice(0, 2);
-  }
-
-  let roomPart = parts.length >= 2 ? parts[1] : "";
-  if (roomPart.includes(".")) {
-    roomPart = roomPart.split(".")[0];
-  }
-
-  roomPart = roomPart.replace(/[A-Z]{1,16}$/, "");
-
-  if (/^\d{3,4}$/.test(roomPart)) {
-    return roomPart[0];
-  }
-
-  if (roomPart.length >= 3) {
-    return roomPart.slice(0, -2);
-  }
-
-  if (roomPart.length > 0) {
-    return roomPart;
-  }
-
-  for (const char of lastPart) {
-    if (char >= "0" && char <= "9") {
-      return char;
-    }
-  }
-
-  return fallbackFloor;
+  return getFirstDigitFloor(lastPart) ?? fallbackFloor;
 };
 
 const getBuildingFromRoom = (
@@ -393,9 +379,8 @@ const getDisplayedRoutePoints = (
   );
 
   if (progressIndex >= movementStepCount) {
-    return floorPoints.at(-1)
-      ? [floorPoints[floorPoints.length - 1]]
-      : undefined;
+    const lastFloorPoint = floorPoints.at(-1);
+    return lastFloorPoint ? [lastFloorPoint] : undefined;
   }
 
   return floorPoints.slice(decisionIndices[progressIndex]);
@@ -493,7 +478,7 @@ const sumSegmentDistance = (
     const end = routePoints[i + 1];
     const dx = end.x - start.x;
     const dy = end.y - start.y;
-    distance += Math.sqrt(dx * dx + dy * dy);
+    distance += Math.hypot(dx, dy);
   }
   return distance;
 };
@@ -508,8 +493,8 @@ const classifyTurnAtPoint = (
   const bx = next.x - current.x;
   const by = next.y - current.y;
 
-  const lenA = Math.sqrt(ax * ax + ay * ay);
-  const lenB = Math.sqrt(bx * bx + by * by);
+  const lenA = Math.hypot(ax, ay);
+  const lenB = Math.hypot(bx, by);
   if (lenA < 0.001 || lenB < 0.001) return "STRAIGHT";
 
   const dot = ax * bx + ay * by;
@@ -545,7 +530,7 @@ const getDecisionPointIndices = (
       routePoints[i],
       routePoints[i + 1],
     );
-    const previousTurn = decisionManeuvers[decisionManeuvers.length - 1];
+    const previousTurn = decisionManeuvers.at(-1);
     if (turn !== "STRAIGHT" && turn !== previousTurn) {
       decisionIndices.push(i);
       decisionManeuvers.push(turn);
@@ -1201,6 +1186,18 @@ type StepNavigationControlsProps = {
   onNextAction?: () => void;
 };
 
+type RouteContinuationState = {
+  showUniversalOutdoorContinuation: boolean;
+  showOutdoorContinuation: boolean;
+  showForcedFlowOutdoorContinuation: boolean;
+  showArrivalAction: boolean;
+};
+
+type StepNavigationActionConfig = {
+  nextActionLabel?: string;
+  onNextAction?: () => void;
+};
+
 const StepNavigationControls = ({
   totalSteps,
   showRouteDetails,
@@ -1277,6 +1274,156 @@ const StepNavigationControls = ({
       </View>
     </View>
   );
+};
+
+const FloorSelectorOverlay = ({
+  activeFloors,
+  statusBarHeight,
+  effectiveCurrentFloor,
+  handleFloorChange,
+  activeBuildingId,
+}: {
+  activeFloors: string[];
+  statusBarHeight: number;
+  effectiveCurrentFloor: string;
+  handleFloorChange: (floor: string) => void;
+  activeBuildingId: BuildingId;
+}) => {
+  if (activeFloors.length <= 1) {
+    return null;
+  }
+
+  return (
+    <View
+      style={[styles.floorSelectorContainer, { top: statusBarHeight + 16 }]}
+    >
+      <FloorSelector
+        currentFloor={effectiveCurrentFloor}
+        availableFloors={activeFloors}
+        onFloorSelect={handleFloorChange}
+        buildingName={activeBuildingId}
+      />
+    </View>
+  );
+};
+
+const IndoorBottomPanelSection = ({
+  showRouteDetails,
+  startRoom,
+  endRoom,
+  routeData,
+  isLoadingRoute,
+  onToggleDirections,
+}: {
+  showRouteDetails: boolean;
+  startRoom: string;
+  endRoom: string;
+  routeData: IndoorDirectionResponse | null;
+  isLoadingRoute: boolean;
+  onToggleDirections: () => void;
+}) => {
+  if (showRouteDetails) {
+    return null;
+  }
+
+  return (
+    <BottomPanel
+      startRoom={startRoom}
+      endRoom={endRoom}
+      routeData={routeData}
+      isLoadingRoute={isLoadingRoute}
+      showDirections={showRouteDetails}
+      onToggleDirections={onToggleDirections}
+    />
+  );
+};
+
+const getRouteContinuationState = ({
+  universalRouteData,
+  routePhase,
+  routeData,
+  resumeOutdoorNavigation,
+  startRoom,
+  endRoom,
+  isForcedBuildingFlow,
+  buildingId,
+}: {
+  universalRouteData: unknown;
+  routePhase: "origin" | "outdoor" | "destination";
+  routeData: IndoorDirectionResponse | null;
+  resumeOutdoorNavigation: string | string[] | undefined;
+  startRoom: string;
+  endRoom: string;
+  isForcedBuildingFlow: boolean;
+  buildingId: BuildingId;
+}): RouteContinuationState => {
+  const showUniversalOutdoorContinuation =
+    !!universalRouteData && routePhase === "origin" && !!routeData;
+  const showOutdoorContinuation =
+    resumeOutdoorNavigation === "1" && !!routeData && !!startRoom && !!endRoom;
+  const knownExitRoom = getKnownExitRoom(buildingId);
+  const showForcedFlowOutdoorContinuation =
+    isForcedBuildingFlow &&
+    !!routeData &&
+    !!endRoom &&
+    !!knownExitRoom &&
+    endRoom.toUpperCase() === knownExitRoom.toUpperCase();
+
+  return {
+    showUniversalOutdoorContinuation,
+    showOutdoorContinuation,
+    showForcedFlowOutdoorContinuation,
+    showArrivalAction:
+      !!routeData &&
+      !!endRoom &&
+      !showOutdoorContinuation &&
+      !showUniversalOutdoorContinuation &&
+      !showForcedFlowOutdoorContinuation,
+  };
+};
+
+const getStepNavigationActionConfig = ({
+  continuationState,
+  handleResumeOutdoorNavigation,
+  handleUniversalOutdoorContinuation,
+  handleForcedOutdoorContinuation,
+  handleArrival,
+}: {
+  continuationState: RouteContinuationState;
+  handleResumeOutdoorNavigation: () => void;
+  handleUniversalOutdoorContinuation: () => void;
+  handleForcedOutdoorContinuation: () => void;
+  handleArrival: () => void;
+}): StepNavigationActionConfig => {
+  if (continuationState.showOutdoorContinuation) {
+    return {
+      nextActionLabel: "Continue Outside",
+      onNextAction: handleResumeOutdoorNavigation,
+    };
+  }
+
+  if (continuationState.showUniversalOutdoorContinuation) {
+    return {
+      nextActionLabel: "Continue Outside",
+      onNextAction: handleUniversalOutdoorContinuation,
+    };
+  }
+
+  if (continuationState.showForcedFlowOutdoorContinuation) {
+    return {
+      nextActionLabel: "Continue Outside",
+      onNextAction: handleForcedOutdoorContinuation,
+    };
+  }
+
+  if (continuationState.showArrivalAction) {
+    return {
+      nextActionLabel: "Arrived",
+      onNextAction: handleArrival,
+    };
+  }
+
+  return {};
 };
 
 type ShuttleBannerProps = {
@@ -1387,13 +1534,6 @@ export default function IndoorNavigation() {
   useEffect(() => {
     routerRef.current = router;
   }, [router]);
-
-  useEffect(() => {}, [
-    buildingId,
-    currentFloor,
-    backendBuildingId,
-    availableFloors,
-  ]);
 
   const mapViewRef = useRef<FloorPlanWebViewRef>(null);
   const [availableRooms, setAvailableRooms] = useState<string[]>([]);
@@ -1927,27 +2067,16 @@ export default function IndoorNavigation() {
   const canGoToPreviousStep = visibleStepIndex > 0;
   const canGoToNextStep = visibleStepIndex < totalSteps - 1;
   const { roomData, poiData } = splitRoomsAndPois(roomPoints, pois);
-  const showUniversalOutdoorContinuation =
-    !!universalRouteData && routePhase === "origin" && !!routeData;
-  const showOutdoorContinuation =
-    params.resumeOutdoorNavigation === "1" &&
-    !!routeData &&
-    !!startRoom &&
-    !!endRoom;
-  const isForcedTargetBuildingFlow = isForcedBuildingFlow;
-  const knownExitRoom = getKnownExitRoom(buildingId);
-  const showForcedFlowOutdoorContinuation =
-    isForcedTargetBuildingFlow &&
-    !!routeData &&
-    !!endRoom &&
-    !!knownExitRoom &&
-    endRoom.toUpperCase() === knownExitRoom.toUpperCase();
-  const showArrivalAction =
-    !!routeData &&
-    !!endRoom &&
-    !showOutdoorContinuation &&
-    !showUniversalOutdoorContinuation &&
-    !showForcedFlowOutdoorContinuation;
+  const continuationState = getRouteContinuationState({
+    universalRouteData,
+    routePhase,
+    routeData,
+    resumeOutdoorNavigation: params.resumeOutdoorNavigation,
+    startRoom,
+    endRoom,
+    isForcedBuildingFlow,
+    buildingId,
+  });
 
   const handleStepNavigation = useCallback(
     (delta: -1 | 1) =>
@@ -1983,6 +2112,13 @@ export default function IndoorNavigation() {
 
     router.replace("/(home-page)");
   }, [handleClearRoute, invalidatePendingRouteRequests, router]);
+
+  const handleResumeOutdoorNavigation = useCallback(() => {
+    useNavigationStore
+      .getState()
+      .setNavigationState(NAVIGATION_STATE.NAVIGATING);
+    router.replace("/(home-page)");
+  }, [router]);
 
   const handleUniversalOutdoorContinuation = useCallback(() => {
     if (!universalRouteData) {
@@ -2132,6 +2268,29 @@ export default function IndoorNavigation() {
     router,
   ]);
 
+  const stepNavigationAction = getStepNavigationActionConfig({
+    continuationState,
+    handleResumeOutdoorNavigation,
+    handleUniversalOutdoorContinuation,
+    handleForcedOutdoorContinuation,
+    handleArrival,
+  });
+
+  const openStartRoomSelector = useCallback(() => {
+    setSelectingFor("start");
+    setShowRoomList(true);
+  }, []);
+
+  const openEndRoomSelector = useCallback(() => {
+    setSelectingFor("end");
+    setShowRoomList(true);
+  }, []);
+
+  const openDirectionsPanel = useCallback(() => {
+    setDirectionsSnapIndex(1);
+    setShowRouteDetails(true);
+  }, []);
+
   useEffect(() => {
     setActiveBuildingId(buildingId);
   }, [buildingId]);
@@ -2160,18 +2319,13 @@ export default function IndoorNavigation() {
         />
       </View>
 
-      {activeFloors.length > 1 && (
-        <View
-          style={[styles.floorSelectorContainer, { top: statusBarHeight + 16 }]}
-        >
-          <FloorSelector
-            currentFloor={effectiveCurrentFloor}
-            availableFloors={activeFloors}
-            onFloorSelect={handleFloorChange}
-            buildingName={activeBuildingId}
-          />
-        </View>
-      )}
+      <FloorSelectorOverlay
+        activeFloors={activeFloors}
+        statusBarHeight={statusBarHeight}
+        effectiveCurrentFloor={effectiveCurrentFloor}
+        handleFloorChange={handleFloorChange}
+        activeBuildingId={activeBuildingId}
+      />
 
       <IndoorSearchBar
         startRoom={startRoom}
@@ -2180,14 +2334,8 @@ export default function IndoorNavigation() {
         statusBarHeight={statusBarHeight}
         buildingName={displayBuildingName}
         floor={effectiveCurrentFloor}
-        onStartPress={() => {
-          setSelectingFor("start");
-          setShowRoomList(true);
-        }}
-        onEndPress={() => {
-          setSelectingFor("end");
-          setShowRoomList(true);
-        }}
+        onStartPress={openStartRoomSelector}
+        onEndPress={openEndRoomSelector}
         onClearStart={clearStart}
         onClearEnd={clearEnd}
         onSwap={swapLocations}
@@ -2231,33 +2379,8 @@ export default function IndoorNavigation() {
         canGoToNextStep={canGoToNextStep}
         visibleStepIndex={visibleStepIndex}
         onStepChange={handleStepNavigation}
-        nextActionLabel={
-          showOutdoorContinuation
-            ? "Continue Outside"
-            : showUniversalOutdoorContinuation
-              ? "Continue Outside"
-              : showForcedFlowOutdoorContinuation
-                ? "Continue Outside"
-                : showArrivalAction
-                  ? "Arrived"
-                  : undefined
-        }
-        onNextAction={
-          showOutdoorContinuation
-            ? () => {
-                useNavigationStore
-                  .getState()
-                  .setNavigationState(NAVIGATION_STATE.NAVIGATING);
-                router.replace("/(home-page)");
-              }
-            : showUniversalOutdoorContinuation
-              ? handleUniversalOutdoorContinuation
-              : showForcedFlowOutdoorContinuation
-                ? handleForcedOutdoorContinuation
-                : showArrivalAction
-                  ? handleArrival
-                  : undefined
-        }
+        nextActionLabel={stepNavigationAction.nextActionLabel}
+        onNextAction={stepNavigationAction.onNextAction}
       />
 
       <ShuttleBanner
@@ -2268,19 +2391,14 @@ export default function IndoorNavigation() {
         textColor={colors.primary}
       />
 
-      {!showRouteDetails && (
-        <BottomPanel
-          startRoom={startRoom}
-          endRoom={endRoom}
-          routeData={routeData}
-          isLoadingRoute={isLoadingRoute}
-          showDirections={showRouteDetails}
-          onToggleDirections={() => {
-            setDirectionsSnapIndex(1);
-            setShowRouteDetails(true);
-          }}
-        />
-      )}
+      <IndoorBottomPanelSection
+        showRouteDetails={showRouteDetails}
+        startRoom={startRoom}
+        endRoom={endRoom}
+        routeData={routeData}
+        isLoadingRoute={isLoadingRoute}
+        onToggleDirections={openDirectionsPanel}
+      />
 
       <DirectionsPanel
         routeData={routeData}
