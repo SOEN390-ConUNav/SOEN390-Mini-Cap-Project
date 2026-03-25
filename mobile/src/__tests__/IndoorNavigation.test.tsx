@@ -224,7 +224,7 @@ const buildCrossFloorRoute = (overrides: Record<string, unknown> = {}) => ({
       instruction: "Take elevator to floor 9",
       distance: "0 m",
       duration: "1 min",
-      floor: "9",
+      floor: "8",
       maneuverType: "ELEVATOR_UP",
     },
     {
@@ -234,11 +234,20 @@ const buildCrossFloorRoute = (overrides: Record<string, unknown> = {}) => ({
       floor: "9",
       maneuverType: "STRAIGHT",
     },
+    {
+      instruction: "Arrive at H9-903",
+      distance: "0 m",
+      duration: "0 sec",
+      floor: "9",
+      maneuverType: "ENTER_ROOM",
+    },
   ],
   polyline: "",
   routePoints: [
     { x: 10, y: 20, label: "H8-801" },
-    { x: 15, y: 25, label: "TRANSITION_8_TO_9" },
+    { x: 15, y: 25, label: "H8-Main-Elevator" },
+    { x: 15, y: 25, label: "TRANSITION_ELEVATOR_TO_9" },
+    { x: 20, y: 30, label: "H9-Main-Elevator" },
     { x: 20, y: 30, label: "H9-903" },
   ],
   stairMessage: null,
@@ -823,7 +832,7 @@ describe("IndoorNavigation", () => {
     await waitFor(
       () => {
         expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
-        expect(getByTestId("route-point-count").props.children).toBe("1");
+        expect(getByTestId("route-point-count").props.children).toBe("2");
       },
       { timeout: 15_000 },
     );
@@ -964,7 +973,7 @@ describe("IndoorNavigation", () => {
 
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
-      expect(getByTestId("route-point-count").props.children).toBe("1");
+      expect(getByTestId("route-point-count").props.children).toBe("2");
     });
   });
 
@@ -1268,7 +1277,7 @@ describe("IndoorNavigation", () => {
     });
   });
 
-  it("hides the step buttons while the directions panel is open", async () => {
+  it("shows the step buttons while the directions panel is open", async () => {
     (getIndoorDirections as jest.Mock).mockResolvedValue(
       buildCrossFloorRoute(),
     );
@@ -1287,13 +1296,13 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("toggle-directions"));
 
     await waitFor(() => {
-      expect(queryByTestId("next-step-button")).toBeNull();
-      expect(queryByTestId("previous-step-button")).toBeNull();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(getByTestId("previous-step-button")).toBeTruthy();
       expect(getByTestId("directions-panel")).toBeTruthy();
     });
   });
 
-  it("shows the step buttons again when the directions panel is collapsed", async () => {
+  it("keeps the step buttons rendered when the directions panel is expanded and collapsed", async () => {
     (getIndoorDirections as jest.Mock).mockResolvedValue(
       buildCrossFloorRoute(),
     );
@@ -1312,7 +1321,8 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("toggle-directions"));
 
     await waitFor(() => {
-      expect(queryByTestId("next-step-button")).toBeNull();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(getByTestId("previous-step-button")).toBeTruthy();
     });
 
     fireEvent.press(getByTestId("collapse-directions"));
@@ -1325,8 +1335,8 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("expand-directions"));
 
     await waitFor(() => {
-      expect(queryByTestId("next-step-button")).toBeNull();
-      expect(queryByTestId("previous-step-button")).toBeNull();
+      expect(getByTestId("next-step-button")).toBeTruthy();
+      expect(getByTestId("previous-step-button")).toBeTruthy();
     });
   });
 
@@ -1407,6 +1417,7 @@ describe("IndoorNavigation", () => {
 
     fireEvent.press(getByTestId("next-step-button"));
     fireEvent.press(getByTestId("next-step-button"));
+    fireEvent.press(getByTestId("next-step-button"));
 
     await waitFor(() => {
       expect(getByTestId("route-point-count").props.children).toBe("1");
@@ -1415,7 +1426,7 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("previous-step-button"));
 
     await waitFor(() => {
-      expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
+      expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
       expect(getByTestId("route-point-count").props.children).toBe("2");
     });
   });
@@ -2339,14 +2350,14 @@ describe("IndoorNavigation", () => {
 
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
-      expect(getByTestId("route-point-count").props.children).toBe("1");
+      expect(getByTestId("route-point-count").props.children).toBe("2");
     });
 
     fireEvent.press(getByTestId("previous-step-button"));
 
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "8" });
-      expect(getByTestId("route-point-count").props.children).toBe("2");
+      expect(getByTestId("route-point-count").props.children).toBe("1");
     });
   });
 

@@ -23,6 +23,7 @@ let mockNavInfoStore: any;
 let mockLocationStore: any;
 let mockLocationService: any;
 let mockNavigationProgressStore: any;
+const mockNavigationInfoBottom = jest.fn(() => null);
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -75,7 +76,7 @@ jest.mock(
 jest.mock("../components/DirectionPath", () => () => null);
 jest.mock(
   "../components/navigation-info/NavigationInfoBottom",
-  () => () => null,
+  () => (props: any) => mockNavigationInfoBottom(props),
 );
 jest.mock(
   "../components/navigation-direction/NavigationDirectionHUDBottom",
@@ -469,5 +470,20 @@ describe("HomePageIndex event handoff coverage", () => {
       NAVIGATION_STATE.IDLE,
     );
     expect(mockEndpointsStore.clear).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: false }),
+      );
+    });
+
+    mockNavStateStore.isNavigating = false;
+    mockNavStateStore.isIdle = true;
+    screen.rerender(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: false }),
+      );
+    });
   });
 });

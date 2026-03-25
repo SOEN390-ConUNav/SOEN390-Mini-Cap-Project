@@ -68,6 +68,9 @@ const DISTANCE_METER_REGEX = /^(\d+(?:\.\d+)?)[ \t]{0,4}m$/i;
 const BASEMENT_FLOOR_REGEX = /^S(\d+)$/i;
 const DURATION_HOUR_REGEX = /\b(\d{1,3})[ \t]{0,4}hours?\b/i;
 const DURATION_MINUTE_REGEX = /\b(\d{1,3})[ \t]{0,4}mins?\b/i;
+const TURN_THRESHOLD_DEG = 70;
+const UTURN_THRESHOLD_DEG = 150;
+const MIN_SEGMENT_PX = 12;
 
 const getParamValue = (value?: string | string[]) =>
   Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
@@ -366,9 +369,50 @@ const getFloorForStepIndex = (
 const getDisplayedRoutePoints = (
   routeData: IndoorDirectionResponse | null,
   currentFloor: string,
+  currentStepIndex: number,
 ) => {
   const points = routeData?.routePoints;
   if (!points || points.length === 0) return undefined;
+
+  const floorPoints = getRoutePointsForFloorLeg(routeData, currentFloor);
+  if (!floorPoints?.length) {
+    return undefined;
+  }
+
+  if (floorPoints.length < 2) {
+    return floorPoints;
+  }
+
+  const decisionIndices = getDecisionPointIndices(floorPoints);
+  const movementStepCount = decisionIndices.length;
+  const progressIndex = getMovementProgressForFloorLeg(
+    routeData,
+    currentFloor,
+    currentStepIndex,
+    movementStepCount,
+  );
+
+  if (progressIndex >= movementStepCount) {
+    return floorPoints.at(-1)
+      ? [floorPoints[floorPoints.length - 1]]
+      : undefined;
+  }
+
+  return floorPoints.slice(decisionIndices[progressIndex]);
+};
+
+const getRoutePointsForFloorLeg = (
+  routeData: IndoorDirectionResponse | null,
+  currentFloor: string,
+) => {
+  if (!routeData) {
+    return undefined;
+  }
+
+  const points = routeData?.routePoints;
+  if (!points?.length) {
+    return undefined;
+  }
 
   const transitionIndex = points.findIndex((point) =>
     point.label?.startsWith("TRANSITION_"),
@@ -380,14 +424,136 @@ const getDisplayedRoutePoints = (
 
   const { startFloor, endFloor } = routeData;
   if (currentFloor === startFloor) {
-    return points.slice(0, transitionIndex + 1);
+    const startLegPoints = points.slice(0, transitionIndex);
+    // Some tests and sparse mocked routes omit the duplicated connector point
+    // that the backend normally emits before the transition marker.
+    return startLegPoints.length >= 2
+      ? startLegPoints
+      : points.slice(0, transitionIndex + 1);
   }
 
   if (currentFloor === endFloor) {
-    return points.slice(transitionIndex + 1);
+    const endLegStartIndex = Math.min(transitionIndex + 1, points.length - 1);
+    const endLegPoints = points.slice(endLegStartIndex);
+    return endLegPoints.length >= 2
+      ? endLegPoints
+      : points.slice(transitionIndex);
   }
 
   return undefined;
+};
+
+const getMovementProgressForFloorLeg = (
+  routeData: IndoorDirectionResponse | null,
+  currentFloor: string,
+  currentStepIndex: number,
+  movementStepCount: number,
+) => {
+  if (!routeData?.steps?.length || movementStepCount <= 0) {
+    return 0;
+  }
+
+  const clampedStepIndex = Math.max(
+    0,
+    Math.min(currentStepIndex, routeData.steps.length - 1),
+  );
+
+  if (routeData.startFloor === routeData.endFloor) {
+    return Math.min(clampedStepIndex, movementStepCount);
+  }
+
+  const transitionStepIndex = getVerticalTransitionStepIndex(routeData);
+  if (transitionStepIndex < 0) {
+    return Math.min(clampedStepIndex, movementStepCount);
+  }
+
+  if (currentFloor === routeData.startFloor) {
+    return clampedStepIndex < transitionStepIndex
+      ? clampedStepIndex
+      : movementStepCount;
+  }
+
+  if (currentFloor === routeData.endFloor) {
+    const destinationLegStepIndex =
+      clampedStepIndex - (transitionStepIndex + 1);
+    return Math.max(0, Math.min(destinationLegStepIndex, movementStepCount));
+  }
+
+  return 0;
+};
+
+const sumSegmentDistance = (
+  routePoints: IndoorDirectionResponse["routePoints"],
+  startSegment: number,
+  endSegmentExclusive: number,
+) => {
+  let distance = 0;
+  for (let i = startSegment; i < endSegmentExclusive; i += 1) {
+    const start = routePoints[i];
+    const end = routePoints[i + 1];
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    distance += Math.sqrt(dx * dx + dy * dy);
+  }
+  return distance;
+};
+
+const classifyTurnAtPoint = (
+  previous: IndoorDirectionResponse["routePoints"][number],
+  current: IndoorDirectionResponse["routePoints"][number],
+  next: IndoorDirectionResponse["routePoints"][number],
+): "STRAIGHT" | "TURN_LEFT" | "TURN_RIGHT" | "TURN_AROUND" => {
+  const ax = current.x - previous.x;
+  const ay = current.y - previous.y;
+  const bx = next.x - current.x;
+  const by = next.y - current.y;
+
+  const lenA = Math.sqrt(ax * ax + ay * ay);
+  const lenB = Math.sqrt(bx * bx + by * by);
+  if (lenA < 0.001 || lenB < 0.001) return "STRAIGHT";
+
+  const dot = ax * bx + ay * by;
+  const cosAngle = Math.max(-1, Math.min(1, dot / (lenA * lenB)));
+  const angleDeg = (Math.acos(cosAngle) * 180) / Math.PI;
+
+  if (angleDeg < TURN_THRESHOLD_DEG) return "STRAIGHT";
+  if (angleDeg >= UTURN_THRESHOLD_DEG) return "TURN_AROUND";
+
+  const cross = ax * by - ay * bx;
+  return cross > 0 ? "TURN_RIGHT" : "TURN_LEFT";
+};
+
+const getDecisionPointIndices = (
+  routePoints: IndoorDirectionResponse["routePoints"],
+) => {
+  if (!routePoints.length) return [];
+
+  const decisionIndices = [0];
+  const decisionManeuvers: Array<ReturnType<typeof classifyTurnAtPoint>> = [
+    "STRAIGHT",
+  ];
+  let anchorIndex = 0;
+
+  for (let i = 1; i < routePoints.length - 1; i += 1) {
+    const segmentDistance = sumSegmentDistance(routePoints, anchorIndex, i);
+    if (segmentDistance < MIN_SEGMENT_PX) {
+      continue;
+    }
+
+    const turn = classifyTurnAtPoint(
+      routePoints[anchorIndex],
+      routePoints[i],
+      routePoints[i + 1],
+    );
+    const previousTurn = decisionManeuvers[decisionManeuvers.length - 1];
+    if (turn !== "STRAIGHT" && turn !== previousTurn) {
+      decisionIndices.push(i);
+      decisionManeuvers.push(turn);
+      anchorIndex = i;
+    }
+  }
+
+  return decisionIndices;
 };
 
 const applySelectedRoom = ({
@@ -1750,13 +1916,14 @@ export default function IndoorNavigation() {
     Constants.statusBarHeight ||
     (Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 0);
 
-  const displayedRoutePoints = getDisplayedRoutePoints(
-    routeData,
-    effectiveCurrentFloor,
-  );
   const totalSteps = routeData?.steps?.length ?? 0;
   const visibleStepIndex =
     totalSteps > 0 ? Math.min(currentStepIndex, totalSteps - 1) : 0;
+  const displayedRoutePoints = getDisplayedRoutePoints(
+    routeData,
+    effectiveCurrentFloor,
+    visibleStepIndex,
+  );
   const canGoToPreviousStep = visibleStepIndex > 0;
   const canGoToNextStep = visibleStepIndex < totalSteps - 1;
   const { roomData, poiData } = splitRoomsAndPois(roomPoints, pois);

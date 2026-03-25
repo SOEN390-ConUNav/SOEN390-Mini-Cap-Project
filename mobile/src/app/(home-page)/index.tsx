@@ -180,6 +180,7 @@ export default function HomePageIndex() {
   const [toggleNavigationHUDState, setToggleNavigationHUDState] = useState<
     "maximize" | "minimize"
   >("minimize");
+  const [navigationUiDismissed, setNavigationUiDismissed] = useState(false);
 
   const {
     requestPermission,
@@ -369,6 +370,8 @@ export default function HomePageIndex() {
   const outdoorArrivalActionLabel = activeEventIndoorTarget
     ? "Continue Inside"
     : "I Have Arrived";
+  const showNavigatingUi = isNavigating && !navigationUiDismissed;
+  const showCancellingUi = isCancellingNavigation && !navigationUiDismissed;
   // ───────────────────────────────────────────────────────────────────────
 
   // When navigation starts, clear UI clutter + zoom to user ──────
@@ -659,6 +662,7 @@ export default function HomePageIndex() {
       setActiveEventIndoorTarget(eventIndoorTarget);
       setPendingIndoorExitTarget(indoorExitTarget);
       setShowIndoorFallbackNotice(false);
+      setNavigationUiDismissed(false);
     } catch (error) {
       console.error("Error fetching directions:", error);
       Alert.alert(
@@ -668,6 +672,7 @@ export default function HomePageIndex() {
       setActiveEventIndoorTarget(null);
       setPendingIndoorExitTarget(null);
       setShowIndoorFallbackNotice(false);
+      setNavigationUiDismissed(false);
       setNavigationState(NAVIGATION_STATE.IDLE);
     } finally {
       setIsLoading(false);
@@ -1031,6 +1036,7 @@ export default function HomePageIndex() {
     }
 
     navigatingRef.current = true;
+    setNavigationUiDismissed(false);
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
     setToggleNavigationInfoState("minimize");
     setToggleNavigationHUDState("minimize");
@@ -1048,6 +1054,7 @@ export default function HomePageIndex() {
   };
 
   const handleResumeNavigation = () => {
+    setNavigationUiDismissed(false);
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
   };
 
@@ -1055,6 +1062,7 @@ export default function HomePageIndex() {
     indoorHandoffInFlightRef.current = false;
     navigatingRef.current = false;
     setIsLoading(false);
+    setNavigationUiDismissed(true);
     setNavigationState(NAVIGATION_STATE.IDLE);
     setToggleNavigationInfoState("minimize");
     setToggleNavigationHUDState("minimize");
@@ -1313,7 +1321,10 @@ export default function HomePageIndex() {
           />
         )}
 
-        {!isSearching && !isIdle && <DirectionPath destination={destination} />}
+        {!isSearching &&
+          (isConfiguring || showNavigatingUi || showCancellingUi) && (
+            <DirectionPath destination={destination} />
+          )}
       </MapView>
 
       {showBuildingPopup && selectedBuilding && !isNavigating && (
@@ -1341,13 +1352,13 @@ export default function HomePageIndex() {
           styles.upcomingEventWrapper,
           (shouldShowEnableLocation ||
             isConfiguring ||
-            isNavigating ||
-            isCancellingNavigation) &&
+            showNavigatingUi ||
+            showCancellingUi) &&
             styles.overlayHidden,
         ]}
         pointerEvents={
           !shouldShowEnableLocation &&
-          !(isConfiguring || isNavigating || isCancellingNavigation)
+          !(isConfiguring || showNavigatingUi || showCancellingUi)
             ? "auto"
             : "none"
         }
@@ -1423,8 +1434,8 @@ export default function HomePageIndex() {
             }
           }}
           isConfiguring={isConfiguring}
-          isNavigating={isNavigating}
-          isCancellingNavigation={isCancellingNavigation}
+          isNavigating={showNavigatingUi}
+          isCancellingNavigation={showCancellingUi}
           originLabel={origin?.label ?? "Current Location"}
           destinationLabel={destination?.label ?? "Select destination"}
           onBack={() => {
@@ -1444,7 +1455,7 @@ export default function HomePageIndex() {
           }}
           navigationInfoToggleState={toggleNavigationInfoState}
           navigationHUDToggleState={toggleNavigationHUDState}
-          navigationHUDStep={hudTopStep}
+          navigationHUDStep={showNavigatingUi ? hudTopStep : undefined}
           onSwap={handleSwap}
         />
       </View>
@@ -1460,67 +1471,58 @@ export default function HomePageIndex() {
         onClose={() => handleCloseNavConfig()}
         onGo={() => handleGoNavConfig()}
       />
-      {!isCancellingNavigation && (
+      {!showCancellingUi && (
         <FloatingActionButton onPress={() => void onPressFab()} />
       )}
 
       <View
         style={[
           styles.campusWrapper,
-          (isNavigating || isCancellingNavigation) && styles.overlayHidden,
+          (showNavigatingUi || showCancellingUi) && styles.overlayHidden,
         ]}
-        pointerEvents={isNavigating || isCancellingNavigation ? "none" : "auto"}
+        pointerEvents={showNavigatingUi || showCancellingUi ? "none" : "auto"}
       >
         <CampusSwitcher value={campus} onChange={onChangeCampus} />
       </View>
-      {isNavigating && (
-        <>
-          {isRerouting && (
-            <View style={styles.reroutingBanner}>
-              <Text style={styles.reroutingText}>Recalculating route...</Text>
-            </View>
-          )}
-          {hasReachedOutdoorDestination && (
-            <View
-              style={styles.arrivalActionContainer}
-              pointerEvents="box-none"
-            >
-              <Pressable
-                testID="outdoor-arrival-action"
-                style={[
-                  styles.arrivalActionButton,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.primary,
-                  },
-                ]}
-                onPress={handleOutdoorArrivalAction}
-              >
-                <Text
-                  style={[styles.arrivalActionText, { color: colors.primary }]}
-                >
-                  {outdoorArrivalActionLabel}
-                </Text>
-              </Pressable>
-            </View>
-          )}
-          <NavigationDirectionHUDBottom
-            visible={isNavigating}
-            steps={hudSteps}
-            onSnapIndexChange={handleHUDSnapIndexChange}
-          />
-          <NavigationInfoBottom
-            visible={isNavigating}
-            onClose={() => {
-              navigatingRef.current = false;
-            }}
-            onPressAction={onToggleNavigationInfoState}
-            onSnapIndexChange={handleInfoSnapIndexChange}
-          />
-        </>
+      {showNavigatingUi && isRerouting && (
+        <View style={styles.reroutingBanner}>
+          <Text style={styles.reroutingText}>Recalculating route...</Text>
+        </View>
       )}
+      {showNavigatingUi && hasReachedOutdoorDestination && (
+        <View style={styles.arrivalActionContainer} pointerEvents="box-none">
+          <Pressable
+            testID="outdoor-arrival-action"
+            style={[
+              styles.arrivalActionButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.primary,
+              },
+            ]}
+            onPress={handleOutdoorArrivalAction}
+          >
+            <Text style={[styles.arrivalActionText, { color: colors.primary }]}>
+              {outdoorArrivalActionLabel}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+      <NavigationDirectionHUDBottom
+        visible={showNavigatingUi}
+        steps={hudSteps}
+        onSnapIndexChange={handleHUDSnapIndexChange}
+      />
+      <NavigationInfoBottom
+        visible={showNavigatingUi}
+        onClose={() => {
+          navigatingRef.current = false;
+        }}
+        onPressAction={onToggleNavigationInfoState}
+        onSnapIndexChange={handleInfoSnapIndexChange}
+      />
 
-      {isCancellingNavigation && (
+      {showCancellingUi && (
         <NavigationCancelBottom
           onOpenSettings={handleOpenSettings}
           onConfirmCancel={handleCancelTrip}
