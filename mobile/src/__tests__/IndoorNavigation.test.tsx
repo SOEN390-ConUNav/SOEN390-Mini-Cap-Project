@@ -249,6 +249,12 @@ describe("IndoorNavigation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockParams = { buildingId: "H", floor: "8" };
+    mockSetParams.mockImplementation((nextParams: Record<string, string>) => {
+      mockParams = {
+        ...mockParams,
+        ...nextParams,
+      };
+    });
     useNavigationEndpointsStore.getState().clear();
     useNavigationConfig.setState({
       navigationMode: "WALK",
@@ -358,14 +364,16 @@ describe("IndoorNavigation", () => {
       expect(useNavigationConfig.getState().allOutdoorRoutes).toHaveLength(1);
       expect(useNavigationInfo.getState().pathDistance).toBe("500 m");
       expect(useNavigationStore.getState().navigationState).toBe("NAVIGATING");
-      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual({
-        buildingId: "VL",
-        floor: "1",
-        startFloor: "1",
-        floorSupported: true,
-        destinationRoom: "VL-101",
-        startRoom: "VL-Entrance-Exit",
-      });
+      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual(
+        expect.objectContaining({
+          buildingId: "VL",
+          floor: "1",
+          startFloor: "1",
+          floorSupported: true,
+          destinationRoom: "VL-101",
+          startRoom: "VL-Entrance-Exit",
+        }),
+      );
     });
   });
 
@@ -436,14 +444,16 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("next-action-button"));
 
     await waitFor(() => {
-      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual({
-        buildingId: "MB",
-        floor: "S2",
-        startFloor: "1",
-        floorSupported: true,
-        destinationRoom: "MB-S2-330",
-        startRoom: "MB1-Main-Entrance",
-      });
+      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual(
+        expect.objectContaining({
+          buildingId: "MB",
+          floor: "S2",
+          startFloor: "1",
+          floorSupported: true,
+          destinationRoom: "MB-S2-330",
+          startRoom: "MB1-Main-Entrance",
+        }),
+      );
     });
   });
 
@@ -527,14 +537,16 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("next-action-button"));
 
     await waitFor(() => {
-      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual({
-        buildingId: "H",
-        floor: "9",
-        startFloor: "1",
-        floorSupported: true,
-        destinationRoom: "H9-937",
-        startRoom: "H1-Maisonneuve-Entry",
-      });
+      expect(useIndoorHandoffStore.getState().pendingIndoorTarget).toEqual(
+        expect.objectContaining({
+          buildingId: "H",
+          floor: "9",
+          startFloor: "1",
+          floorSupported: true,
+          destinationRoom: "H9-937",
+          startRoom: "H1-Maisonneuve-Entry",
+        }),
+      );
     });
   });
 
@@ -1039,6 +1051,131 @@ describe("IndoorNavigation", () => {
     await waitFor(() => {
       expect(getByTestId("start-room-value").props.children).toBe("H-820");
       expect(getByTestId("end-room-value").props.children).toBe("H-801");
+    });
+  });
+
+  it("restarts the full room-to-room flow from the beginning with swapped endpoints when swap is pressed in a forced target-building flow", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "1",
+      startRoom: "H1-Maisonneuve-Entry",
+      endRoom: "H9-937",
+      forceBuildingId: "1",
+      globalOriginRoom: "MB-S2-330",
+      globalOriginBuildingId: "MB",
+      globalDestinationRoom: "H9-937",
+      globalDestinationBuildingId: "H",
+    };
+
+    (getIndoorDirections as jest.Mock).mockImplementation(
+      (building: string, origin: string, destination: string) => {
+        if (
+          building === "H" &&
+          origin === "H1-Maisonneuve-Entry" &&
+          destination === "H9-937"
+        ) {
+          return Promise.resolve({
+            distance: "100 m",
+            duration: "5 min",
+            buildingName: "Hall Building",
+            buildingId: "H",
+            startFloor: "1",
+            endFloor: "9",
+            steps: [],
+            polyline: "",
+            routePoints: [
+              { x: 1, y: 1, label: "H1-Maisonneuve-Entry" },
+              { x: 2, y: 2, label: "H9-937" },
+            ],
+            stairMessage: null,
+          });
+        }
+        return Promise.reject(
+          new Error(
+            `Unexpected path request: ${building} ${origin} -> ${destination}`,
+          ),
+        );
+      },
+    );
+
+    (getUniversalDirections as jest.Mock).mockResolvedValue({
+      startIndoorRoute: {
+        startFloor: "9",
+        endFloor: "1",
+        buildingName: "Hall Building",
+        steps: [],
+        routePoints: [{ x: 1, y: 1, label: "H9-937" }],
+      },
+      outdoorRoute: {
+        distance: "500 m",
+        duration: "7 min",
+        polyline: "abc",
+        transportMode: "walking",
+        steps: [],
+      },
+      endIndoorRoute: {
+        startFloor: "1",
+        endFloor: "S2",
+        buildingName: "John Molson Building",
+        steps: [],
+        routePoints: [
+          { x: 2, y: 2, label: "MB1-Main-Entrance" },
+          { x: 4, y: 4, label: "MB-S2-330" },
+        ],
+      },
+      nextShuttleTime: null,
+      totalDuration: "12 min",
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H1-Maisonneuve-Entry",
+        "H9-937",
+        "1",
+        "9",
+        false,
+      );
+    });
+
+    fireEvent.press(getByTestId("swap-locations"));
+
+    await waitFor(() => {
+      expect(mockSetParams).toHaveBeenCalledWith({
+        buildingId: "H",
+        floor: "9",
+        startRoom: "H9-937",
+        endRoom: "MB-S2-330",
+        forceBuildingId: "0",
+        resumeOutdoorNavigation: "0",
+        resumeOutdoorNavigationToken: "",
+        returnOutdoorOriginLat: "",
+        returnOutdoorOriginLng: "",
+        returnOutdoorOriginLabel: "",
+        returnOutdoorOriginBuildingId: "",
+        returnOutdoorDestinationLat: "",
+        returnOutdoorDestinationLng: "",
+        returnOutdoorDestinationLabel: "",
+        returnOutdoorDestinationBuildingId: "",
+        returnOutdoorMode: "",
+        globalOriginRoom: "H9-937",
+        globalOriginBuildingId: "H",
+        globalDestinationRoom: "MB-S2-330",
+        globalDestinationBuildingId: "MB",
+      });
+      expect(getUniversalDirections).toHaveBeenCalledWith(
+        "H",
+        "H9-937",
+        "9",
+        "MB",
+        "MB-S2-330",
+        "S2",
+        false,
+      );
+      expect(getByTestId("start-room-value").props.children).toBe("H9-937");
+      expect(getByTestId("end-room-value").props.children).toBe("MB-S2-330");
     });
   });
 

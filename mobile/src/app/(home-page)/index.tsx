@@ -1093,6 +1093,17 @@ export default function HomePageIndex() {
       };
       if (target.startRoom) params.startRoom = target.startRoom;
       if (target.destinationRoom) params.endRoom = target.destinationRoom;
+      if (target.globalOriginRoom)
+        params.globalOriginRoom = target.globalOriginRoom;
+      if (target.globalOriginBuildingId) {
+        params.globalOriginBuildingId = target.globalOriginBuildingId;
+      }
+      if (target.globalDestinationRoom) {
+        params.globalDestinationRoom = target.globalDestinationRoom;
+      }
+      if (target.globalDestinationBuildingId) {
+        params.globalDestinationBuildingId = target.globalDestinationBuildingId;
+      }
       if (outdoorOrigin && outdoorDestination) {
         params.returnOutdoorOriginLat = `${outdoorOrigin.latitude}`;
         params.returnOutdoorOriginLng = `${outdoorOrigin.longitude}`;

@@ -1198,6 +1198,10 @@ export default function IndoorNavigation() {
     returnOutdoorDestinationLabel?: string;
     returnOutdoorDestinationBuildingId?: string;
     returnOutdoorMode?: string;
+    globalOriginRoom?: string;
+    globalOriginBuildingId?: string;
+    globalDestinationRoom?: string;
+    globalDestinationBuildingId?: string;
   }>();
   const { colors, isDark } = useTheme();
 
@@ -1285,6 +1289,14 @@ export default function IndoorNavigation() {
   const returnOutdoorMode = getParamValue(params.returnOutdoorMode) as
     | TransportMode
     | "";
+  const globalOriginRoom = getParamValue(params.globalOriginRoom);
+  const globalOriginBuildingId = getParamValue(
+    params.globalOriginBuildingId,
+  ) as BuildingId | "";
+  const globalDestinationRoom = getParamValue(params.globalDestinationRoom);
+  const globalDestinationBuildingId = getParamValue(
+    params.globalDestinationBuildingId,
+  ) as BuildingId | "";
   const currentFloorRef = useRef(currentFloor);
 
   useEffect(() => {
@@ -1365,20 +1377,68 @@ export default function IndoorNavigation() {
   };
 
   const swapLocations = () => {
-    const tempRoom = startRoom;
-    setStartRoom(endRoom);
-    setEndRoom(tempRoom);
+    const shouldRestartFromGlobalSwap =
+      isForcedBuildingFlow &&
+      !!globalOriginRoom &&
+      !!globalOriginBuildingId &&
+      !!globalDestinationRoom &&
+      !!globalDestinationBuildingId;
+    const newStartRoom = shouldRestartFromGlobalSwap
+      ? globalDestinationRoom
+      : endRoom;
+    const newEndRoom = shouldRestartFromGlobalSwap
+      ? globalOriginRoom
+      : startRoom;
+    const newStartBuilding = shouldRestartFromGlobalSwap
+      ? globalDestinationBuildingId
+      : getBuildingFromRoom(newStartRoom, buildingId);
+    const newEndBuilding = shouldRestartFromGlobalSwap
+      ? globalOriginBuildingId
+      : getBuildingFromRoom(newEndRoom, buildingId);
+    const newStartFloor = newStartRoom
+      ? getFloorFromRoom(newStartRoom, currentFloorRef.current)
+      : getDefaultFloor(newStartBuilding);
 
-    const newStartBuilding = getBuildingFromRoom(endRoom, buildingId);
-    const newEndBuilding = getBuildingFromRoom(tempRoom, buildingId);
+    invalidatePendingRouteRequests();
+    handleClearRoute();
+    setRouteData(null);
+    setUniversalRouteData(null);
+    setRoutePhase("origin");
+    setShowRouteDetails(false);
+    setDirectionsSnapIndex(1);
+    setCurrentStepIndex(0);
+    setShowRoomList(false);
+    setSelectingFor(null);
+    setSearchQuery("");
 
+    setStartRoom(newStartRoom);
+    setEndRoom(newEndRoom);
     setStartBuildingId(newStartBuilding);
     setEndBuildingId(newEndBuilding);
-
-    if (endRoom) {
-      setActiveBuildingId(newStartBuilding);
-      setCurrentFloor(getFloorFromRoom(endRoom, currentFloorRef.current));
-    }
+    setActiveBuildingId(newStartBuilding);
+    setCurrentFloor(newStartFloor);
+    routerRef.current.setParams({
+      buildingId: newStartBuilding,
+      floor: newStartFloor,
+      startRoom: newStartRoom,
+      endRoom: newEndRoom,
+      forceBuildingId: "0",
+      resumeOutdoorNavigation: "0",
+      resumeOutdoorNavigationToken: "",
+      returnOutdoorOriginLat: "",
+      returnOutdoorOriginLng: "",
+      returnOutdoorOriginLabel: "",
+      returnOutdoorOriginBuildingId: "",
+      returnOutdoorDestinationLat: "",
+      returnOutdoorDestinationLng: "",
+      returnOutdoorDestinationLabel: "",
+      returnOutdoorDestinationBuildingId: "",
+      returnOutdoorMode: "",
+      globalOriginRoom: newStartRoom,
+      globalOriginBuildingId: newStartBuilding,
+      globalDestinationRoom: newEndRoom,
+      globalDestinationBuildingId: newEndBuilding,
+    });
   };
 
   const applyIndoorRouteResponse = useCallback(
@@ -1793,9 +1853,14 @@ export default function IndoorNavigation() {
       return;
     }
 
-    useIndoorHandoffStore
-      .getState()
-      .setPendingIndoorTarget(destinationIndoorTarget);
+    useIndoorHandoffStore.getState().setPendingIndoorTarget({
+      ...destinationIndoorTarget,
+      globalOriginRoom: startRoom || null,
+      globalOriginBuildingId: startBuildingId,
+      globalDestinationRoom:
+        destinationIndoorTarget.destinationRoom || endRoom || null,
+      globalDestinationBuildingId: destinationBuildingId,
+    });
     useNavigationStore
       .getState()
       .setNavigationState(NAVIGATION_STATE.NAVIGATING);
