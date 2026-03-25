@@ -1,3 +1,7 @@
+jest.mock("expo-constants", () => ({
+  expoConfig: { extra: { API_BASE_URL: "http://mock-api" } },
+}));
+
 import {
   getOutdoorDirections,
   OutdoorDirectionResponse,
