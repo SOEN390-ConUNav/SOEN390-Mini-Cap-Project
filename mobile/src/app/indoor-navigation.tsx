@@ -37,7 +37,6 @@ import FloorSelector from "../components/FloorSelector";
 import { BUILDINGS, BuildingId } from "../data/buildings";
 import { OutdoorDirectionResponse } from "../api/outdoorDirectionsApi";
 import {
-  getBackendBuildingId,
   getDefaultFloor,
   getAvailableFloors,
 } from "../utils/buildingIndoorMaps";
@@ -68,6 +67,7 @@ const DISTANCE_METER_REGEX = /^(\d+(?:\.\d+)?)[ \t]{0,4}m$/i;
 const BASEMENT_FLOOR_REGEX = /^S(\d+)$/i;
 const DURATION_HOUR_REGEX = /\b(\d{1,3})[ \t]{0,4}hours?\b/i;
 const DURATION_MINUTE_REGEX = /\b(\d{1,3})[ \t]{0,4}mins?\b/i;
+const FIRST_DIGIT_REGEX = /\d/;
 const TURN_THRESHOLD_DEG = 70;
 const UTURN_THRESHOLD_DEG = 150;
 const MIN_SEGMENT_PX = 12;
@@ -121,7 +121,8 @@ const getFloorFromRoomPart = (roomPart: string) => {
   return roomPart;
 };
 
-const getFirstDigitFloor = (value: string) => value.match(/\d/)?.[0] ?? null;
+const getFirstDigitFloor = (value: string) =>
+  FIRST_DIGIT_REGEX.exec(value)?.[0] ?? null;
 
 const getFloorFromRoom = (roomId: string, fallbackFloor: string) => {
   if (!roomId) return fallbackFloor;
@@ -1528,7 +1529,6 @@ export default function IndoorNavigation() {
   const initialStartRoom = getParamValue(params.startRoom);
   const initialEndRoom = getParamValue(params.endRoom);
   const [currentFloor, setCurrentFloor] = useState<string>(initialFloor);
-  const backendBuildingId = getBackendBuildingId(buildingId, currentFloor);
   const routerRef = useRef(router);
 
   useEffect(() => {
