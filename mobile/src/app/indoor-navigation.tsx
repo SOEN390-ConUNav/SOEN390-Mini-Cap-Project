@@ -1263,7 +1263,8 @@ export default function IndoorNavigation() {
   const paramStartRoom = getParamValue(params.startRoom);
   const paramEndRoom = getParamValue(params.endRoom);
   const isForcedBuildingFlow = params.forceBuildingId === "1";
-  const isParamDrivenRoute = !!paramStartRoom || !!paramEndRoom;
+  const shouldWaitForParamDrivenRouteSync =
+    isForcedBuildingFlow || (!!paramStartRoom && !!paramEndRoom);
   const expectedParamStartBuildingId = isForcedBuildingFlow
     ? buildingId
     : getBuildingFromRoom(paramStartRoom, buildingId);
@@ -1486,7 +1487,7 @@ export default function IndoorNavigation() {
   const fetchRoute = useCallback(async () => {
     if (!startRoom || !endRoom || startRoom === endRoom) return;
     if (
-      isParamDrivenRoute &&
+      shouldWaitForParamDrivenRouteSync &&
       (startRoom !== paramStartRoom ||
         endRoom !== paramEndRoom ||
         startBuildingId !== expectedParamStartBuildingId ||
@@ -1564,9 +1565,9 @@ export default function IndoorNavigation() {
     expectedParamStartBuildingId,
     avoidStairs,
     handleClearRoute,
-    isParamDrivenRoute,
     paramEndRoom,
     paramStartRoom,
+    shouldWaitForParamDrivenRouteSync,
     applyIndoorRouteResponse,
     applyUniversalRouteResponse,
   ]);

@@ -1179,6 +1179,51 @@ describe("IndoorNavigation", () => {
     });
   });
 
+  it("fetches the indoor exit route after selecting a start room in resume-outdoor mode", async () => {
+    mockParams = {
+      buildingId: "H",
+      floor: "1",
+      endRoom: "H1-Maisonneuve-Entry",
+      resumeOutdoorNavigation: "1",
+      resumeOutdoorNavigationToken: "resume-token",
+    };
+
+    (getIndoorDirections as jest.Mock).mockResolvedValue({
+      distance: "100 m",
+      duration: "5 min",
+      buildingName: "Hall Building",
+      buildingId: "H",
+      startFloor: "8",
+      endFloor: "1",
+      steps: [],
+      polyline: "",
+      routePoints: [
+        { x: 1, y: 1, label: "H-820" },
+        { x: 2, y: 2, label: "H1-Maisonneuve-Entry" },
+      ],
+      stairMessage: null,
+    });
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    await waitFor(() => {
+      expect(getByTestId("selecting-for").props.children).toBe("start");
+    });
+
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getIndoorDirections).toHaveBeenCalledWith(
+        "H",
+        "H-820",
+        "H1-Maisonneuve-Entry",
+        "8",
+        "1",
+        false,
+      );
+    });
+  });
+
   it("clear start and clear end reset the room fields", async () => {
     const { getByTestId } = render(<IndoorNavigation />);
 
