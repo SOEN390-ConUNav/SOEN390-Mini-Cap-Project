@@ -1,4 +1,11 @@
-import { computeNextDepartures, CampusKey } from "../data/ShuttleSchedule";
+import {
+  computeNextDepartures,
+  CampusKey,
+  toMinutes24,
+  nowMinutes,
+  isFriday,
+  isWeekend,
+} from "../data/ShuttleSchedule";
 
 const monThu: Record<CampusKey, string[]> = {
   sgw: ["09:30", "10:00", "14:00", "15:00", "18:00"],
@@ -27,7 +34,12 @@ describe("computeNextDepartures", () => {
   it("returns upcoming departures after current time", () => {
     // Wednesday at 13:00
     withMockedDate("2026-02-11T13:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       expect(result.length).toBeGreaterThan(0);
       expect(result.every((d) => d.countdownMin > 0)).toBe(true);
     });
@@ -36,7 +48,12 @@ describe("computeNextDepartures", () => {
   it("returns at most 4 departures", () => {
     // Wednesday at 08:00 — all 5 times are in the future
     withMockedDate("2026-02-11T08:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       expect(result.length).toBeLessThanOrEqual(4);
     });
   });
@@ -44,7 +61,12 @@ describe("computeNextDepartures", () => {
   it("returns empty array on weekends", () => {
     // Saturday
     withMockedDate("2026-02-14T10:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       expect(result).toEqual([]);
     });
   });
@@ -52,7 +74,12 @@ describe("computeNextDepartures", () => {
   it("uses friday schedule on fridays", () => {
     // Friday at 09:00
     withMockedDate("2026-02-13T09:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       // Friday SGW has 09:45 as first time, should appear
       expect(result[0].time).toBe("09:45");
     });
@@ -61,14 +88,24 @@ describe("computeNextDepartures", () => {
   it("uses weekday schedule on mon-thu", () => {
     // Wednesday at 09:00
     withMockedDate("2026-02-11T09:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       expect(result[0].time).toBe("09:30");
     });
   });
 
   it("includes correct fields in each departure", () => {
     withMockedDate("2026-02-11T09:00:00", () => {
-      const result = computeNextDepartures("loyola", "Loyola Chapel", monThu, friday);
+      const result = computeNextDepartures(
+        "loyola",
+        "Loyola Chapel",
+        monThu,
+        friday,
+      );
       const d = result[0];
       expect(d).toHaveProperty("id");
       expect(d).toHaveProperty("time");
@@ -81,16 +118,54 @@ describe("computeNextDepartures", () => {
   it("returns empty when all departures have passed", () => {
     // Wednesday at 23:00
     withMockedDate("2026-02-11T23:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       expect(result).toEqual([]);
     });
   });
 
   it("calculates ETA as departure + 30 minutes", () => {
     withMockedDate("2026-02-11T09:00:00", () => {
-      const result = computeNextDepartures("sgw", "Henry F. Hall", monThu, friday);
+      const result = computeNextDepartures(
+        "sgw",
+        "Henry F. Hall",
+        monThu,
+        friday,
+      );
       // First departure is 09:30, ETA should be 10:00
       expect(result[0].eta).toBe("10:00 ETA");
+    });
+  });
+});
+
+describe("ShuttleSchedule helpers", () => {
+  it("converts HH:MM time strings to 24-hour minutes", () => {
+    expect(toMinutes24("00:00")).toBe(0);
+    expect(toMinutes24("09:30")).toBe(570);
+    expect(toMinutes24("23:59")).toBe(1439);
+  });
+
+  it("returns the current time in minutes", () => {
+    withMockedDate("2026-02-11T13:07:00", () => {
+      expect(nowMinutes()).toBe(13 * 60 + 7);
+    });
+  });
+
+  it("detects Friday correctly", () => {
+    withMockedDate("2026-02-13T09:00:00", () => {
+      expect(isFriday()).toBe(true);
+      expect(isWeekend()).toBe(false);
+    });
+  });
+
+  it("detects weekend correctly", () => {
+    withMockedDate("2026-02-15T09:00:00", () => {
+      expect(isFriday()).toBe(false);
+      expect(isWeekend()).toBe(true);
     });
   });
 });

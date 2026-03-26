@@ -15,6 +15,10 @@ export type EventIndoorTarget = {
   floorSupported: boolean;
   destinationRoom: string | null;
   startRoom: string | null;
+  globalOriginRoom?: string | null;
+  globalOriginBuildingId?: BuildingId | null;
+  globalDestinationRoom?: string | null;
+  globalDestinationBuildingId?: BuildingId | null;
 };
 
 type RoomIndex = {

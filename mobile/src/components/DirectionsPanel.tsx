@@ -124,7 +124,7 @@ export default function DirectionsPanel({
   return (
     <BottomDrawer
       visible={visible}
-      snapPoints={["16%", "45%", "75%"]}
+      snapPoints={["21%", "46%", "66%"]}
       initialSnapIndex={1}
       useModal={false}
       enablePanDownToClose={false}

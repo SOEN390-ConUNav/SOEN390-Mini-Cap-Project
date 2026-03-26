@@ -25,6 +25,7 @@ import {
   BuildingId,
   BUILDINGS,
 } from "../../data/buildings";
+import { BUILDING_EXIT_ROOMS } from "../../data/buildingExits";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
 import UpcomingEventButton from "../../components/UpcomingEventButton";
@@ -54,6 +55,7 @@ import useLocationService from "../../hooks/useLocationService";
 import useLocationStore from "../../hooks/useLocationStore";
 import useRerouting from "../../hooks/useRerouting";
 import useNavigationProgress from "../../hooks/useNavigationProgress";
+import { useIndoorHandoffStore } from "../../hooks/useIndoorHandoffStore";
 import LocationPromptModal from "../../components/LocationPromptModal";
 import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
 import { useTheme } from "../../hooks/useTheme";
@@ -77,6 +79,49 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 };
 const FREEZE_MARKERS_AFTER_MS = 800;
 const EVENT_INDOOR_HANDOFF_DISTANCE_METERS = 10;
+
+type IndoorExitTarget = {
+  buildingId: BuildingId;
+  floor: string;
+  exitRoom: string;
+};
+
+type OutdoorResumeEndpoint = {
+  latitude: number;
+  longitude: number;
+  label: string;
+  buildingId?: BuildingId;
+};
+
+const getIndoorExitTarget = (
+  buildingId: BuildingId,
+): IndoorExitTarget | null => {
+  const exitTarget = BUILDING_EXIT_ROOMS[buildingId];
+  if (!exitTarget) {
+    return null;
+  }
+
+  return {
+    buildingId,
+    floor: exitTarget.floor,
+    exitRoom: exitTarget.room,
+  };
+};
+
+const normalizeCurrentLocationLabel = (label: string | null | undefined) => {
+  const trimmed = label?.trim();
+  if (!trimmed) {
+    return "Current Location";
+  }
+
+  // Reverse geocoding can return only the civic number (e.g. "1455"),
+  // which reads poorly in the route card.
+  if (/^\d+[A-Za-z]?$/.test(trimmed)) {
+    return "Current Location";
+  }
+
+  return trimmed;
+};
 
 type EventDetailsPayload = {
   title: string;
@@ -139,6 +184,7 @@ export default function HomePageIndex() {
   const [toggleNavigationHUDState, setToggleNavigationHUDState] = useState<
     "maximize" | "minimize"
   >("minimize");
+  const [navigationUiDismissed, setNavigationUiDismissed] = useState(false);
 
   const {
     requestPermission,
@@ -214,15 +260,35 @@ export default function HomePageIndex() {
     latitude: number;
     longitude: number;
     label: string;
+    buildingId?: BuildingId;
     eventIndoorTarget?: EventIndoorTarget | null;
   } | null>(null);
   const [activeEventIndoorTarget, setActiveEventIndoorTarget] =
     useState<EventIndoorTarget | null>(null);
+  const [pendingIndoorExitTarget, setPendingIndoorExitTarget] =
+    useState<IndoorExitTarget | null>(null);
+  const [showIndoorFallbackNotice, setShowIndoorFallbackNotice] =
+    useState(false);
+  const pendingIndoorHandoffTarget = useIndoorHandoffStore(
+    (s) => s.pendingIndoorTarget,
+  );
+  const clearPendingIndoorHandoffTarget = useIndoorHandoffStore(
+    (s) => s.clearPendingIndoorTarget,
+  );
   const indoorHandoffInFlightRef = useRef(false);
 
   const mapRef = useRef<MapView>(null);
 
   const navigatingRef = useRef(false);
+
+  useEffect(() => {
+    if (!pendingIndoorHandoffTarget) {
+      return;
+    }
+
+    setActiveEventIndoorTarget(pendingIndoorHandoffTarget);
+    clearPendingIndoorHandoffTarget();
+  }, [clearPendingIndoorHandoffTarget, pendingIndoorHandoffTarget]);
 
   // Re-check permission when initialized - handles return from settings
   useEffect(() => {
@@ -241,7 +307,37 @@ export default function HomePageIndex() {
     null;
 
   const allSteps = activeRoute?.steps ?? [];
-  const hudSteps = allSteps.slice(currentStepIndex);
+  const hudSteps = useMemo(() => {
+    if (allSteps.length > 0) {
+      const boundedStepIndex = Math.min(
+        currentStepIndex,
+        Math.max(0, allSteps.length - 1),
+      );
+      return allSteps.slice(boundedStepIndex);
+    }
+
+    if (!activeRoute?.polyline) {
+      return [];
+    }
+
+    return [
+      {
+        instruction: `Continue to ${destination?.label ?? "destination"}`,
+        distance: pathDistance || activeRoute.distance,
+        duration: activeRoute.duration,
+        maneuverType: "STRAIGHT",
+        polyline: activeRoute.polyline,
+      },
+    ];
+  }, [
+    activeRoute?.distance,
+    activeRoute?.duration,
+    activeRoute?.polyline,
+    allSteps,
+    currentStepIndex,
+    destination?.label,
+    pathDistance,
+  ]);
   const hudTopStep = hudSteps.length > 1 ? hudSteps[1] : hudSteps[0];
   const outdoorRouteEndCoordinate = useMemo(() => {
     const decodeLast = (
@@ -275,6 +371,41 @@ export default function HomePageIndex() {
     if (meterMatch) return Number(meterMatch[1]);
     return null;
   };
+  const outdoorArrivalDistance = useMemo(() => {
+    if (!isNavigating || !currentLocation) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const distanceToDestinationPin = destination
+      ? haversineDistance(currentLocation, {
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+        })
+      : Number.POSITIVE_INFINITY;
+    const distanceToRouteEnd = outdoorRouteEndCoordinate
+      ? haversineDistance(currentLocation, outdoorRouteEndCoordinate)
+      : Number.POSITIVE_INFINITY;
+    const remainingOutdoorMeters = parseDistanceMeters(pathDistance);
+
+    return Math.min(
+      distanceToDestinationPin,
+      distanceToRouteEnd,
+      remainingOutdoorMeters ?? Number.POSITIVE_INFINITY,
+    );
+  }, [
+    currentLocation,
+    destination,
+    isNavigating,
+    outdoorRouteEndCoordinate,
+    pathDistance,
+  ]);
+  const hasReachedOutdoorDestination =
+    outdoorArrivalDistance <= EVENT_INDOOR_HANDOFF_DISTANCE_METERS;
+  const outdoorArrivalActionLabel = activeEventIndoorTarget
+    ? "Continue Inside"
+    : "I Have Arrived";
+  const showNavigatingUi = isNavigating && !navigationUiDismissed;
+  const showCancellingUi = isCancellingNavigation && !navigationUiDismissed;
   // ───────────────────────────────────────────────────────────────────────
 
   // When navigation starts, clear UI clutter + zoom to user ──────
@@ -352,7 +483,14 @@ export default function HomePageIndex() {
       const defaultFloor = getDefaultFloor(selectedBuildingId);
       router.push({
         pathname: "/indoor-navigation",
-        params: { buildingId: selectedBuildingId, floor: defaultFloor },
+        params: {
+          buildingId: selectedBuildingId,
+          floor: defaultFloor,
+          startRoom: "",
+          endRoom: "",
+          resumeOutdoorNavigation: "0",
+          resumeOutdoorNavigationToken: "",
+        },
       });
     }
   };
@@ -399,7 +537,7 @@ export default function HomePageIndex() {
         return {
           latitude: fix.latitude,
           longitude: fix.longitude,
-          label,
+          label: normalizeCurrentLocationLabel(label),
         };
       } catch {
         // Fall back below when a GPS fix is temporarily unavailable.
@@ -489,6 +627,8 @@ export default function HomePageIndex() {
     setOutlineMode(false);
     setShowBuildingPopup(false);
     setShuttleStop(null);
+    setPendingIndoorExitTarget(null);
+    setShowIndoorFallbackNotice(false);
     setNavigationState(NAVIGATION_STATE.IDLE);
   };
 
@@ -517,6 +657,7 @@ export default function HomePageIndex() {
         longitude: b.marker.longitude,
         latitude: b.marker.latitude,
         label: b.name,
+        buildingId: b.id,
       });
       enterOutlineForBuilding(b);
       return;
@@ -530,6 +671,7 @@ export default function HomePageIndex() {
     originCoords: { latitude: number; longitude: number; label: string },
     destCoords: { latitude: number; longitude: number; label: string },
     eventIndoorTarget: EventIndoorTarget | null = null,
+    indoorExitTarget: IndoorExitTarget | null = null,
   ) => {
     setIsLoading(true);
     setNavigationState(NAVIGATION_STATE.ROUTE_CONFIGURING);
@@ -552,6 +694,9 @@ export default function HomePageIndex() {
         setPathDuration(walkRoute.duration);
       }
       setActiveEventIndoorTarget(eventIndoorTarget);
+      setPendingIndoorExitTarget(indoorExitTarget);
+      setShowIndoorFallbackNotice(false);
+      setNavigationUiDismissed(false);
     } catch (error) {
       console.error("Error fetching directions:", error);
       Alert.alert(
@@ -559,6 +704,9 @@ export default function HomePageIndex() {
         "Could not fetch directions. Please try again.",
       );
       setActiveEventIndoorTarget(null);
+      setPendingIndoorExitTarget(null);
+      setShowIndoorFallbackNotice(false);
+      setNavigationUiDismissed(false);
       setNavigationState(NAVIGATION_STATE.IDLE);
     } finally {
       setIsLoading(false);
@@ -573,12 +721,18 @@ export default function HomePageIndex() {
       latitude: nearestBuilding.marker.latitude,
       longitude: nearestBuilding.marker.longitude,
       label: `${nearestBuilding.name} (Inside)`,
+      buildingId: nearestBuilding.id,
     };
+    const indoorExitTarget = hasIndoorMaps(nearestBuilding.id)
+      ? getIndoorExitTarget(nearestBuilding.id)
+      : null;
+    setShowIndoorFallbackNotice(indoorExitTarget == null);
 
     await proceedWithDirections(
       originCoords,
       pendingDestination,
       pendingDestination.eventIndoorTarget ?? null,
+      indoorExitTarget,
     );
     setPendingDestination(null);
   };
@@ -586,6 +740,7 @@ export default function HomePageIndex() {
   const handleLocationPromptOutside = async () => {
     setShowLocationPrompt(false);
     if (!pendingDestination || !currentLocation) return;
+    setShowIndoorFallbackNotice(false);
 
     const label = await reverseGeocode(currentLocation).catch(
       () => "Current Location",
@@ -594,7 +749,7 @@ export default function HomePageIndex() {
     const originCoords = {
       latitude: currentLocation.latitude,
       longitude: currentLocation.longitude,
-      label,
+      label: normalizeCurrentLocationLabel(label),
     };
 
     await proceedWithDirections(
@@ -618,6 +773,7 @@ export default function HomePageIndex() {
       latitude: selectedBuilding.marker.latitude,
       longitude: selectedBuilding.marker.longitude,
       label: selectedBuilding.name,
+      buildingId: selectedBuilding.id,
     };
 
     if (shouldPromptForSelectedBuilding(selectedBuilding.id, destCoords))
@@ -640,6 +796,7 @@ export default function HomePageIndex() {
       latitude: destCoords.latitude,
       longitude: destCoords.longitude,
       label: destinationLabel,
+      buildingId: destinationBuildingId as BuildingId | undefined,
     };
 
     if (
@@ -855,6 +1012,8 @@ export default function HomePageIndex() {
     if (!origin || !destination) return;
 
     setIsLoading(true);
+    setPendingIndoorExitTarget(null);
+    setShowIndoorFallbackNotice(false);
 
     const newOrigin = destination;
     const newDest = origin;
@@ -880,7 +1039,38 @@ export default function HomePageIndex() {
   };
 
   const handleGoNavConfig = () => {
+    if (pendingIndoorExitTarget) {
+      const target = pendingIndoorExitTarget;
+      setPendingIndoorExitTarget(null);
+      setShowIndoorFallbackNotice(false);
+      setNavigationState(NAVIGATION_STATE.IDLE);
+      setToggleNavigationInfoState("minimize");
+      setToggleNavigationHUDState("minimize");
+      requestAnimationFrame(() => {
+        router.push({
+          pathname: "/indoor-navigation",
+          params: {
+            buildingId: target.buildingId,
+            floor: target.floor,
+            endRoom: target.exitRoom,
+            resumeOutdoorNavigation: "1",
+            resumeOutdoorNavigationToken: `${Date.now()}`,
+          },
+        });
+      });
+      return;
+    }
+
+    if (showIndoorFallbackNotice) {
+      Alert.alert(
+        "Indoor Maps Unavailable",
+        "No indoor maps for this building. Regular outdoor navigation started.",
+      );
+      setShowIndoorFallbackNotice(false);
+    }
+
     navigatingRef.current = true;
+    setNavigationUiDismissed(false);
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
     setToggleNavigationInfoState("minimize");
     setToggleNavigationHUDState("minimize");
@@ -898,6 +1088,7 @@ export default function HomePageIndex() {
   };
 
   const handleResumeNavigation = () => {
+    setNavigationUiDismissed(false);
     setNavigationState(NAVIGATION_STATE.NAVIGATING);
   };
 
@@ -905,6 +1096,7 @@ export default function HomePageIndex() {
     indoorHandoffInFlightRef.current = false;
     navigatingRef.current = false;
     setIsLoading(false);
+    setNavigationUiDismissed(true);
     setNavigationState(NAVIGATION_STATE.IDLE);
     setToggleNavigationInfoState("minimize");
     setToggleNavigationHUDState("minimize");
@@ -913,11 +1105,17 @@ export default function HomePageIndex() {
     setAllOutdoorRoutes([]);
     resetNavigationProgress();
     setActiveEventIndoorTarget(null);
+    setPendingIndoorExitTarget(null);
+    setShowIndoorFallbackNotice(false);
     clear();
   };
 
   const triggerIndoorHandoff = useCallback(
     (target: EventIndoorTarget) => {
+      const outdoorOrigin = origin;
+      const outdoorDestination = destination;
+      const outdoorMode = navigationMode;
+
       indoorHandoffInFlightRef.current = true;
       handleCancelTrip();
 
@@ -933,9 +1131,39 @@ export default function HomePageIndex() {
       const params: Record<string, string> = {
         buildingId: target.buildingId,
         floor: initialIndoorFloor,
+        forceBuildingId: "1",
       };
       if (target.startRoom) params.startRoom = target.startRoom;
       if (target.destinationRoom) params.endRoom = target.destinationRoom;
+      if (target.globalOriginRoom)
+        params.globalOriginRoom = target.globalOriginRoom;
+      if (target.globalOriginBuildingId) {
+        params.globalOriginBuildingId = target.globalOriginBuildingId;
+      }
+      if (target.globalDestinationRoom) {
+        params.globalDestinationRoom = target.globalDestinationRoom;
+      }
+      if (target.globalDestinationBuildingId) {
+        params.globalDestinationBuildingId = target.globalDestinationBuildingId;
+      }
+      if (outdoorOrigin && outdoorDestination) {
+        params.returnOutdoorOriginLat = `${outdoorOrigin.latitude}`;
+        params.returnOutdoorOriginLng = `${outdoorOrigin.longitude}`;
+        params.returnOutdoorOriginLabel = outdoorOrigin.label;
+        if (outdoorOrigin.buildingId) {
+          params.returnOutdoorOriginBuildingId = outdoorOrigin.buildingId;
+        }
+
+        params.returnOutdoorDestinationLat = `${outdoorDestination.latitude}`;
+        params.returnOutdoorDestinationLng = `${outdoorDestination.longitude}`;
+        params.returnOutdoorDestinationLabel = outdoorDestination.label;
+        if (outdoorDestination.buildingId) {
+          params.returnOutdoorDestinationBuildingId =
+            outdoorDestination.buildingId;
+        }
+
+        params.returnOutdoorMode = outdoorMode;
+      }
 
       requestAnimationFrame(() => {
         router.push({
@@ -944,49 +1172,28 @@ export default function HomePageIndex() {
         });
       });
     },
-    [handleCancelTrip, router],
+    [destination, handleCancelTrip, navigationMode, origin, router],
   );
 
   useEffect(() => {
-    if (!isNavigating || !currentLocation || !activeEventIndoorTarget) {
+    if (!isNavigating) {
       indoorHandoffInFlightRef.current = false;
       return;
     }
 
-    if (indoorHandoffInFlightRef.current) {
+    if (navigationUiDismissed) {
+      setNavigationUiDismissed(false);
+    }
+  }, [isNavigating, navigationUiDismissed]);
+
+  const handleOutdoorArrivalAction = useCallback(() => {
+    if (activeEventIndoorTarget) {
+      triggerIndoorHandoff(activeEventIndoorTarget);
       return;
     }
 
-    const distanceToDestinationPin = destination
-      ? haversineDistance(currentLocation, {
-          latitude: destination.latitude,
-          longitude: destination.longitude,
-        })
-      : Number.POSITIVE_INFINITY;
-    const distanceToRouteEnd = outdoorRouteEndCoordinate
-      ? haversineDistance(currentLocation, outdoorRouteEndCoordinate)
-      : Number.POSITIVE_INFINITY;
-    const remainingOutdoorMeters = parseDistanceMeters(pathDistance);
-    const arrivalDistance = Math.min(
-      distanceToDestinationPin,
-      distanceToRouteEnd,
-      remainingOutdoorMeters ?? Number.POSITIVE_INFINITY,
-    );
-
-    if (arrivalDistance > EVENT_INDOOR_HANDOFF_DISTANCE_METERS) {
-      return;
-    }
-
-    triggerIndoorHandoff(activeEventIndoorTarget);
-  }, [
-    activeEventIndoorTarget,
-    currentLocation,
-    destination,
-    isNavigating,
-    outdoorRouteEndCoordinate,
-    pathDistance,
-    triggerIndoorHandoff,
-  ]);
+    handleCancelTrip();
+  }, [activeEventIndoorTarget, handleCancelTrip, triggerIndoorHandoff]);
 
   const handleOpenSettings = () => {
     router.push("/settings");
@@ -1153,7 +1360,10 @@ export default function HomePageIndex() {
           />
         )}
 
-        {!isSearching && !isIdle && <DirectionPath destination={destination} />}
+        {!isSearching &&
+          (isConfiguring || showNavigatingUi || showCancellingUi) && (
+            <DirectionPath destination={destination} />
+          )}
       </MapView>
 
       {showBuildingPopup && selectedBuilding && !isNavigating && (
@@ -1181,13 +1391,13 @@ export default function HomePageIndex() {
           styles.upcomingEventWrapper,
           (shouldShowEnableLocation ||
             isConfiguring ||
-            isNavigating ||
-            isCancellingNavigation) &&
+            showNavigatingUi ||
+            showCancellingUi) &&
             styles.overlayHidden,
         ]}
         pointerEvents={
           !shouldShowEnableLocation &&
-          !(isConfiguring || isNavigating || isCancellingNavigation)
+          !(isConfiguring || showNavigatingUi || showCancellingUi)
             ? "auto"
             : "none"
         }
@@ -1263,8 +1473,8 @@ export default function HomePageIndex() {
             }
           }}
           isConfiguring={isConfiguring}
-          isNavigating={isNavigating}
-          isCancellingNavigation={isCancellingNavigation}
+          isNavigating={showNavigatingUi}
+          isCancellingNavigation={showCancellingUi}
           originLabel={origin?.label ?? "Current Location"}
           destinationLabel={destination?.label ?? "Select destination"}
           onBack={() => {
@@ -1284,7 +1494,7 @@ export default function HomePageIndex() {
           }}
           navigationInfoToggleState={toggleNavigationInfoState}
           navigationHUDToggleState={toggleNavigationHUDState}
-          navigationHUDStep={hudTopStep}
+          navigationHUDStep={showNavigatingUi ? hudTopStep : undefined}
           onSwap={handleSwap}
         />
       </View>
@@ -1300,43 +1510,58 @@ export default function HomePageIndex() {
         onClose={() => handleCloseNavConfig()}
         onGo={() => handleGoNavConfig()}
       />
-      {!isCancellingNavigation && (
+      {!showCancellingUi && (
         <FloatingActionButton onPress={() => void onPressFab()} />
       )}
 
       <View
         style={[
           styles.campusWrapper,
-          (isNavigating || isCancellingNavigation) && styles.overlayHidden,
+          (showNavigatingUi || showCancellingUi) && styles.overlayHidden,
         ]}
-        pointerEvents={isNavigating || isCancellingNavigation ? "none" : "auto"}
+        pointerEvents={showNavigatingUi || showCancellingUi ? "none" : "auto"}
       >
         <CampusSwitcher value={campus} onChange={onChangeCampus} />
       </View>
-      {isNavigating && (
-        <>
-          {isRerouting && (
-            <View style={styles.reroutingBanner}>
-              <Text style={styles.reroutingText}>Recalculating route...</Text>
-            </View>
-          )}
-          <NavigationDirectionHUDBottom
-            visible={isNavigating}
-            steps={hudSteps}
-            onSnapIndexChange={handleHUDSnapIndexChange}
-          />
-          <NavigationInfoBottom
-            visible={isNavigating}
-            onClose={() => {
-              navigatingRef.current = false;
-            }}
-            onPressAction={onToggleNavigationInfoState}
-            onSnapIndexChange={handleInfoSnapIndexChange}
-          />
-        </>
+      {showNavigatingUi && isRerouting && (
+        <View style={styles.reroutingBanner}>
+          <Text style={styles.reroutingText}>Recalculating route...</Text>
+        </View>
       )}
+      {showNavigatingUi && hasReachedOutdoorDestination && (
+        <View style={styles.arrivalActionContainer} pointerEvents="box-none">
+          <Pressable
+            testID="outdoor-arrival-action"
+            style={[
+              styles.arrivalActionButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.primary,
+              },
+            ]}
+            onPress={handleOutdoorArrivalAction}
+          >
+            <Text style={[styles.arrivalActionText, { color: colors.primary }]}>
+              {outdoorArrivalActionLabel}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+      <NavigationDirectionHUDBottom
+        visible={showNavigatingUi}
+        steps={hudSteps}
+        onSnapIndexChange={handleHUDSnapIndexChange}
+      />
+      <NavigationInfoBottom
+        visible={showNavigatingUi}
+        onClose={() => {
+          navigatingRef.current = false;
+        }}
+        onPressAction={onToggleNavigationInfoState}
+        onSnapIndexChange={handleInfoSnapIndexChange}
+      />
 
-      {isCancellingNavigation && (
+      {showCancellingUi && (
         <NavigationCancelBottom
           onOpenSettings={handleOpenSettings}
           onConfirmCancel={handleCancelTrip}
@@ -1429,5 +1654,31 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 14,
+  },
+  arrivalActionContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 160,
+    alignItems: "center",
+  },
+  arrivalActionButton: {
+    minWidth: 220,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  arrivalActionText: {
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
   },
 });

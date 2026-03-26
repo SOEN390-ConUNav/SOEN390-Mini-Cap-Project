@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -9,8 +9,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CampusSwitcher from "../../components/CampusSwitcher";
-import { computeNextDepartures } from "../../data/ShuttleSchedule";
+import {
+  computeNextDepartures,
+  toMinutes24,
+  nowMinutes,
+  isFriday,
+  isWeekend,
+} from "../../data/ShuttleSchedule";
 import {
   getSchedule,
   DeparturesByDay,
@@ -39,9 +46,11 @@ export default function ShuttleInfoPage() {
   const { colors } = useTheme();
   const { defaultCampus } = useGeneralSettingsStore();
   const { textStyle } = useAccessibleTypography();
+  const insets = useSafeAreaInsets();
   const [campus, setCampus] = useState<Campus>("SGW");
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [schedule, setSchedule] = useState<DeparturesByDay | null>(null);
+  const [campusWrapperHeight, setCampusWrapperHeight] = useState(0);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -113,10 +122,52 @@ export default function ShuttleInfoPage() {
     );
   }
 
-  return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content} style={{ flex: 1 }}>
-        {showFullSchedule && (
+  const headerSection = (
+    <>
+      <Text style={[styles.title, textStyle(30), { color: colors.text }]}>
+        Shuttle Schedule
+      </Text>
+
+      <View style={styles.locationRow}>
+        <Text
+          style={[
+            styles.locationLabel,
+            textStyle(13),
+            { color: colors.textMuted },
+          ]}
+        >
+          {campus === "SGW" ? "S.G.W Departures" : "Loyola Departures"}
+        </Text>
+        <View style={styles.locationLine}>
+          <Text
+            style={[styles.locationText, textStyle(14), { color: colors.text }]}
+          >
+            {campusInfo.address}
+          </Text>
+          <Pressable
+            style={[styles.directionsBtn, { backgroundColor: colors.primary }]}
+            onPress={onDirectionsPress}
+            hitSlop={10}
+          >
+            <Ionicons name="navigate" size={18} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+    </>
+  );
+
+  if (showFullSchedule) {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.fullScheduleContainer,
+            {
+              paddingTop: insets.top + 8,
+              paddingBottom: 90 + campusWrapperHeight + 12,
+            },
+          ]}
+        >
           <Pressable
             style={styles.backBtn}
             onPress={() => setShowFullSchedule(false)}
@@ -124,107 +175,75 @@ export default function ShuttleInfoPage() {
           >
             <Ionicons name="arrow-back" size={22} color={colors.primary} />
           </Pressable>
-        )}
 
-        <Text style={[styles.title, textStyle(30), { color: colors.text }]}>
-          Shuttle Schedule
-        </Text>
+          {headerSection}
 
-        <View style={styles.locationRow}>
-          <Text
-            style={[
-              styles.locationLabel,
-              textStyle(13),
-              { color: colors.textMuted },
-            ]}
-          >
-            {campus === "SGW" ? "S.G.W Departures" : "Loyola Departures"}
-          </Text>
-          <View style={styles.locationLine}>
-            <Text
-              style={[
-                styles.locationText,
-                textStyle(14),
-                { color: colors.text },
-              ]}
-            >
-              {campusInfo.address}
-            </Text>
-            <Pressable
-              style={[
-                styles.directionsBtn,
-                { backgroundColor: colors.primary },
-              ]}
-              onPress={onDirectionsPress}
-              hitSlop={10}
-            >
-              <Ionicons name="navigate" size={18} color="#fff" />
-            </Pressable>
-          </View>
-        </View>
-
-        {showFullSchedule ? (
           <FullScheduleTable
             monThu={monThuTimes}
             fri={fridayTimes}
             colors={colors}
           />
+        </View>
+
+        <View
+          style={styles.campusWrapper}
+          onLayout={(e) => setCampusWrapperHeight(e.nativeEvent.layout.height)}
+        >
+          <CampusSwitcher value={campus} onChange={setCampus} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={[styles.content, { paddingTop: insets.top + 8, flex: 1 }]}>
+        {headerSection}
+
+        <Text
+          style={[styles.sectionTitle, textStyle(18), { color: colors.text }]}
+        >
+          Next Departures
+        </Text>
+
+        {nextDepartures.length === 0 ? (
+          <Text style={[{ color: colors.textMuted }, textStyle(14)]}>
+            No more departures today.
+          </Text>
         ) : (
-          <>
-            <Text
-              style={[
-                styles.sectionTitle,
-                textStyle(18),
-                { color: colors.text },
-              ]}
-            >
-              Next Departures
-            </Text>
-
-            {nextDepartures.length === 0 ? (
-              <Text style={[{ color: colors.textMuted }, textStyle(14)]}>
-                No more departures today.
-              </Text>
-            ) : (
-              <View style={styles.list}>
-                {nextDepartures.map((d) => (
-                  <DepartureCard
-                    key={d.id}
-                    time={d.time}
-                    from={d.from}
-                    eta={d.eta}
-                    countdownMin={d.countdownMin}
-                    colors={colors}
-                  />
-                ))}
-              </View>
-            )}
-
-            <View style={styles.divider} />
-
-            <Pressable
-              style={[
-                styles.fullButton,
-                {
-                  backgroundColor: colors.primary,
-                  borderColor: colors.primary,
-                },
-              ]}
-              onPress={() => setShowFullSchedule(true)}
-            >
-              <Text
-                style={[
-                  styles.fullButtonText,
-                  textStyle(16),
-                  { color: "#fff" },
-                ]}
-              >
-                View Full Schedule
-              </Text>
-            </Pressable>
-          </>
+          <View style={styles.list}>
+            {nextDepartures.map((d) => (
+              <DepartureCard
+                key={d.id}
+                time={d.time}
+                from={d.from}
+                eta={d.eta}
+                countdownMin={d.countdownMin}
+                colors={colors}
+              />
+            ))}
+          </View>
         )}
-      </ScrollView>
+
+        <View style={styles.divider} />
+
+        <Pressable
+          style={[
+            styles.fullButton,
+            {
+              backgroundColor: colors.primary,
+              borderColor: colors.primary,
+            },
+          ]}
+          onPress={() => setShowFullSchedule(true)}
+        >
+          <Text
+            style={[styles.fullButtonText, textStyle(16), { color: "#fff" }]}
+          >
+            View Full Schedule
+          </Text>
+        </Pressable>
+      </View>
 
       <View style={styles.campusWrapper}>
         <CampusSwitcher value={campus} onChange={setCampus} />
@@ -289,17 +308,51 @@ function FullScheduleTable({
 }) {
   const rows = Math.max(monThu.length, fri.length);
   const { textStyle } = useAccessibleTypography();
+  const scrollRef = useRef<ScrollView>(null);
+
+  const now = nowMinutes();
+  const weekend = isWeekend();
+  const isFri = isFriday();
+
+  // Index of the first upcoming departure in the active column (monThu or fri)
+  const activeTimes = isFri ? fri : monThu;
+  const nextIdx = weekend
+    ? -1
+    : activeTimes.findIndex((t) => toMinutes24(t) > now);
+
+  const ROW_HEIGHT = 48;
+
+  useEffect(() => {
+    if (nextIdx > 0) {
+      // small delay so layout is ready
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y: nextIdx * ROW_HEIGHT,
+          animated: true,
+        });
+      }, 150);
+    }
+  }, [nextIdx]);
 
   const rowAltBg = colors.surface;
   const rowMainBg = colors.card;
+
+  function cellStyle(time: string, isActive: boolean) {
+    if (!time) return {};
+    if (weekend || !isActive) return {};
+    return toMinutes24(time) <= now
+      ? { textDecorationLine: "line-through" as const, opacity: 0.4 }
+      : {};
+  }
 
   return (
     <View
       style={[
         styles.table,
-        { backgroundColor: colors.card, borderColor: colors.border },
+        { backgroundColor: colors.card, borderColor: colors.border, flex: 1 },
       ]}
     >
+      {/* Static header — does not scroll */}
       <View style={[styles.tableHeader, { backgroundColor: colors.primary }]}>
         <Text style={[styles.tableHeaderText, textStyle(16)]}>
           Monday - Thursday
@@ -307,35 +360,64 @@ function FullScheduleTable({
         <Text style={[styles.tableHeaderText, textStyle(16)]}>Friday</Text>
       </View>
 
-      {Array.from({ length: rows }).map((_, i) => {
-        const zebra = i % 2 === 0;
-        return (
-          <View
-            key={i}
-            style={[
-              styles.tableRow,
-              { backgroundColor: zebra ? rowMainBg : rowAltBg },
-            ]}
-          >
-            <Text
-              style={[styles.cellText, textStyle(14), { color: colors.text }]}
+      {/* Scrollable rows */}
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+      >
+        {Array.from({ length: rows }).map((_, i) => {
+          const zebra = i % 2 === 0;
+          const mtTime = monThu[i] ?? "";
+          const frTime = fri[i] ?? "";
+          const isNextRow = i === nextIdx;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.tableRow,
+                { backgroundColor: zebra ? rowMainBg : rowAltBg },
+                isNextRow && {
+                  borderLeftWidth: 3,
+                  borderLeftColor: colors.primary,
+                },
+              ]}
             >
-              {monThu[i] ?? ""}
-            </Text>
-            <Text
-              style={[styles.cellText, textStyle(14), { color: colors.text }]}
-            >
-              {fri[i] ?? ""}
-            </Text>
-          </View>
-        );
-      })}
+              <Text
+                style={[
+                  styles.cellText,
+                  textStyle(14),
+                  { color: colors.text },
+                  cellStyle(mtTime, !isFri),
+                ]}
+              >
+                {mtTime}
+              </Text>
+              <Text
+                style={[
+                  styles.cellText,
+                  textStyle(14),
+                  { color: colors.text },
+                  cellStyle(frTime, isFri),
+                ]}
+              >
+                {frTime}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  fullScheduleContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
 
   center: {
     flex: 1,
@@ -348,7 +430,6 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 16,
-    paddingTop: 8,
     paddingBottom: 220,
   },
   title: {
@@ -426,7 +507,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   badge: {
-    backgroundColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -434,7 +515,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   badgeText: {
-    color: "#111",
+    color: "#fff",
     fontWeight: "800",
   },
   fullButton: {

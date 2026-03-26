@@ -43,8 +43,26 @@ describe("locationUtils", () => {
 
   it("findNearestBuilding returns the closest building", () => {
     const buildings = [
-      { id: "A", marker: { latitude: 45.5001, longitude: -73.6001 } },
-      { id: "B", marker: { latitude: 45.7, longitude: -73.9 } },
+      {
+        id: "A",
+        marker: { latitude: 45.5001, longitude: -73.6001 },
+        polygon: [
+          { latitude: 45.5, longitude: -73.6002 },
+          { latitude: 45.5002, longitude: -73.6002 },
+          { latitude: 45.5002, longitude: -73.6 },
+          { latitude: 45.5, longitude: -73.6 },
+        ],
+      },
+      {
+        id: "B",
+        marker: { latitude: 45.7, longitude: -73.9 },
+        polygon: [
+          { latitude: 45.6999, longitude: -73.9001 },
+          { latitude: 45.7001, longitude: -73.9001 },
+          { latitude: 45.7001, longitude: -73.8999 },
+          { latitude: 45.6999, longitude: -73.8999 },
+        ],
+      },
     ] as unknown as Building[];
 
     const result = findNearestBuilding(
@@ -54,7 +72,62 @@ describe("locationUtils", () => {
 
     expect(result).not.toBeNull();
     expect(result?.building.id).toBe("A");
-    expect(result?.distance).toBeGreaterThan(0);
+    expect(result?.distance).toBe(0);
+  });
+
+  it("findNearestBuilding returns zero distance when user is inside a building polygon", () => {
+    const buildings = [
+      {
+        id: "H",
+        marker: { latitude: 45.4975, longitude: -73.5793 },
+        polygon: [
+          { latitude: 45.4977, longitude: -73.579 },
+          { latitude: 45.4972, longitude: -73.5795 },
+          { latitude: 45.4969, longitude: -73.5789 },
+          { latitude: 45.4974, longitude: -73.5784 },
+        ],
+      },
+    ] as unknown as Building[];
+
+    const result = findNearestBuilding(
+      { latitude: 45.4973, longitude: -73.579 },
+      buildings,
+    );
+
+    expect(result?.building.id).toBe("H");
+    expect(result?.distance).toBe(0);
+  });
+
+  it("prefers the nearest polygon over a closer marker centroid", () => {
+    const buildings = [
+      {
+        id: "H",
+        marker: { latitude: 45.4973399, longitude: -73.5790301 },
+        polygon: [
+          { latitude: 45.4977073, longitude: -73.5790347 },
+          { latitude: 45.4971658, longitude: -73.5795382 },
+          { latitude: 45.4968273, longitude: -73.5788485 },
+          { latitude: 45.4973753, longitude: -73.5783426 },
+        ],
+      },
+      {
+        id: "LB",
+        marker: { latitude: 45.496798, longitude: -73.5780372 },
+        polygon: [
+          { latitude: 45.4972589, longitude: -73.5780579 },
+          { latitude: 45.49669, longitude: -73.5786074 },
+          { latitude: 45.4963225, longitude: -73.5778418 },
+          { latitude: 45.4968947, longitude: -73.5772899 },
+        ],
+      },
+    ] as unknown as Building[];
+
+    const result = findNearestBuilding(
+      { latitude: 45.49725, longitude: -73.57902 },
+      buildings,
+    );
+
+    expect(result?.building.id).toBe("H");
   });
 
   it("findNearestBuildingOnCampus filters to SGW/LOYOLA campus sets", () => {
@@ -86,36 +159,36 @@ describe("locationUtils", () => {
     expect(config).toEqual({
       accuracy: 4,
       timeInterval: 1000,
-      distanceInterval: 3,
+      distanceInterval: 1,
     });
   });
 
   it("getWatcherConfigForMode returns mode-specific config and fallback", () => {
     expect(getWatcherConfigForMode("idle", false)).toEqual({
       accuracy: 1,
-      timeInterval: 15000,
-      distanceInterval: 25,
+      timeInterval: 1000,
+      distanceInterval: 1,
     });
     expect(getWatcherConfigForMode("walking", false)).toEqual({
       accuracy: 3,
-      timeInterval: 3000,
-      distanceInterval: 5,
+      timeInterval: 1000,
+      distanceInterval: 1,
     });
     expect(getWatcherConfigForMode("biking", false)).toEqual({
       accuracy: 3,
-      timeInterval: 2000,
-      distanceInterval: 10,
+      timeInterval: 1000,
+      distanceInterval: 1,
     });
     expect(getWatcherConfigForMode("transit", false)).toEqual({
       accuracy: 2,
-      timeInterval: 5000,
-      distanceInterval: 50,
+      timeInterval: 1000,
+      distanceInterval: 1,
     });
 
     expect(getWatcherConfigForMode("unknown" as any, false)).toEqual({
       accuracy: 1,
-      timeInterval: 15000,
-      distanceInterval: 25,
+      timeInterval: 1000,
+      distanceInterval: 1,
     });
   });
 

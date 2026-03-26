@@ -17,13 +17,49 @@ export interface OutdoorDirectionResponse {
   steps: Step[];
 }
 
+const normalizeTransportMode = (mode: unknown): TransportModeApi => {
+  const normalized = typeof mode === "string" ? mode.toLowerCase() : "";
+  switch (normalized) {
+    case "walking":
+    case "driving":
+    case "bicycling":
+    case "transit":
+    case "shuttle":
+      return normalized;
+    default:
+      return "walking";
+  }
+};
+
+const normalizeOutdoorDirectionResponse = (
+  data: OutdoorDirectionResponse,
+): OutdoorDirectionResponse => ({
+  ...data,
+  transportMode: normalizeTransportMode(data.transportMode),
+});
+
 export const getOutdoorDirections = async (
   origin: string,
   destination: string,
   mode: TransportModeApi = "walking",
+  options?: {
+    originBuildingId?: string;
+    destinationBuildingId?: string;
+  },
 ): Promise<OutdoorDirectionResponse | null> => {
   try {
-    const url = `${API_BASE_URL}/api/directions/outdoor?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&transportMode=${mode.toUpperCase()}`;
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      transportMode: mode.toUpperCase(),
+    });
+    if (options?.originBuildingId) {
+      params.append("originBuildingId", options.originBuildingId);
+    }
+    if (options?.destinationBuildingId) {
+      params.append("destinationBuildingId", options.destinationBuildingId);
+    }
+    const url = `${API_BASE_URL}/api/directions/outdoor?${params.toString()}`;
     const response = await fetch(url);
 
     if (response.status === 204) {
@@ -35,7 +71,7 @@ export const getOutdoorDirections = async (
     }
 
     const data = (await response.json()) as OutdoorDirectionResponse;
-    return data;
+    return normalizeOutdoorDirectionResponse(data);
   } catch (error) {
     console.error("Failed to fetch directions:", error);
     return null;
@@ -45,9 +81,24 @@ export async function getOutdoorDirectionsWithShuttle(
   origin: string,
   destination: string,
   dest_shuttle: string,
+  options?: {
+    originBuildingId?: string;
+    destinationBuildingId?: string;
+  },
 ): Promise<OutdoorDirectionResponse | null> {
   try {
-    const url = `${API_BASE_URL}/api/directions/outdoor/shuttle?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&destinationShuttle=${dest_shuttle}`;
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      destinationShuttle: dest_shuttle,
+    });
+    if (options?.originBuildingId) {
+      params.append("originBuildingId", options.originBuildingId);
+    }
+    if (options?.destinationBuildingId) {
+      params.append("destinationBuildingId", options.destinationBuildingId);
+    }
+    const url = `${API_BASE_URL}/api/directions/outdoor/shuttle?${params.toString()}`;
     const response = await fetch(url);
     const contentLength = response.headers.get("content-length");
     if (response.status === 204 || contentLength === "0") {
@@ -62,7 +113,7 @@ export async function getOutdoorDirectionsWithShuttle(
     }
 
     const data = (await response.json()) as OutdoorDirectionResponse;
-    return data;
+    return normalizeOutdoorDirectionResponse(data);
   } catch (error) {
     console.error("Failed to fetch directions:", error);
     return null;

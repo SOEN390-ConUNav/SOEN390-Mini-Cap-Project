@@ -28,6 +28,8 @@ out/
 # Java / Spring Boot (Maven)
 ############################
 target/
+.m2/
+backend/.m2/
 *.class
 *.log
 hs_err_pid*

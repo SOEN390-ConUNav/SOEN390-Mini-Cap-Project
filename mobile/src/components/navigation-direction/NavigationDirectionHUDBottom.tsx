@@ -95,7 +95,6 @@ export default function NavigationDirectionHUDBottom({
       visible={visible}
       snapPoints={["17%", "37%"]}
       initialSnapIndex={1}
-      useModal={false}
       enablePanDownToClose={false}
       enableDynamicSizing={false}
       backgroundColor={BURGUNDY}
