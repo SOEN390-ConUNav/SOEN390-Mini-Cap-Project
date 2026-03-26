@@ -10,9 +10,20 @@ import * as cache from "../services/shuttleScheduleCache";
 import { computeNextDepartures } from "../data/ShuttleSchedule";
 import type { DeparturesByDay } from "../services/shuttleScheduleCache";
 
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
 jest.mock("../services/shuttleScheduleCache");
 jest.mock("../data/ShuttleSchedule", () => ({
   computeNextDepartures: jest.fn(),
+  toMinutes24: jest.fn((t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  }),
+  nowMinutes: jest.fn(() => 0),
+  isFriday: jest.fn(() => false),
+  isWeekend: jest.fn(() => false),
 }));
 
 const mockPush = jest.fn();
