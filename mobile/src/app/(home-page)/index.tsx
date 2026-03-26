@@ -303,7 +303,37 @@ export default function HomePageIndex() {
     null;
 
   const allSteps = activeRoute?.steps ?? [];
-  const hudSteps = allSteps.slice(currentStepIndex);
+  const hudSteps = useMemo(() => {
+    if (allSteps.length > 0) {
+      const boundedStepIndex = Math.min(
+        currentStepIndex,
+        Math.max(0, allSteps.length - 1),
+      );
+      return allSteps.slice(boundedStepIndex);
+    }
+
+    if (!activeRoute?.polyline) {
+      return [];
+    }
+
+    return [
+      {
+        instruction: `Continue to ${destination?.label ?? "destination"}`,
+        distance: pathDistance || activeRoute.distance,
+        duration: activeRoute.duration,
+        maneuverType: "STRAIGHT",
+        polyline: activeRoute.polyline,
+      },
+    ];
+  }, [
+    activeRoute?.distance,
+    activeRoute?.duration,
+    activeRoute?.polyline,
+    allSteps,
+    currentStepIndex,
+    destination?.label,
+    pathDistance,
+  ]);
   const hudTopStep = hudSteps.length > 1 ? hudSteps[1] : hudSteps[0];
   const outdoorRouteEndCoordinate = useMemo(() => {
     const decodeLast = (

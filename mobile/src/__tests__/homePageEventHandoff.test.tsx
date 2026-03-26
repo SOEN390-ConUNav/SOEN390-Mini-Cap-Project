@@ -24,6 +24,7 @@ let mockLocationStore: any;
 let mockLocationService: any;
 let mockNavigationProgressStore: any;
 const mockNavigationInfoBottom = jest.fn(() => null);
+const mockNavigationDirectionHudBottom = jest.fn(() => null);
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -80,7 +81,7 @@ jest.mock(
 );
 jest.mock(
   "../components/navigation-direction/NavigationDirectionHUDBottom",
-  () => () => null,
+  () => (props: any) => mockNavigationDirectionHudBottom(props),
 );
 jest.mock(
   "../components/navigation-cancel/NavigationCancelBottom",
@@ -512,6 +513,44 @@ describe("HomePageIndex event handoff coverage", () => {
     await waitFor(() => {
       expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
         expect.objectContaining({ visible: true }),
+      );
+    });
+  });
+
+  it("provides a fallback HUD step when resumed outdoor navigation has no steps", async () => {
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+    mockEndpointsStore.destination = {
+      latitude: 45.5,
+      longitude: -73.57,
+      label: "Hall Building",
+      buildingId: "H",
+    };
+    mockNavConfigStore.allOutdoorRoutes = [
+      {
+        transportMode: "walking",
+        distance: "182 m",
+        duration: "3 mins",
+        polyline: "abc",
+        steps: [],
+      },
+    ];
+    mockNavInfoStore.pathDistance = "182 m";
+
+    render(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(mockNavigationDirectionHudBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          visible: true,
+          steps: [
+            expect.objectContaining({
+              instruction: "Continue to Hall Building",
+              distance: "182 m",
+              polyline: "abc",
+            }),
+          ],
+        }),
       );
     });
   });

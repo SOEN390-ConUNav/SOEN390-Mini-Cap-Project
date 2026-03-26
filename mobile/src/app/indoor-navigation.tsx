@@ -2233,9 +2233,6 @@ export default function IndoorNavigation() {
       }
     }
 
-    useNavigationStore
-      .getState()
-      .setNavigationState(NAVIGATION_STATE.NAVIGATING);
     useNavigationEndpointsStore.getState().setOrigin(
       originMarker
         ? {
@@ -2272,6 +2269,9 @@ export default function IndoorNavigation() {
       );
     useNavigationInfo.getState().setIsLoading(false);
     useNavigationProgress.getState().resetProgress();
+    useNavigationStore
+      .getState()
+      .setNavigationState(NAVIGATION_STATE.NAVIGATING);
 
     router.replace("/(home-page)");
   }, [
