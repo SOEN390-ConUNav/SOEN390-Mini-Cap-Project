@@ -11,7 +11,7 @@ export type DepartureComputed = {
 const SHUTTLE_TRIP_MINUTES = 30;
 const NEXT_COUNT = 4;
 
-function toMinutes24(time: string) {
+export function toMinutes24(time: string) {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
 }
@@ -22,15 +22,15 @@ function minutesTo24h(min: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function nowMinutes() {
+export function nowMinutes() {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
 }
 
-function isFriday() {
+export function isFriday() {
   return new Date().getDay() === 5;
 }
-function isWeekend() {
+export function isWeekend() {
   const d = new Date().getDay();
   return d === 0 || d === 6;
 }
@@ -39,13 +39,13 @@ export function computeNextDepartures(
   campusKey: CampusKey,
   campusName: string,
   monThu: Record<CampusKey, string[]>,
-  friday: Record<CampusKey, string[]>
+  friday: Record<CampusKey, string[]>,
 ): DepartureComputed[] {
   if (isWeekend()) return [];
 
   const todayTimes = isFriday()
-    ? friday[campusKey] ?? []
-    : monThu[campusKey] ?? [];
+    ? (friday[campusKey] ?? [])
+    : (monThu[campusKey] ?? []);
 
   const now = nowMinutes();
 
