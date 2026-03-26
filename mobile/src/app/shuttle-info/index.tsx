@@ -52,6 +52,12 @@ export default function ShuttleInfoPage() {
   const [schedule, setSchedule] = useState<DeparturesByDay | null>(null);
   const [campusWrapperHeight, setCampusWrapperHeight] = useState(0);
   const [error, setError] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -96,7 +102,7 @@ export default function ShuttleInfoPage() {
       schedule.monThu,
       schedule.friday,
     );
-  }, [campusKey, campusInfo.name, schedule]);
+  }, [campusKey, campusInfo.name, schedule, tick]);
 
   const monThuTimes = schedule?.monThu[campusKey] ?? [];
   const fridayTimes = schedule?.friday[campusKey] ?? [];
@@ -182,6 +188,7 @@ export default function ShuttleInfoPage() {
             monThu={monThuTimes}
             fri={fridayTimes}
             colors={colors}
+            tick={tick}
           />
         </View>
 
@@ -301,10 +308,12 @@ function FullScheduleTable({
   monThu,
   fri,
   colors,
+  tick: _tick,
 }: {
   monThu: string[];
   fri: string[];
   colors: ThemeColors;
+  tick: number;
 }) {
   const rows = Math.max(monThu.length, fri.length);
   const { textStyle } = useAccessibleTypography();
