@@ -35,6 +35,7 @@ import FloorPlanWebView, {
 } from "../components/FloorPlanWebView";
 import FloorSelector from "../components/FloorSelector";
 import { BUILDINGS, BuildingId } from "../data/buildings";
+import { BUILDING_EXIT_ROOMS } from "../data/buildingExits";
 import { OutdoorDirectionResponse } from "../api/outdoorDirectionsApi";
 import {
   getDefaultFloor,
@@ -173,24 +174,8 @@ const getStartRoomSearchSeed = (buildingId: BuildingId): string => buildingId;
 const getBuildingMarker = (buildingId: BuildingId) =>
   BUILDINGS.find((building) => building.id === buildingId)?.marker ?? null;
 
-const getKnownExitRoom = (buildingId: BuildingId): string | null => {
-  switch (buildingId) {
-    case "H":
-      return "H1-Maisonneuve-Entry";
-    case "LB":
-      return "LB2-Emergency-Exit-1";
-    case "MB":
-      return "MB1-Main-Entrance";
-    case "VL":
-      return "VL-101";
-    case "VE":
-      return "VE1-Entrance/exit";
-    case "CC":
-      return "CC-Entrance-Exit";
-    default:
-      return null;
-  }
-};
+const getKnownExitRoom = (buildingId: BuildingId): string | null =>
+  BUILDING_EXIT_ROOMS[buildingId]?.room ?? null;
 
 const getOutdoorNavigationMode = (
   mode: TransportModeApi | undefined,

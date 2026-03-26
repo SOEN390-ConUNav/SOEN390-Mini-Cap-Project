@@ -25,6 +25,7 @@ import {
   BuildingId,
   BUILDINGS,
 } from "../../data/buildings";
+import { BUILDING_EXIT_ROOMS } from "../../data/buildingExits";
 import BuildingMarker from "../../components/BuildingMarker";
 import BuildingPopup from "../../components/BuildingPopup";
 import UpcomingEventButton from "../../components/UpcomingEventButton";
@@ -92,17 +93,20 @@ type OutdoorResumeEndpoint = {
   buildingId?: BuildingId;
 };
 
-const INDOOR_EXIT_TARGETS: Partial<Record<BuildingId, IndoorExitTarget>> = {
-  H: { buildingId: "H", floor: "1", exitRoom: "H1-Maisonneuve-Entry" },
-  LB: { buildingId: "LB", floor: "2", exitRoom: "LB2-Emergency-Exit-1" },
-  MB: { buildingId: "MB", floor: "1", exitRoom: "MB1-Main-Entrance" },
-  VL: { buildingId: "VL", floor: "1", exitRoom: "VL-101" },
-  VE: { buildingId: "VE", floor: "1", exitRoom: "VE1-Entrance/exit" },
-  CC: { buildingId: "CC", floor: "1", exitRoom: "CC-Entrance-Exit" },
-};
+const getIndoorExitTarget = (
+  buildingId: BuildingId,
+): IndoorExitTarget | null => {
+  const exitTarget = BUILDING_EXIT_ROOMS[buildingId];
+  if (!exitTarget) {
+    return null;
+  }
 
-const getIndoorExitTarget = (buildingId: BuildingId): IndoorExitTarget | null =>
-  INDOOR_EXIT_TARGETS[buildingId] ?? null;
+  return {
+    buildingId,
+    floor: exitTarget.floor,
+    exitRoom: exitTarget.room,
+  };
+};
 
 const normalizeCurrentLocationLabel = (label: string | null | undefined) => {
   const trimmed = label?.trim();

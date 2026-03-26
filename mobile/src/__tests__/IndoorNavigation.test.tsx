@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Switch } from "react-native";
 import IndoorNavigation from "../app/indoor-navigation";
 import { getAllOutdoorDirectionsInfo } from "../api";
+import { BUILDING_EXIT_ROOMS } from "../data/buildingExits";
 import {
   getAvailableRooms,
   getIndoorDirections,
@@ -1197,10 +1198,13 @@ describe("IndoorNavigation", () => {
   });
 
   it("fetches the indoor exit route after selecting a start room in resume-outdoor mode", async () => {
+    const hallExitRoom = BUILDING_EXIT_ROOMS.H?.room;
+    expect(hallExitRoom).toBeTruthy();
+
     mockParams = {
       buildingId: "H",
       floor: "1",
-      endRoom: "H1-Maisonneuve-Entry",
+      endRoom: hallExitRoom,
       resumeOutdoorNavigation: "1",
       resumeOutdoorNavigationToken: "resume-token",
     };
@@ -1216,7 +1220,7 @@ describe("IndoorNavigation", () => {
       polyline: "",
       routePoints: [
         { x: 1, y: 1, label: "H-820" },
-        { x: 2, y: 2, label: "H1-Maisonneuve-Entry" },
+        { x: 2, y: 2, label: hallExitRoom },
       ],
       stairMessage: null,
     });
@@ -1233,7 +1237,7 @@ describe("IndoorNavigation", () => {
       expect(getIndoorDirections).toHaveBeenCalledWith(
         "H",
         "H-820",
-        "H1-Maisonneuve-Entry",
+        hallExitRoom,
         "8",
         "1",
         false,
