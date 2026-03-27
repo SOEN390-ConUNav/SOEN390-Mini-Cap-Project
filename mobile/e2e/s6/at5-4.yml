@@ -1,0 +1,26 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "SGW Campus"
+- tapOn: { point: "50%,48%" }
+- tapOn: { point: "50%,48%" }
+- tapOn: "Indoor Maps"
+- tapOn: "Floor 1"
+- tapOn: "Floor 9"
+- tapOn: "Search"
+- tapOn: "CC-106"
+- tapOn: "Search rooms..."
+- inputText: "H9"
+- tapOn: "H9-907"
+- tapOn: "H9-907"
+- tapOn: "Choose destination"
+- tapOn: "CC-106"
+- tapOn: "Search rooms..."
+- inputText: "H1"
+- tapOn: "H1-115"
+- tapOn: "H1-115"
+- assertVisible: "Show Directions"
+- tapOn: "Show Directions"
+- assertVisible: "Go to Floor 1"
+- tapOn: "Go to Floor 1"
+- assertVisible: "Back to Floor 9"

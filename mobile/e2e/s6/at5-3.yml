@@ -1,0 +1,12 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "SGW Campus"
+- tapOn: { point: "50%,48%" }
+- tapOn: { point: "50%,48%" }
+- tapOn: "Indoor Maps"
+- tapOn: "Floor 1"
+- tapOn: "Floor 9"
+- assertVisible: "M"
+- assertVisible: "W"
+- assertVisible: "E"
