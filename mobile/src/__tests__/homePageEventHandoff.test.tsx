@@ -23,8 +23,8 @@ let mockNavInfoStore: any;
 let mockLocationStore: any;
 let mockLocationService: any;
 let mockNavigationProgressStore: any;
-const mockNavigationInfoBottom = jest.fn(() => null);
-const mockNavigationDirectionHudBottom = jest.fn(() => null);
+const mockNavigationInfoBottom = jest.fn((_props: any) => null);
+const mockNavigationDirectionHudBottom = jest.fn((_props: any) => null);
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -395,24 +395,25 @@ describe("HomePageIndex event handoff coverage", () => {
     fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith({
-        pathname: "/indoor-navigation",
-        params: {
-          buildingId: "H",
-          floor: "1",
-          forceBuildingId: "1",
-          startRoom: "Hall-Elevator-Main",
-          endRoom: "H9-937",
-          returnOutdoorOriginLat: "45.5",
-          returnOutdoorOriginLng: "-73.58",
-          returnOutdoorOriginLat: "45.49",
-          returnOutdoorOriginLabel: "Current Location",
-          returnOutdoorDestinationLat: "45.5",
-          returnOutdoorDestinationLng: "-73.57",
-          returnOutdoorDestinationLabel: "Selected Location",
-          returnOutdoorMode: "WALK",
-        },
-      });
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pathname: "/indoor-navigation",
+          params: expect.objectContaining({
+            buildingId: "H",
+            floor: "1",
+            forceBuildingId: "1",
+            startRoom: "Hall-Elevator-Main",
+            endRoom: "H9-937",
+            returnOutdoorOriginLat: "45.49",
+            returnOutdoorOriginLng: "-73.58",
+            returnOutdoorOriginLabel: "Current Location",
+            returnOutdoorDestinationLat: "45.5",
+            returnOutdoorDestinationLng: "-73.57",
+            returnOutdoorDestinationLabel: "Selected Location",
+            returnOutdoorMode: "WALK",
+          }),
+        }),
+      );
     });
   });
 

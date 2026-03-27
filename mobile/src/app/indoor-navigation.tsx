@@ -1326,6 +1326,10 @@ const IndoorBottomPanelSection = ({
   routeData,
   isLoadingRoute,
   onToggleDirections,
+  selectedTransportMode,
+  onTransportModeChange,
+  outdoorRoutes,
+  nextShuttleTime,
 }: {
   showRouteDetails: boolean;
   startRoom: string;
@@ -1333,6 +1337,10 @@ const IndoorBottomPanelSection = ({
   routeData: IndoorDirectionResponse | null;
   isLoadingRoute: boolean;
   onToggleDirections: () => void;
+  selectedTransportMode: TransportMode;
+  onTransportModeChange: (mode: TransportMode) => void;
+  outdoorRoutes: OutdoorDirectionResponse[];
+  nextShuttleTime: string | null;
 }) => {
   if (showRouteDetails) {
     return null;
@@ -1346,6 +1354,10 @@ const IndoorBottomPanelSection = ({
       isLoadingRoute={isLoadingRoute}
       showDirections={showRouteDetails}
       onToggleDirections={onToggleDirections}
+      selectedTransportMode={selectedTransportMode}
+      onTransportModeChange={onTransportModeChange}
+      outdoorRoutes={outdoorRoutes}
+      nextShuttleTime={nextShuttleTime}
     />
   );
 };
@@ -1514,6 +1526,7 @@ export default function IndoorNavigation() {
     resumeOutdoorNavigation?: string;
     resumeOutdoorNavigationToken?: string;
     forceBuildingId?: string;
+    navigationKey?: string;
     returnOutdoorOriginLat?: string;
     returnOutdoorOriginLng?: string;
     returnOutdoorOriginLabel?: string;
@@ -1564,6 +1577,13 @@ export default function IndoorNavigation() {
   const [roomPoints, setRoomPoints] = useState<RoomPoint[]>([]);
   const [pois, setPois] = useState<PoiItem[]>([]);
   const [avoidStairs, setAvoidStairs] = useState<boolean>(false);
+  const [selectedTransportMode, setSelectedTransportMode] =
+    useState<TransportMode>(
+      useNavigationConfig.getState().navigationMode ?? "WALK",
+    );
+  const [outdoorRoutes, setOutdoorRoutes] = useState<
+    OutdoorDirectionResponse[]
+  >([]);
   const [startBuildingId, setStartBuildingId] =
     useState<BuildingId>(buildingId);
   const [endBuildingId, setEndBuildingId] = useState<BuildingId>(buildingId);
@@ -1644,6 +1664,36 @@ export default function IndoorNavigation() {
     routeRequestIdRef.current += 1;
   }, []);
 
+  useEffect(() => {
+    if (!universalRouteData) {
+      setOutdoorRoutes([]);
+      return;
+    }
+    const originMarker = getBuildingMarker(startBuildingId);
+    const destMarker = getBuildingMarker(endBuildingId);
+    if (!originMarker || !destMarker) return;
+    let cancelled = false;
+    getAllOutdoorDirectionsInfo(
+      {
+        latitude: originMarker.latitude,
+        longitude: originMarker.longitude,
+        buildingId: startBuildingId,
+      },
+      {
+        latitude: destMarker.latitude,
+        longitude: destMarker.longitude,
+        buildingId: endBuildingId,
+      },
+    )
+      .then((routes) => {
+        if (!cancelled) setOutdoorRoutes(routes);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [universalRouteData, startBuildingId, endBuildingId]);
+
   const prevBuildingRef = useRef(buildingId);
   useEffect(() => {
     if (prevBuildingRef.current !== buildingId) {
@@ -1658,6 +1708,38 @@ export default function IndoorNavigation() {
       handleClearRoute();
     }
   }, [buildingId, handleClearRoute, invalidatePendingRouteRequests]);
+
+  // Reset all route state when a new navigation session starts (navigationKey changes)
+  const navigationKey = params.navigationKey ?? "";
+  const lastNavigationKeyRef = useRef<string>("");
+  useEffect(() => {
+    if (!navigationKey || navigationKey === lastNavigationKeyRef.current)
+      return;
+    lastNavigationKeyRef.current = navigationKey;
+
+    invalidatePendingRouteRequests();
+    handleClearRoute();
+    setStartRoom(getParamValue(params.startRoom));
+    setEndRoom(getParamValue(params.endRoom));
+    setStartBuildingId(buildingId);
+    setEndBuildingId(buildingId);
+    setRouteData(null);
+    setUniversalRouteData(null);
+    setRoutePhase("origin");
+    setShowRouteDetails(false);
+    setDirectionsSnapIndex(1);
+    setCurrentStepIndex(0);
+    setSearchQuery("");
+    setSelectingFor(null);
+    setShowRoomList(false);
+  }, [
+    navigationKey,
+    buildingId,
+    params.startRoom,
+    params.endRoom,
+    handleClearRoute,
+    invalidatePendingRouteRequests,
+  ]);
 
   const syncFloorSelection = useCallback((newFloor: string) => {
     setCurrentFloor(newFloor);
@@ -2234,23 +2316,28 @@ export default function IndoorNavigation() {
       label: destinationLabel,
       buildingId: destinationBuildingId,
     });
+    const preferredApiMode = TRANSPORT_MODE_API_MAP[selectedTransportMode];
+    const modeMatchedRoute =
+      routes.find((r) => r.transportMode?.toLowerCase() === preferredApiMode) ??
+      preferredRoute;
+
     useNavigationConfig
       .getState()
       .setNavigationMode(
-        preferredRoute?.transportMode
-          ? getOutdoorNavigationMode(preferredRoute.transportMode)
-          : "WALK",
+        modeMatchedRoute?.transportMode
+          ? getOutdoorNavigationMode(modeMatchedRoute.transportMode)
+          : selectedTransportMode,
       );
     useNavigationConfig.getState().setAllOutdoorRoutes(routes);
     useNavigationInfo
       .getState()
       .setPathDistance(
-        preferredRoute?.distance ?? fallbackOutdoorRoute.distance,
+        modeMatchedRoute?.distance ?? fallbackOutdoorRoute.distance,
       );
     useNavigationInfo
       .getState()
       .setPathDuration(
-        preferredRoute?.duration ?? fallbackOutdoorRoute.duration,
+        modeMatchedRoute?.duration ?? fallbackOutdoorRoute.duration,
       );
     useNavigationInfo.getState().setIsLoading(false);
     useNavigationProgress.getState().resetProgress();
@@ -2264,6 +2351,7 @@ export default function IndoorNavigation() {
     endRoom,
     handleFloorChange,
     router,
+    selectedTransportMode,
     startBuildingId,
     universalRouteData,
   ]);
@@ -2291,7 +2379,7 @@ export default function IndoorNavigation() {
           const preferredMode =
             returnOutdoorMode && TRANSPORT_MODE_API_MAP[returnOutdoorMode]
               ? returnOutdoorMode
-              : "WALK";
+              : selectedTransportMode;
           const preferredApiMode = TRANSPORT_MODE_API_MAP[preferredMode];
           const preferredRoute =
             routes.find(
@@ -2447,14 +2535,6 @@ export default function IndoorNavigation() {
         onNextAction={stepNavigationAction.onNextAction}
       />
 
-      <ShuttleBanner
-        nextShuttleTime={universalRouteData?.nextShuttleTime}
-        routePhase={routePhase}
-        cardBackground={colors.card}
-        accentColor={colors.primary}
-        textColor={colors.primary}
-      />
-
       <IndoorBottomPanelSection
         showRouteDetails={showRouteDetails}
         startRoom={startRoom}
@@ -2462,6 +2542,10 @@ export default function IndoorNavigation() {
         routeData={routeData}
         isLoadingRoute={isLoadingRoute}
         onToggleDirections={openDirectionsPanel}
+        selectedTransportMode={selectedTransportMode}
+        onTransportModeChange={setSelectedTransportMode}
+        outdoorRoutes={outdoorRoutes}
+        nextShuttleTime={universalRouteData?.nextShuttleTime ?? null}
       />
 
       <DirectionsPanel

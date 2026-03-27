@@ -49,7 +49,14 @@ describe("RouteCard", () => {
   const onBack = jest.fn();
   const onSwap = jest.fn();
   const setIsLoading = jest.fn();
-  let navigationInfoState: { isLoading: boolean; setIsLoading: jest.Mock };
+  let navigationInfoState: {
+    isLoading: boolean;
+    setIsLoading: jest.Mock;
+    pathDistance: string;
+    pathDuration: string;
+    setPathDistance: jest.Mock;
+    setPathDuration: jest.Mock;
+  };
 
   const baseProps = {
     originLabel: "Hall Building",
@@ -63,6 +70,10 @@ describe("RouteCard", () => {
     navigationInfoState = {
       isLoading: false,
       setIsLoading,
+      pathDistance: "",
+      pathDuration: "",
+      setPathDistance: jest.fn(),
+      setPathDuration: jest.fn(),
     };
 
     mockUseNavigationInfo.mockImplementation((selector) =>

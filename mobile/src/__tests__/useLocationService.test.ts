@@ -214,8 +214,10 @@ describe("useLocationService", () => {
   it("openSettings uses platform-specific API", async () => {
     const openSettingsSpy = jest
       .spyOn(Linking, "openSettings")
-      .mockResolvedValue();
-    const openURLSpy = jest.spyOn(Linking, "openURL").mockResolvedValue();
+      .mockResolvedValue(undefined);
+    const openURLSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useLocationService());
 

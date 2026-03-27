@@ -28,6 +28,23 @@ let mockParams: {
   floor?: string;
   startRoom?: string;
   endRoom?: string;
+  forceBuildingId?: string;
+  resumeOutdoorNavigation?: string;
+  resumeOutdoorNavigationToken?: string;
+  returnOutdoorOriginLat?: string;
+  returnOutdoorOriginLng?: string;
+  returnOutdoorOriginLabel?: string;
+  returnOutdoorOriginBuildingId?: string;
+  returnOutdoorDestinationLat?: string;
+  returnOutdoorDestinationLng?: string;
+  returnOutdoorDestinationLabel?: string;
+  returnOutdoorDestinationBuildingId?: string;
+  returnOutdoorMode?: string;
+  globalOriginRoom?: string;
+  globalOriginBuildingId?: string;
+  globalDestinationRoom?: string;
+  globalDestinationBuildingId?: string;
+  navigationKey?: string;
 } = {
   buildingId: "H",
   floor: "8",
@@ -892,8 +909,6 @@ describe("IndoorNavigation", () => {
       expect(getUniversalDirections).toHaveBeenCalled();
     });
 
-    expect(getByText("Next Shuttle Bus: 14:30")).toBeTruthy();
-
     fireEvent.press(getByTestId("toggle-directions"));
     await waitFor(() => {
       expect(getByTestId("directions-panel")).toBeTruthy();
@@ -1450,7 +1465,7 @@ describe("IndoorNavigation", () => {
     expect(getByTestId("building-name").props.children).toBe("Hall Building");
   });
 
-  it("shows shuttle banner when universal route has nextShuttleTime", async () => {
+  it("handles universal route with nextShuttleTime without crashing", async () => {
     (getAvailableRooms as jest.Mock).mockImplementation((bId: string) => {
       if (bId === "CC" || String(bId).startsWith("CC"))
         return Promise.resolve(["CC-101"]);
@@ -1472,7 +1487,7 @@ describe("IndoorNavigation", () => {
       totalDuration: "15 min",
     });
 
-    const { getByTestId, getByText } = render(<IndoorNavigation />);
+    const { getByTestId } = render(<IndoorNavigation />);
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
@@ -1480,9 +1495,7 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-second"));
 
-    await waitFor(() =>
-      expect(getByText("Next Shuttle Bus: 14:30")).toBeTruthy(),
-    );
+    await waitFor(() => expect(getUniversalDirections).toHaveBeenCalled());
   });
 
   it("resets state when building changes via params", async () => {

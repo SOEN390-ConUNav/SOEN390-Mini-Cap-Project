@@ -39,7 +39,11 @@ import DirectionPath from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
-import { NamedCoordinate, TRANSPORT_MODE_API_MAP } from "../../type";
+import {
+  NamedCoordinate,
+  TRANSPORT_MODE_API_MAP,
+  ManeuverTypeApi,
+} from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 import { haversineDistance } from "../../utils/locationUtils";
@@ -325,7 +329,7 @@ export default function HomePageIndex() {
         instruction: `Continue to ${destination?.label ?? "destination"}`,
         distance: pathDistance || activeRoute.distance,
         duration: activeRoute.duration,
-        maneuverType: "STRAIGHT",
+        maneuverType: "STRAIGHT" as ManeuverTypeApi,
         polyline: activeRoute.polyline,
       },
     ];
@@ -490,6 +494,7 @@ export default function HomePageIndex() {
           endRoom: "",
           resumeOutdoorNavigation: "0",
           resumeOutdoorNavigationToken: "",
+          navigationKey: Date.now().toString(),
         },
       });
     }
@@ -1055,6 +1060,7 @@ export default function HomePageIndex() {
             endRoom: target.exitRoom,
             resumeOutdoorNavigation: "1",
             resumeOutdoorNavigationToken: `${Date.now()}`,
+            navigationKey: Date.now().toString(),
           },
         });
       });
@@ -1132,6 +1138,7 @@ export default function HomePageIndex() {
         buildingId: target.buildingId,
         floor: initialIndoorFloor,
         forceBuildingId: "1",
+        navigationKey: Date.now().toString(),
       };
       if (target.startRoom) params.startRoom = target.startRoom;
       if (target.destinationRoom) params.endRoom = target.destinationRoom;

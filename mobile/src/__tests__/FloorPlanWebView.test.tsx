@@ -143,7 +143,7 @@ describe("FloorPlanWebView Component", () => {
   it("stays in loading state when building/floor has no SVG asset", async () => {
     // Covers getSvgAsset returning null for unknown building
     const { getByText } = render(
-      <FloorPlanWebView buildingId="XX" floorNumber="99" />,
+      <FloorPlanWebView buildingId={"XX" as any} floorNumber="99" />,
     );
     await waitFor(() => {}, { timeout: 100 });
     expect(getByText("Loading floor plan...")).toBeTruthy();

@@ -7,6 +7,17 @@ import {
   Platform,
 } from "react-native";
 import { IndoorDirectionResponse } from "../types/indoorDirections";
+import { TransportMode, TRANSPORT_MODE_API_MAP } from "../type";
+import { OutdoorDirectionResponse } from "../api/outdoorDirectionsApi";
+import NavigationTransportCard from "./navigation-config/NavigationTransportCard";
+
+const TRANSPORT_MODES: TransportMode[] = [
+  "WALK",
+  "BIKE",
+  "BUS",
+  "CAR",
+  "SHUTTLE",
+];
 
 interface BottomPanelProps {
   startRoom: string;
@@ -15,6 +26,10 @@ interface BottomPanelProps {
   isLoadingRoute: boolean;
   showDirections: boolean;
   onToggleDirections: () => void;
+  selectedTransportMode: TransportMode;
+  onTransportModeChange: (mode: TransportMode) => void;
+  outdoorRoutes: OutdoorDirectionResponse[];
+  nextShuttleTime: string | null;
 }
 
 function getSuggestionText(startRoom: string, endRoom: string): string {
@@ -31,7 +46,21 @@ export default function BottomPanel({
   isLoadingRoute,
   showDirections,
   onToggleDirections,
+  selectedTransportMode,
+  onTransportModeChange,
+  outdoorRoutes,
+  nextShuttleTime,
 }: Readonly<BottomPanelProps>) {
+  const getDurationForMode = (mode: TransportMode): string => {
+    if (mode === "SHUTTLE") return "N/A";
+    const apiMode = TRANSPORT_MODE_API_MAP[mode];
+    return (
+      outdoorRoutes.find((r) => r.transportMode === apiMode)?.duration ?? ""
+    );
+  };
+
+  const showTransportModes = outdoorRoutes.length > 0 || !!nextShuttleTime;
+
   return (
     <View style={styles.bottomPanel}>
       {!routeData || isLoadingRoute ? (
@@ -44,7 +73,7 @@ export default function BottomPanel({
       ) : (
         /* Route Summary Panel - When route is available */
         <View style={styles.routeSummaryPanel}>
-          <View style={styles.routeInfoRow}>
+          <View style={[styles.routeInfoRow, styles.horizontalPad]}>
             <View style={styles.routeInfo}>
               <Text style={styles.routeInfoLabel}>From</Text>
               <Text style={styles.routeInfoValue} numberOfLines={1}>
@@ -58,8 +87,23 @@ export default function BottomPanel({
               </Text>
             </View>
           </View>
+
+          {showTransportModes && (
+            <View style={styles.transportRow}>
+              {TRANSPORT_MODES.map((mode) => (
+                <NavigationTransportCard
+                  key={mode}
+                  mode={mode}
+                  duration={getDurationForMode(mode)}
+                  isSelected={selectedTransportMode === mode}
+                  onSelect={() => onTransportModeChange(mode)}
+                />
+              ))}
+            </View>
+          )}
+
           <TouchableOpacity
-            style={styles.goButton}
+            style={[styles.goButton, styles.horizontalPad]}
             onPress={onToggleDirections}
           >
             <Text style={styles.goButtonText}>
@@ -98,11 +142,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#757575",
   },
+  transportRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#D9D9D9",
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  horizontalPad: {
+    paddingHorizontal: 16,
+  },
   routeSummaryPanel: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
