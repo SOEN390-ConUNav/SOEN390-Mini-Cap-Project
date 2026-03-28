@@ -1,0 +1,14 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "SGW Campus"
+- assertVisible: "Upcoming event: SOEN 357 LEC"
+- tapOn: "Upcoming event: SOEN 357 LEC"
+- assertVisible: "Directions"
+- tapOn: "Directions"
+- assertVisible: "Outside"
+- tapOn: "Outside"
+- assertVisible: "GO"
+- tapOn: "GO"
+- assertVisible: "Estimated Time Arrival"
+- assertVisible: "Distance"
