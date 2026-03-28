@@ -4,6 +4,7 @@ appId: com.soen390.conunav
 - tapOn: "Import Google Calendar Schedule"
 - tapOn:
     point: "55%,54%"
+- assertVisible: "Back to safety"
 - tapOn: "Continue"
 - tapOn: "Continue"
 - extendedWaitUntil:
@@ -17,6 +18,7 @@ appId: com.soen390.conunav
 - extendedWaitUntil:
     visible: "Continue"
     timeout: 5000
+- assertVisible: "Back to safety"
 - tapOn: "Continue"
 - tapOn: "Continue"
 - extendedWaitUntil:
