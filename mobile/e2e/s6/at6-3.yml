@@ -1,0 +1,9 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Search"
+- tapOn:
+    text: ""
+    index: 0
+- tapOn: "Get Directions"
+- assertVisible: "GO"

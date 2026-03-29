@@ -16,21 +16,6 @@ import {
 } from "../data/ShuttleSchedule";
 import type { DeparturesByDay } from "../services/shuttleScheduleCache";
 
-const findAncestorStyle = (
-  instance: { parent: any } | null | undefined,
-  predicate: (style: Record<string, unknown>) => boolean,
-) => {
-  let current = instance?.parent;
-  while (current) {
-    const style = StyleSheet.flatten(current.props?.style) ?? {};
-    if (predicate(style)) {
-      return style;
-    }
-    current = current.parent;
-  }
-  return {};
-};
-
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));

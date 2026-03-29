@@ -1,0 +1,23 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "SGW Campus"
+- tapOn:
+    point: "50%,48%"
+- tapOn:
+    point: "50%,48%"
+- tapOn: "Indoor Maps"
+- tapOn: "Search"
+- extendedWaitUntil:
+    visible: "CC-111"
+    timeout: 5000
+- tapOn: "CC-111"
+- tapOn: "CC-111"
+- tapOn: "Choose destination"
+- extendedWaitUntil:
+    visible: "CC-112.1"
+    timeout: 5000
+- tapOn: "CC-112.1"
+- tapOn: "CC-112.1"
+- tapOn: "Show Directions"
+- assertVisible: "Walk straight to CC-111"

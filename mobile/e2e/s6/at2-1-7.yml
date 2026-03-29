@@ -1,0 +1,18 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "SGW Campus"
+- assertVisible: "Search"
+- tapOn: "Search"
+- assertVisible: "Restaurants"
+- assertVisible: "Parking"
+- assertVisible: "Libraries"
+- assertVisible: "Parks"
+- assertVisible: "Nearby restaurant"
+- tapOn: "Parking"
+- assertVisible: "Nearby parking"
+- assertNotVisible: "Nearby restaurant"
+- assertVisible: "Filter"
+- tapOn: "Filter"
+- assertVisible: "Filter by Distance"
+- tapOn: "5 km"

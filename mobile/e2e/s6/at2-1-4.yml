@@ -1,0 +1,17 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "SGW Campus"
+- assertVisible: "Loyola Campus"
+- tapOn: "Map Marker"
+- tapOn: "Map Marker"
+- assertVisible: "Directions"
+- tapOn: "Directions"
+- assertVisible: "Inside Building"
+- assertVisible: "Outside"
+- tapOn: "Outside"
+- assertVisible: "GO"
+- tapOn: "GO"
+- assertVisible: "Estimated Time Arrival"
+- tapOn:
+    point: "50%,65%"

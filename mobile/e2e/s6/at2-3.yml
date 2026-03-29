@@ -1,0 +1,21 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- assertVisible: "SGW Campus"
+- tapOn: "Map Marker"
+- tapOn: "Map Marker"
+- assertVisible: "Directions"
+- tapOn: "Directions"
+- assertVisible: "Inside Building"
+- assertVisible: "Outside"
+- tapOn: "Outside"
+- assertVisible: "From"
+- assertVisible: "To"
+- assertVisible: "Walk"
+- assertVisible: "Bike"
+- assertVisible: "Car"
+- assertVisible: "Bus"
+- assertVisible: "Shuttle"
+- assertVisible: "Arriving in"
+- assertVisible: "ETA"
+- assertVisible: "GO"

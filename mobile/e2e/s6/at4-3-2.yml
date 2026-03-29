@@ -1,0 +1,41 @@
+appId: com.soen390.conunav
+---
+- launchApp
+- tapOn: "Import Google Calendar Schedule"
+- tapOn:
+    point: "55%,54%"
+- assertVisible: "Back to safety"
+- tapOn: "Continue"
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 5000
+- scrollUntilVisible:
+    element: "Continue"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 5000
+- assertVisible: "Back to safety"
+- tapOn: "Continue"
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 5000
+- scrollUntilVisible:
+    element: "Continue"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Continue"
+- assertVisible: "Select a calendar"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,83%"
+- assertVisible: "Change calendar"
+- tapOn: "Directions"
+- assertVisible: "Arriving in"
+- tapOn: "GO"
+- assertVisible: "Estimated Time Arrival"
