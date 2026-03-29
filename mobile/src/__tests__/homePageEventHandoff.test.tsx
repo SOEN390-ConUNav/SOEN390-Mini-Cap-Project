@@ -23,6 +23,8 @@ let mockNavInfoStore: any;
 let mockLocationStore: any;
 let mockLocationService: any;
 let mockNavigationProgressStore: any;
+const mockNavigationInfoBottom = jest.fn((_props: any) => null);
+const mockNavigationDirectionHudBottom = jest.fn((_props: any) => null);
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -75,11 +77,11 @@ jest.mock(
 jest.mock("../components/DirectionPath", () => () => null);
 jest.mock(
   "../components/navigation-info/NavigationInfoBottom",
-  () => () => null,
+  () => (props: any) => mockNavigationInfoBottom(props),
 );
 jest.mock(
   "../components/navigation-direction/NavigationDirectionHUDBottom",
-  () => () => null,
+  () => (props: any) => mockNavigationDirectionHudBottom(props),
 );
 jest.mock(
   "../components/navigation-cancel/NavigationCancelBottom",
@@ -199,16 +201,22 @@ const resetStores = () => {
       longitude: -73.57,
       label: "Selected Location",
     },
-    setOrigin: jest.fn(),
-    setDestination: jest.fn(),
+    setOrigin: jest.fn((endpoint) => {
+      mockEndpointsStore.origin = endpoint;
+    }),
+    setDestination: jest.fn((endpoint) => {
+      mockEndpointsStore.destination = endpoint;
+    }),
     swap: jest.fn(),
     clear: jest.fn(),
   };
 
   mockNavConfigStore = {
     allOutdoorRoutes: [],
-    setAllOutdoorRoutes: jest.fn(),
-    navigationMode: "walking",
+    setAllOutdoorRoutes: jest.fn((routes) => {
+      mockNavConfigStore.allOutdoorRoutes = routes;
+    }),
+    navigationMode: "WALK",
   };
 
   mockNavInfoStore = {
@@ -356,7 +364,7 @@ describe("HomePageIndex event handoff coverage", () => {
     expect(searchLocations).not.toHaveBeenCalled();
   });
 
-  it("hands off to indoor navigation when near destination and floor is supported", async () => {
+  it("shows continue inside near the outdoor destination and opens indoor navigation when pressed", async () => {
     mockEventPayload = {
       locationText: "45.50000,-73.57000",
       detailsText: "Classroom: H-937",
@@ -381,19 +389,35 @@ describe("HomePageIndex event handoff coverage", () => {
     screen.rerender(<HomePageIndex />);
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith({
-        pathname: "/indoor-navigation",
-        params: {
-          buildingId: "H",
-          floor: "1",
-          startRoom: "Hall-Elevator-Main",
-          endRoom: "H9-937",
-        },
-      });
+      expect(screen.getByText("Continue Inside")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pathname: "/indoor-navigation",
+          params: expect.objectContaining({
+            buildingId: "H",
+            floor: "1",
+            forceBuildingId: "1",
+            startRoom: "Hall-Elevator-Main",
+            endRoom: "H9-937",
+            returnOutdoorOriginLat: "45.49",
+            returnOutdoorOriginLng: "-73.58",
+            returnOutdoorOriginLabel: "Current Location",
+            returnOutdoorDestinationLat: "45.5",
+            returnOutdoorDestinationLng: "-73.57",
+            returnOutdoorDestinationLabel: "Selected Location",
+            returnOutdoorMode: "WALK",
+          }),
+        }),
+      );
     });
   });
 
-  it("shows unsupported-floor alert when handoff target floor is unavailable", async () => {
+  it("shows continue inside near the outdoor destination and alerts when indoor floor is unavailable", async () => {
     mockEventPayload = {
       locationText: "45.50000,-73.57000",
       detailsText: "Classroom: H-937",
@@ -418,11 +442,117 @@ describe("HomePageIndex event handoff coverage", () => {
     screen.rerender(<HomePageIndex />);
 
     await waitFor(() => {
+      expect(screen.getByText("Continue Inside")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
         "Indoor directions unavailable",
         "Floor for your next class is not supported.",
       );
     });
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("shows i have arrived near the outdoor destination when there is no indoor handoff target", async () => {
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+
+    const screen = render(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(screen.getByText("I Have Arrived")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    expect(mockNavStateStore.setNavigationState).toHaveBeenCalledWith(
+      NAVIGATION_STATE.IDLE,
+    );
+    expect(mockEndpointsStore.clear).toHaveBeenCalled();
+    mockNavStateStore.isNavigating = false;
+    mockNavStateStore.isIdle = true;
+    screen.rerender(<HomePageIndex />);
+    await waitFor(() => {
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: false }),
+      );
+    });
+  });
+
+  it("restores the navigation UI when navigation resumes externally after being dismissed", async () => {
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+
+    const screen = render(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(screen.getByText("I Have Arrived")).toBeTruthy();
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: true }),
+      );
+    });
+
+    fireEvent.press(screen.getByTestId("outdoor-arrival-action"));
+
+    mockNavStateStore.isNavigating = false;
+    mockNavStateStore.isIdle = true;
+    screen.rerender(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: false }),
+      );
+    });
+
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+    screen.rerender(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(mockNavigationInfoBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({ visible: true }),
+      );
+    });
+  });
+
+  it("provides a fallback HUD step when resumed outdoor navigation has no steps", async () => {
+    mockNavStateStore.isNavigating = true;
+    mockNavStateStore.isIdle = false;
+    mockEndpointsStore.destination = {
+      latitude: 45.5,
+      longitude: -73.57,
+      label: "Hall Building",
+      buildingId: "H",
+    };
+    mockNavConfigStore.allOutdoorRoutes = [
+      {
+        transportMode: "walking",
+        distance: "182 m",
+        duration: "3 mins",
+        polyline: "abc",
+        steps: [],
+      },
+    ];
+    mockNavInfoStore.pathDistance = "182 m";
+
+    render(<HomePageIndex />);
+
+    await waitFor(() => {
+      expect(mockNavigationDirectionHudBottom).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          visible: true,
+          steps: [
+            expect.objectContaining({
+              instruction: "Continue to Hall Building",
+              distance: "182 m",
+              polyline: "abc",
+            }),
+          ],
+        }),
+      );
+    });
   });
 });

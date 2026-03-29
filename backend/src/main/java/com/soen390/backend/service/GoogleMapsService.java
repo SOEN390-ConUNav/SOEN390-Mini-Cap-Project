@@ -33,7 +33,7 @@ public class GoogleMapsService {
         String url = "https://maps.googleapis.com/maps/api/directions/json" +
                 "?origin=" + origin +
                 "&destination=" + destination +
-                "&mode=" + transportMode +
+                "&mode=" + transportMode.getApiValue() +
                 "&key=" + apiKey;
         String json = restTemplate.getForObject(url, String.class);
 

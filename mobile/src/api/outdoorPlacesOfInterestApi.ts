@@ -55,8 +55,16 @@ export async function getNearbyPlaces(
   }
 }
 export const getAllOutdoorDirectionsInfo = async (
-  origin: { latitude: number; longitude: number },
-  destination: { latitude: number; longitude: number },
+  origin: {
+    latitude: number;
+    longitude: number;
+    buildingId?: string;
+  },
+  destination: {
+    latitude: number;
+    longitude: number;
+    buildingId?: string;
+  },
 ) => {
   const modes: TransportModeApi[] = [
     "walking",
@@ -70,7 +78,12 @@ export const getAllOutdoorDirectionsInfo = async (
 
   try {
     const results = await Promise.all(
-      modes.map((mode) => getOutdoorDirections(originStr, destStr, mode)),
+      modes.map((mode) =>
+        getOutdoorDirections(originStr, destStr, mode, {
+          originBuildingId: origin.buildingId,
+          destinationBuildingId: destination.buildingId,
+        }),
+      ),
     );
     const dest_shuttle = checkAndGetViableShuttleDestination(
       destination,
@@ -78,7 +91,15 @@ export const getAllOutdoorDirectionsInfo = async (
     );
     if (dest_shuttle) {
       results.push(
-        await getOutdoorDirectionsWithShuttle(originStr, destStr, dest_shuttle),
+        await getOutdoorDirectionsWithShuttle(
+          originStr,
+          destStr,
+          dest_shuttle,
+          {
+            originBuildingId: origin.buildingId,
+            destinationBuildingId: destination.buildingId,
+          },
+        ),
       );
     }
 

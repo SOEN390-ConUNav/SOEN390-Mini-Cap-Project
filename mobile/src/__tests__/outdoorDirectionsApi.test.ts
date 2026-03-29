@@ -1,3 +1,7 @@
+jest.mock("expo-constants", () => ({
+  expoConfig: { extra: { API_BASE_URL: "http://mock-api" } },
+}));
+
 import {
   getOutdoorDirections,
   OutdoorDirectionResponse,
@@ -76,6 +80,31 @@ describe("outdoorDirectionsApi", () => {
       "Failed to fetch directions:",
       expect.any(Error),
     );
+  });
+
+  it("passes building ids when provided", async () => {
+    const mockData = {
+      distance: "1.2 km",
+      duration: "15 mins",
+      polyline: "abc",
+      transportMode: "walking",
+      steps: [],
+    };
+
+    (fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockData,
+    });
+
+    await getOutdoorDirections("origin", "destination", "walking", {
+      originBuildingId: "MB",
+      destinationBuildingId: "H",
+    });
+
+    const calledUrl = new URL((fetch as jest.Mock).mock.calls[0][0]);
+    expect(calledUrl.searchParams.get("originBuildingId")).toBe("MB");
+    expect(calledUrl.searchParams.get("destinationBuildingId")).toBe("H");
   });
 });
 
@@ -193,11 +222,26 @@ describe("getOutdoorDirectionsWithShuttle", () => {
       "LOYOLA",
     );
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(encodeURIComponent("45.495, -73.578")),
-    );
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(encodeURIComponent("45.458, -73.638")),
-    );
+    const calledUrl = new URL(mockFetch.mock.calls[0][0]);
+    expect(calledUrl.searchParams.get("origin")).toBe("45.495, -73.578");
+    expect(calledUrl.searchParams.get("destination")).toBe("45.458, -73.638");
+  });
+
+  it("passes building ids to shuttle directions when provided", async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      headers: { get: () => "100" },
+      json: async () => mockResponse,
+    });
+
+    await getOutdoorDirectionsWithShuttle("origin", "destination", "LOYOLA", {
+      originBuildingId: "MB",
+      destinationBuildingId: "H",
+    });
+
+    const calledUrl = new URL(mockFetch.mock.calls[0][0]);
+    expect(calledUrl.searchParams.get("originBuildingId")).toBe("MB");
+    expect(calledUrl.searchParams.get("destinationBuildingId")).toBe("H");
   });
 });

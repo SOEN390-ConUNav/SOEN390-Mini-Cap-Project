@@ -62,8 +62,8 @@ class UniversalRoutingServiceTest {
         );
 
         verify(googleMapsService).getDirections(
-                BuildingLocation.H.address,
-                BuildingLocation.MB.address,
+                BuildingLocation.H.getDirectionsTarget(),
+                BuildingLocation.MB.getDirectionsTarget(),
                 TransportMode.WALKING
         );
         assertNull(response.getNextShuttleTime());
@@ -88,8 +88,8 @@ class UniversalRoutingServiceTest {
         );
 
         verify(googleMapsService).getDirections(
-                BuildingLocation.H.address,
-                BuildingLocation.VL.address,
+                BuildingLocation.H.getDirectionsTarget(),
+                BuildingLocation.VL.getDirectionsTarget(),
                 TransportMode.TRANSIT
         );
         assertEquals("23:59", response.getNextShuttleTime());

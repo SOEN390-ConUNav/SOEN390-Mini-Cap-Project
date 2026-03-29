@@ -71,7 +71,7 @@ public class UniversalRoutingService {
         TransportMode mode = sameCampus ? TransportMode.WALKING : TransportMode.TRANSIT;
 
         OutdoorDirectionResponse leg2 = googleMapsService.getDirections(
-                originLoc.address, destLoc.address, mode);
+                originLoc.getDirectionsTarget(), destLoc.getDirectionsTarget(), mode);
 
         String nextShuttle = null;
         if (!sameCampus) {
