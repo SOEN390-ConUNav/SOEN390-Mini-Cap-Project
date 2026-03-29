@@ -92,6 +92,23 @@ const departures = [
   },
 ];
 
+function findAncestorStyle(
+  node: { parent: any },
+  predicate: (style: Record<string, any>) => boolean,
+) {
+  let current = node.parent;
+
+  while (current) {
+    const style = StyleSheet.flatten(current.props?.style);
+    if (style && predicate(style)) {
+      return style;
+    }
+    current = current.parent;
+  }
+
+  throw new Error("No ancestor with matching style was found.");
+}
+
 describe("ShuttleInfoPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();

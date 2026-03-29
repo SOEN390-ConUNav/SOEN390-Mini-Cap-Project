@@ -16,10 +16,14 @@ jest.mock("react-native-gesture-handler", () => {
   return { GestureHandlerRootView: View };
 });
 
-jest.mock("@gorhom/bottom-sheet", () => ({
-  BottomSheetModalProvider: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
+jest.mock(
+  "@gorhom/bottom-sheet",
+  () => ({
+    BottomSheetModalProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  }),
+  { virtual: true },
+);
 
 jest.mock("../hooks/useTheme", () => ({
   useTheme: () => ({
