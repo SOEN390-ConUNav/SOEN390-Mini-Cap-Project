@@ -272,6 +272,115 @@ const buildCrossFloorRoute = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const buildUniversalContinuationResponse = (
+  outdoorRouteOverrides: Record<string, unknown> = {},
+) => ({
+  startIndoorRoute: {
+    startFloor: "8",
+    endFloor: "8",
+    steps: [
+      {
+        instruction: "Head to the building exit",
+        distance: "10 m",
+        duration: "1 min",
+        floor: "8",
+        maneuverType: "STRAIGHT",
+      },
+    ],
+    routePoints: [{ x: 1, y: 1, label: "H8-801" }],
+  },
+  outdoorRoute: {
+    distance: "500 m",
+    duration: "7 min",
+    polyline: "abc",
+    transportMode: "walking",
+    steps: [],
+    ...outdoorRouteOverrides,
+  },
+  endIndoorRoute: {
+    startFloor: "1",
+    endFloor: "1",
+    buildingName: "Vanier Library Building",
+    steps: [
+      {
+        instruction: "Proceed to VL-101",
+        distance: "10 m",
+        duration: "1 min",
+        floor: "1",
+        maneuverType: "STRAIGHT",
+      },
+    ],
+    routePoints: [
+      { x: 2, y: 2, label: "VL-Entrance-Exit" },
+      { x: 4, y: 4, label: "VL-101" },
+    ],
+  },
+  nextShuttleTime: null,
+  totalDuration: "12 min",
+});
+
+const buildDecisionHeavySameFloorRoute = () => ({
+  distance: "60 m",
+  duration: "3 min",
+  buildingName: "Hall Building",
+  buildingId: "Hall-8",
+  startFloor: "8",
+  endFloor: "8",
+  steps: [
+    {
+      instruction: "Walk east",
+      distance: "20 m",
+      duration: "1 min",
+      floor: "8",
+      maneuverType: "STRAIGHT",
+    },
+    {
+      instruction: "Turn toward the hallway",
+      distance: "20 m",
+      duration: "1 min",
+      floor: "8",
+      maneuverType: "TURN_RIGHT",
+    },
+    {
+      instruction: "Continue to H-820",
+      distance: "20 m",
+      duration: "1 min",
+      floor: "8",
+      maneuverType: "TURN_LEFT",
+    },
+  ],
+  polyline: "",
+  routePoints: [
+    { x: 0, y: 0, label: "H-801" },
+    { x: 24, y: 0, label: "H8-Corner-A" },
+    { x: 24, y: 24, label: "H8-Corner-B" },
+    { x: 48, y: 24, label: "H-820" },
+  ],
+  stairMessage: null,
+});
+
+const openUniversalContinuationStepAction = async () => {
+  const utils = render(<IndoorNavigation />);
+
+  fireEvent.press(utils.getByTestId("open-start"));
+  fireEvent.press(utils.getByTestId("pick-room-first"));
+  fireEvent.press(utils.getByTestId("open-end"));
+  fireEvent.press(utils.getByTestId("pick-room-universal"));
+  fireEvent.press(utils.getByTestId("toggle-directions"));
+
+  await waitFor(() => {
+    expect(utils.getByTestId("directions-panel")).toBeTruthy();
+  });
+
+  fireEvent.press(utils.getByTestId("collapse-directions"));
+
+  await waitFor(() => {
+    expect(utils.getByTestId("next-action-button")).toBeTruthy();
+  });
+
+  return utils;
+};
+
 describe("IndoorNavigation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -408,6 +517,77 @@ describe("IndoorNavigation", () => {
           destinationRoom: "VL-101",
           startRoom: "VL-Entrance-Exit",
         }),
+      );
+    });
+  });
+
+  it.each([
+    ["bicycling", "BIKE"],
+    ["driving", "CAR"],
+    ["transit", "BUS"],
+    ["shuttle", "SHUTTLE"],
+  ])(
+    "preserves existing outdoor steps and maps %s continuation routes to %s",
+    async (transportMode, expectedMode) => {
+      const preservedSteps = [
+        {
+          instruction: `Continue by ${transportMode}`,
+          distance: "500 m",
+          duration: "7 min",
+          maneuverType: "STRAIGHT",
+          polyline: "existing-polyline",
+        },
+      ];
+
+      useNavigationConfig.setState({
+        navigationMode: expectedMode as "BIKE" | "CAR" | "BUS" | "SHUTTLE",
+        allOutdoorRoutes: [],
+      });
+      (getAllOutdoorDirectionsInfo as jest.Mock).mockResolvedValue([]);
+      (getUniversalDirections as jest.Mock).mockResolvedValue(
+        buildUniversalContinuationResponse({
+          transportMode,
+          polyline: "existing-polyline",
+          steps: preservedSteps,
+        }),
+      );
+
+      const { getByTestId } = await openUniversalContinuationStepAction();
+
+      fireEvent.press(getByTestId("next-action-button"));
+
+      await waitFor(() => {
+        expect(useNavigationConfig.getState().navigationMode).toBe(
+          expectedMode,
+        );
+        expect(
+          useNavigationConfig.getState().allOutdoorRoutes[0]?.steps,
+        ).toEqual(preservedSteps);
+        expect(mockReplace).toHaveBeenCalledWith("/(home-page)");
+      });
+    },
+  );
+
+  it("keeps outdoor routes step-free when the continuation route has no polyline", async () => {
+    (getAllOutdoorDirectionsInfo as jest.Mock).mockResolvedValue([]);
+    (getUniversalDirections as jest.Mock).mockResolvedValue(
+      buildUniversalContinuationResponse({
+        polyline: "",
+        steps: [],
+      }),
+    );
+
+    const { getByTestId } = await openUniversalContinuationStepAction();
+
+    fireEvent.press(getByTestId("next-action-button"));
+
+    await waitFor(() => {
+      expect(useNavigationConfig.getState().allOutdoorRoutes).toHaveLength(1);
+      expect(useNavigationConfig.getState().allOutdoorRoutes[0]?.steps).toEqual(
+        [],
+      );
+      expect(useNavigationConfig.getState().allOutdoorRoutes[0]?.polyline).toBe(
+        "",
       );
     });
   });
@@ -1454,6 +1634,41 @@ describe("IndoorNavigation", () => {
 
     await waitFor(() => {
       expect(mockSetParams).toHaveBeenCalledWith({ floor: "9" });
+      expect(getByTestId("route-point-count").props.children).toBe("2");
+    });
+  });
+
+  it("shortens same-floor displayed routes at each decision point", async () => {
+    (getIndoorDirections as jest.Mock).mockResolvedValue(
+      buildDecisionHeavySameFloorRoute(),
+    );
+
+    const { getByTestId } = render(<IndoorNavigation />);
+
+    fireEvent.press(getByTestId("open-start"));
+    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("open-end"));
+    fireEvent.press(getByTestId("pick-room-second"));
+
+    await waitFor(() => {
+      expect(getByTestId("route-point-count").props.children).toBe("4");
+    });
+
+    fireEvent.press(getByTestId("toggle-directions"));
+    await waitFor(() => {
+      expect(getByTestId("directions-panel")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("collapse-directions"));
+
+    fireEvent.press(getByTestId("next-step-button"));
+
+    await waitFor(() => {
+      expect(getByTestId("route-point-count").props.children).toBe("3");
+    });
+
+    fireEvent.press(getByTestId("next-step-button"));
+
+    await waitFor(() => {
       expect(getByTestId("route-point-count").props.children).toBe("2");
     });
   });
