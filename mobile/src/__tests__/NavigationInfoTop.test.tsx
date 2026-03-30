@@ -1,33 +1,51 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
-import NavigationInfoTop from "../components/navigation-info/NavigationInfoTop";
+import NavigationInfoTopCombined from "../components/navigation-info/NavigationInfoTopCombined";
+import useNavigationInfo from "../hooks/useNavigationInfo";
+
+jest.mock("../hooks/useNavigationInfo", () => jest.fn());
 
 jest.mock("@expo/vector-icons", () => {
   return {
-    MaterialIcons: ({ name, size, color }: any) => {
+    MaterialIcons: ({ name }: any) => {
       const { Text } = require("react-native");
       return <Text testID="icon">{name}</Text>;
+    },
+    Ionicons: ({ name }: any) => {
+      const { Text } = require("react-native");
+      return <Text testID="ion-icon">{name}</Text>;
     },
   };
 });
 
-describe("NavigationInfoTop", () => {
+describe("NavigationInfoTop (collapsed)", () => {
   const baseProps = {
     destination: "Loyola Campus",
+    showInfoExtended: false,
+    showHudExtended: false,
   };
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useNavigationInfo as unknown as jest.Mock).mockImplementation((selector) =>
+      selector({ pathDistance: "2.5 km", pathDuration: "10 min" }),
+    );
+  });
+
   it("renders without crashing", () => {
-    const { root } = render(<NavigationInfoTop {...baseProps} />);
+    const { root } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(root).toBeTruthy();
   });
 
   it("renders the destination text", () => {
-    const { getByText } = render(<NavigationInfoTop {...baseProps} />);
+    const { getByText } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(getByText("Loyola Campus")).toBeTruthy();
   });
 
   it("renders the place icon", () => {
-    const { getByTestId } = render(<NavigationInfoTop {...baseProps} />);
+    const { getByTestId } = render(
+      <NavigationInfoTopCombined {...baseProps} />,
+    );
     expect(getByTestId("icon")).toBeTruthy();
     expect(getByTestId("icon").props.children).toBe("place");
   });

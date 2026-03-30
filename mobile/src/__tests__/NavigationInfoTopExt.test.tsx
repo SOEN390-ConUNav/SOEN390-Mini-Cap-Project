@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
-import NavigationInfoTopExt from "../components/navigation-info/NavigationInfoTopExt";
+import NavigationInfoTopCombined from "../components/navigation-info/NavigationInfoTopCombined";
 import useNavigationInfo from "../hooks/useNavigationInfo";
 
 jest.mock("../hooks/useNavigationInfo", () => jest.fn());
@@ -10,10 +10,18 @@ jest.mock("@expo/vector-icons", () => ({
     const { Text } = require("react-native");
     return <Text testID="icon">{name}</Text>;
   },
+  Ionicons: ({ name }: any) => {
+    const { Text } = require("react-native");
+    return <Text testID="ion-icon">{name}</Text>;
+  },
 }));
 
-describe("NavigationInfoTopExt", () => {
-  const baseProps = { destination: "Loyola Campus" };
+describe("NavigationInfoTop (extended)", () => {
+  const baseProps = {
+    destination: "Loyola Campus",
+    showInfoExtended: true,
+    showHudExtended: false,
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -27,28 +35,30 @@ describe("NavigationInfoTopExt", () => {
   });
 
   it("renders without crashing", () => {
-    const { root } = render(<NavigationInfoTopExt {...baseProps} />);
+    const { root } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(root).toBeTruthy();
   });
 
   it("renders the destination text", () => {
-    const { getByText } = render(<NavigationInfoTopExt {...baseProps} />);
+    const { getByText } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(getByText("Loyola Campus")).toBeTruthy();
   });
 
   it("renders the place icon", () => {
-    const { getByTestId } = render(<NavigationInfoTopExt {...baseProps} />);
+    const { getByTestId } = render(
+      <NavigationInfoTopCombined {...baseProps} />,
+    );
     expect(getByTestId("icon")).toBeTruthy();
     expect(getByTestId("icon").props.children).toBe("place");
   });
 
   it("renders distance correctly", () => {
-    const { getByText } = render(<NavigationInfoTopExt {...baseProps} />);
+    const { getByText } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(getByText("2.5 km")).toBeTruthy();
   });
 
   it("calculates ETA correctly", () => {
-    const { getByText } = render(<NavigationInfoTopExt {...baseProps} />);
+    const { getByText } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(getByText(/^\d{2}:\d{2}$/)).toBeTruthy();
   });
 
@@ -60,7 +70,7 @@ describe("NavigationInfoTopExt", () => {
       }),
     );
 
-    const { getByText } = render(<NavigationInfoTopExt {...baseProps} />);
+    const { getByText } = render(<NavigationInfoTopCombined {...baseProps} />);
     expect(getByText("--:--")).toBeTruthy();
   });
 });
