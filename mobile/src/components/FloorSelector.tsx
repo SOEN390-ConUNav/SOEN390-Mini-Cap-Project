@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import ModalHeader from "./ModalHeader";
 
 interface FloorSelectorProps {
   currentFloor: string;
@@ -48,17 +49,11 @@ export default function FloorSelector({
             style={styles.modalContent}
             onStartShouldSetResponder={() => true}
           >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {buildingName || "Building"} - Select Floor
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsVisible(false)}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color="#424242" />
-              </TouchableOpacity>
-            </View>
+            <ModalHeader
+              title={`${buildingName || "Building"} - Select Floor`}
+              onClose={() => setIsVisible(false)}
+              style={styles.modalHeader}
+            />
 
             <View style={styles.floorsList}>
               {availableFloors.map((floor) => (
@@ -134,24 +129,9 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#212121",
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
   },
   floorsList: {
     padding: 8,

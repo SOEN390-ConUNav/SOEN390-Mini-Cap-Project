@@ -21,6 +21,7 @@ import useLocationStore from "../hooks/useLocationStore";
 import useLocationService from "../hooks/useLocationService";
 import cacheService from "../services/cacheService";
 import { useTheme } from "../hooks/useTheme";
+import ModalHeader from "./ModalHeader";
 
 const BURGUNDY = "#800020";
 const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
@@ -195,14 +196,12 @@ export default function SearchPanel({
     <Modal visible={visible} animationType="slide" transparent>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.primary }]}>Search</Text>
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Text style={[styles.closeText, { color: colors.primary }]}>
-              Close
-            </Text>
-          </Pressable>
-        </View>
+        <ModalHeader
+          title="Search"
+          onClose={onClose}
+          closeVariant="text"
+          style={styles.header}
+        />
 
         <View
           style={[styles.searchContainer, { backgroundColor: colors.surface }]}
@@ -359,18 +358,12 @@ export default function SearchPanel({
                 onPress={() => distance.setDistanceFilterVisible(false)}
               />
               <View style={styles.filterModal}>
-                <View style={styles.filterModalHeader}>
-                  <Text style={styles.filterModalTitle}>
-                    Filter by Distance
-                  </Text>
-                  <Pressable
-                    testID="close-filter-button"
-                    onPress={() => distance.setDistanceFilterVisible(false)}
-                    style={styles.closeBtn}
-                  >
-                    <Ionicons name="close" size={24} color={colors.primary} />
-                  </Pressable>
-                </View>
+                <ModalHeader
+                  title="Filter by Distance"
+                  onClose={() => distance.setDistanceFilterVisible(false)}
+                  closeTestID="close-filter-button"
+                  style={styles.filterModalHeader}
+                />
 
                 <View style={styles.filterOptions}>
                   <Text style={styles.filterSubtitle}>Preset Distances</Text>
@@ -459,7 +452,7 @@ export default function SearchPanel({
                   <Pressable
                     testID="close-details-button"
                     onPress={() => location.setLocationDetailVisible(false)}
-                    style={styles.closeBtn}
+                    style={styles.closeDetailsBtn}
                   >
                     <Ionicons name="close" size={24} color={colors.primary} />
                   </Pressable>
@@ -758,21 +751,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 12,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  closeBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  closeText: {
-    fontWeight: "600",
   },
   input: {
     height: 44,
@@ -856,15 +835,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   filterModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 20,
-  },
-  filterModalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: BURGUNDY,
   },
   filterOptions: {
     gap: 8,
@@ -952,6 +923,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: -3 },
     elevation: 15,
+  },
+  closeDetailsBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
   detailModalHeader: {
     flexDirection: "row",
