@@ -154,6 +154,13 @@ jest.mock("../components/RoomListModal", () => {
         </Pressable>
 
         <Pressable
+          testID="pick-room-basement"
+          onPress={() => props.onSelectRoom("ZZ-S2")}
+        >
+          <Text>Pick Basement Room</Text>
+        </Pressable>
+
+        <Pressable
           testID="pick-room-cc"
           onPress={() => props.onSelectRoom("CC-101")}
         >
@@ -2255,7 +2262,7 @@ describe("IndoorNavigation", () => {
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-basement"));
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-unknown"));
 
