@@ -132,7 +132,7 @@ jest.mock("../components/IndoorSearchBar", () => {
 });
 
 jest.mock("../components/RoomListModal", () => {
-  const { View, Text, Pressable, TextInput } = require("react-native");
+  const { View, Text, Pressable } = require("react-native");
   return (props: any) => {
     if (!props.visible) return null;
 
@@ -140,18 +140,26 @@ jest.mock("../components/RoomListModal", () => {
       <View>
         <Text testID="selecting-for">{props.selectingFor}</Text>
 
-        <TextInput
-          testID="mock-room-search"
-          onChangeText={props.onSearchChange}
-        />
-
         <Pressable
           testID="pick-room-first"
-          onPress={() => props.onSelectRoom(props.filteredRooms[0] || "H-801")}
+          onPress={() => props.onSelectRoom("H-801")}
         >
           <Text>Pick First Room</Text>
         </Pressable>
-        {/* NEW BUTTON FOR CROSS-CAMPUS COVERAGE */}
+        <Pressable
+          testID="pick-room-second"
+          onPress={() => props.onSelectRoom("H-820")}
+        >
+          <Text>Pick Second Room</Text>
+        </Pressable>
+
+        <Pressable
+          testID="pick-room-cc"
+          onPress={() => props.onSelectRoom("CC-101")}
+        >
+          <Text>Pick CC Room</Text>
+        </Pressable>
+
         <Pressable
           testID="pick-room-universal"
           onPress={() => props.onSelectRoom("VL-101")}
@@ -1706,10 +1714,9 @@ describe("IndoorNavigation", () => {
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
-    fireEvent.changeText(getByTestId("mock-room-search"), "CC");
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("pick-room-cc"));
 
     await waitFor(() => expect(getUniversalDirections).toHaveBeenCalled());
   });
@@ -1771,10 +1778,9 @@ describe("IndoorNavigation", () => {
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
-    fireEvent.changeText(getByTestId("mock-room-search"), "CC");
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-first"));
+    fireEvent.press(getByTestId("pick-room-cc"));
 
     await waitFor(() => {
       expect(getUniversalDirections).toHaveBeenCalled();
