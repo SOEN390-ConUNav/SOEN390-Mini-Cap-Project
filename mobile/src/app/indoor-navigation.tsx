@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   StyleSheet,
   View,
@@ -2133,9 +2139,35 @@ export default function IndoorNavigation() {
     paramStartRoom,
   ]);
 
-  const filteredRooms = availableRooms.filter((room) =>
-    room.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredRooms = useMemo(() => {
+    const isTyping = searchQuery.trim().length > 0;
+
+    if (!isTyping) {
+      const buildingRooms = availableRooms.filter(
+        (room) =>
+          getBuildingFromRoom(room, activeBuildingId) === activeBuildingId,
+      );
+
+      return buildingRooms.sort((a, b) => {
+        const aFloor = getFloorFromRoom(a, effectiveCurrentFloor);
+        const bFloor = getFloorFromRoom(b, effectiveCurrentFloor);
+
+        const aIsCurrentFloor = aFloor === effectiveCurrentFloor;
+        const bIsCurrentFloor = bFloor === effectiveCurrentFloor;
+
+        //prioritize rooms on the current floor
+        if (aIsCurrentFloor && !bIsCurrentFloor) return -1;
+        if (!aIsCurrentFloor && bIsCurrentFloor) return 1;
+
+        return a.localeCompare(b);
+      });
+    }
+
+    const lowerQuery = searchQuery.toLowerCase();
+    return availableRooms.filter((room) =>
+      room.toLowerCase().includes(lowerQuery),
+    );
+  }, [availableRooms, searchQuery, activeBuildingId, effectiveCurrentFloor]);
 
   const clearStart = () => {
     setStartRoom("");
