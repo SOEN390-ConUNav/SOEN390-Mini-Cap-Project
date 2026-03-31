@@ -139,19 +139,34 @@ jest.mock("../components/RoomListModal", () => {
     return (
       <View>
         <Text testID="selecting-for">{props.selectingFor}</Text>
+
         <Pressable
           testID="pick-room-first"
-          onPress={() => props.onSelectRoom(props.filteredRooms[0] || "H-801")}
+          onPress={() => props.onSelectRoom("H-801")}
         >
           <Text>Pick First Room</Text>
         </Pressable>
         <Pressable
           testID="pick-room-second"
-          onPress={() => props.onSelectRoom(props.filteredRooms[1] || "H-820")}
+          onPress={() => props.onSelectRoom("H-820")}
         >
           <Text>Pick Second Room</Text>
         </Pressable>
-        {/* NEW BUTTON FOR CROSS-CAMPUS COVERAGE */}
+
+        <Pressable
+          testID="pick-room-basement"
+          onPress={() => props.onSelectRoom("ZZ-S2")}
+        >
+          <Text>Pick Basement Room</Text>
+        </Pressable>
+
+        <Pressable
+          testID="pick-room-cc"
+          onPress={() => props.onSelectRoom("CC-101")}
+        >
+          <Text>Pick CC Room</Text>
+        </Pressable>
+
         <Pressable
           testID="pick-room-universal"
           onPress={() => props.onSelectRoom("VL-101")}
@@ -1708,7 +1723,7 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-start"));
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-cc"));
 
     await waitFor(() => expect(getUniversalDirections).toHaveBeenCalled());
   });
@@ -1772,7 +1787,7 @@ describe("IndoorNavigation", () => {
     fireEvent.press(getByTestId("open-start"));
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-cc"));
 
     await waitFor(() => {
       expect(getUniversalDirections).toHaveBeenCalled();
@@ -2247,7 +2262,7 @@ describe("IndoorNavigation", () => {
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-basement"));
     fireEvent.press(getByTestId("open-end"));
     fireEvent.press(getByTestId("pick-room-unknown"));
 
