@@ -132,24 +132,24 @@ jest.mock("../components/IndoorSearchBar", () => {
 });
 
 jest.mock("../components/RoomListModal", () => {
-  const { View, Text, Pressable } = require("react-native");
+  const { View, Text, Pressable, TextInput } = require("react-native");
   return (props: any) => {
     if (!props.visible) return null;
 
     return (
       <View>
         <Text testID="selecting-for">{props.selectingFor}</Text>
+
+        <TextInput
+          testID="mock-room-search"
+          onChangeText={props.onSearchChange}
+        />
+
         <Pressable
           testID="pick-room-first"
           onPress={() => props.onSelectRoom(props.filteredRooms[0] || "H-801")}
         >
           <Text>Pick First Room</Text>
-        </Pressable>
-        <Pressable
-          testID="pick-room-second"
-          onPress={() => props.onSelectRoom(props.filteredRooms[1] || "H-820")}
-        >
-          <Text>Pick Second Room</Text>
         </Pressable>
         {/* NEW BUTTON FOR CROSS-CAMPUS COVERAGE */}
         <Pressable
@@ -1706,9 +1706,10 @@ describe("IndoorNavigation", () => {
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
+    fireEvent.changeText(getByTestId("mock-room-search"), "CC");
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-first"));
 
     await waitFor(() => expect(getUniversalDirections).toHaveBeenCalled());
   });
@@ -1770,9 +1771,10 @@ describe("IndoorNavigation", () => {
     await waitFor(() => expect(getAvailableRooms).toHaveBeenCalled());
 
     fireEvent.press(getByTestId("open-start"));
+    fireEvent.changeText(getByTestId("mock-room-search"), "CC");
     fireEvent.press(getByTestId("pick-room-first"));
     fireEvent.press(getByTestId("open-end"));
-    fireEvent.press(getByTestId("pick-room-second"));
+    fireEvent.press(getByTestId("pick-room-first"));
 
     await waitFor(() => {
       expect(getUniversalDirections).toHaveBeenCalled();
