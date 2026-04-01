@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -73,6 +73,8 @@ export default function SearchPanel({
 
   const { getCurrentPosition } = useLocationService();
 
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const hasLocationPermission = permissionStatus === "granted";
   const locationCacheKeyPart = currentLocation
     ? `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}`
@@ -86,6 +88,35 @@ export default function SearchPanel({
       loadSearchHistory();
     }
   }, [visible]);
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery) {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(trimmedQuery);
+    }, 400);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+    };
+  }, [query]);
 
   useEffect(() => {
     setNearby([]);
@@ -141,6 +172,44 @@ export default function SearchPanel({
     setRecentSearches(list);
   }
 
+  async function performSearch(searchQuery: string) {
+    const queryToUse = String(searchQuery).trim();
+    if (!queryToUse) return;
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    setSearching(true);
+    setSearchResults([]);
+
+    try {
+      let coords = currentLocation;
+      if (!coords && hasLocationPermission) {
+        coords = await getCurrentPosition();
+      }
+      coords ??= FALLBACK_COORDS;
+
+      const results = await searchLocations(
+        queryToUse,
+        coords.latitude,
+        coords.longitude,
+      );
+
+      setSearchResults(results);
+    } catch (e) {
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
+    } finally {
+      setSearching(false);
+    }
+  }
+
   type SearchEvent = { nativeEvent: { text: string } };
 
   async function handleSearch(searchQuery?: string | SearchEvent) {
@@ -158,6 +227,11 @@ export default function SearchPanel({
     ).trim();
 
     if (!queryToUse) return;
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
 
     setQuery(queryToUse);
     setSearching(true);
