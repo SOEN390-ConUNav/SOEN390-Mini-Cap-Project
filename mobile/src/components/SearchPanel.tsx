@@ -74,6 +74,8 @@ export default function SearchPanel({
   const { getCurrentPosition } = useLocationService();
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextDebounceRef = useRef(false);
+  const queryVersionRef = useRef(0);
 
   const hasLocationPermission = permissionStatus === "granted";
   const locationCacheKeyPart = currentLocation
@@ -90,6 +92,11 @@ export default function SearchPanel({
   }, [visible]);
 
   useEffect(() => {
+    if (skipNextDebounceRef.current) {
+      skipNextDebounceRef.current = false;
+      return;
+    }
+
     const trimmedQuery = query.trim();
 
     if (!trimmedQuery) {
@@ -106,7 +113,9 @@ export default function SearchPanel({
       clearTimeout(searchTimeoutRef.current);
     }
 
+    const debounceVersion = ++queryVersionRef.current;
     searchTimeoutRef.current = setTimeout(() => {
+      if (queryVersionRef.current !== debounceVersion) return;
       performSearch(trimmedQuery);
     }, 400);
 
@@ -233,6 +242,8 @@ export default function SearchPanel({
       searchTimeoutRef.current = null;
     }
 
+    queryVersionRef.current += 1;
+    skipNextDebounceRef.current = true;
     setQuery(queryToUse);
     setSearching(true);
     setSearchResults([]);

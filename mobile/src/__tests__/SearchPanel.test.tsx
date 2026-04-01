@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
 import SearchPanel from "../components/SearchPanel";
 import cacheService from "../services/cacheService";
 import { searchLocations, getNearbyPlaces } from "../api";
@@ -127,6 +127,10 @@ describe("SearchPanel", () => {
     mockCalculateDistance.mockReturnValue(0);
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders recent searches when visible", async () => {
     mockGetSearchHistory.mockResolvedValue([
       { query: "Library", timestamp: 1_700_000_000_000 },
@@ -169,6 +173,85 @@ describe("SearchPanel", () => {
       expect(searchLocations).not.toHaveBeenCalled();
       expect(addSearchHistory).not.toHaveBeenCalled();
     });
+  });
+
+  it("performs live search after typing with debounce", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("cancels pending debounce when submit is pressed during typing", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place");
+    fireEvent(input, "submitEditing", { nativeEvent: { text: "Place A" } });
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledTimes(1);
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("does not perform search when query is cleared before the debounce timer fires", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(input, "   ");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    expect(mockSearchLocations).not.toHaveBeenCalled();
   });
 
   it("runs search and selects a result", async () => {
