@@ -423,6 +423,17 @@ export default function HomePageIndex() {
       .catch(() => {});
   }, [isNavigating]);
 
+  // Keep user centered on map during active navigation
+  useEffect(() => {
+    if (isNavigating && currentLocation && mapReady) {
+      animateToRegion({
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        ...NAVIGATION_ZOOM,
+      });
+    }
+  }, [currentLocation, isNavigating, mapReady]);
+
   useEffect(() => {
     if (
       params.shuttleCampus &&
