@@ -74,10 +74,7 @@ export default function SearchPanel({
   const [nearby, setNearby] = useState<NearbyPlace[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
-  const { distance, location, hours } = useDistanceFilter();
-  const todayIndexJS = new Date().getDay();
-  // Convert to Google format (Monday first)
-  const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
+  const { distance, location } = useDistanceFilter();
 
   const permissionStatus = useLocationStore((state) => state.permissionStatus);
   const currentLocation = useLocationStore((state) => state.currentLocation);

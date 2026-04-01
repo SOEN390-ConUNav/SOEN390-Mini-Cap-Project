@@ -106,7 +106,7 @@ export default function PoiDetailsModal({
             </View>
           ) : null}
 
-          {poi.rating != null ? (
+          {poi.rating == null ? null : (
             <View style={styles.detailSection}>
               <Ionicons name="star" size={18} color={BURGUNDY} />
               <View style={styles.detailSectionContent}>
@@ -114,7 +114,7 @@ export default function PoiDetailsModal({
                 <Text style={styles.detailValue}>{poi.rating.toFixed(1)} / 5.0</Text>
               </View>
             </View>
-          ) : null}
+          )}
 
           <View style={styles.detailSection}>
             <Ionicons name="time" size={18} color={BURGUNDY} />
