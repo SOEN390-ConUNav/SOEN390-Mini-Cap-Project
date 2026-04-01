@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../hooks/useTheme";
 import { SettingsScreenScaffold } from "../../components/settings/SettingsScreenScaffold";
+import { SettingsCard } from "../../components/settings";
 
 export default function SettingsAbout() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function SettingsAbout() {
 
   return (
     <SettingsScreenScaffold title="About">
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <SettingsCard>
         <View style={styles.appHeaderRow}>
           <View style={[styles.appIcon, { backgroundColor: colors.primary }]}>
             <Text style={styles.appIconLetter}>C</Text>
@@ -38,9 +39,9 @@ export default function SettingsAbout() {
           facilities, and explore everything our university has to offer with
           ease and accessibility.
         </Text>
-      </View>
+      </SettingsCard>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <SettingsCard>
         <Text style={[styles.sectionHeading, { color: colors.text }]}>
           Key Features
         </Text>
@@ -59,9 +60,9 @@ export default function SettingsAbout() {
         <Text style={[styles.bullet, { color: colors.textMuted }]}>
           • Offline map support for uninterrupted navigation.
         </Text>
-      </View>
+      </SettingsCard>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <SettingsCard>
         <Text style={[styles.sectionHeading, { color: colors.text }]}>
           Development Team
         </Text>
@@ -75,9 +76,9 @@ export default function SettingsAbout() {
           Made with <Text style={{ color: colors.primary }}>❤️</Text> in
           Montreal.
         </Text>
-      </View>
+      </SettingsCard>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <SettingsCard>
         <Pressable style={styles.rowLink}>
           <View style={styles.rowLinkLeft}>
             <Ionicons name="mail-outline" size={18} color={colors.primary} />
@@ -102,7 +103,7 @@ export default function SettingsAbout() {
             </Text>
           </View>
         </Pressable>
-      </View>
+      </SettingsCard>
 
       <Text style={[styles.footerText, { color: colors.textMuted }]}>
         © 2026 Concordia University. All rights reserved.
@@ -112,17 +113,6 @@ export default function SettingsAbout() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
   appHeaderRow: {
     flexDirection: "row",
     alignItems: "center",

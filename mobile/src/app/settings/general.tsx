@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, Pressable, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Alert } from "react-native";
 import {
   useGeneralSettings,
   getCampusLabel,
 } from "../../hooks/useGeneralSettings";
-import { useTheme } from "../../hooks/useTheme";
 import { SettingsScreenScaffold } from "../../components/settings/SettingsScreenScaffold";
+import {
+  SettingsCard,
+  SettingsKeyValueRow,
+  SettingsLinkRow,
+  SettingsPrimaryButton,
+  SettingsSectionLabel,
+} from "../../components/settings";
 
 export default function SettingsGeneral() {
-  const { colors } = useTheme();
-
   const { defaultCampus, setDefaultCampus, hydrateFromStorage } =
     useGeneralSettings();
 
@@ -32,8 +35,9 @@ export default function SettingsGeneral() {
 
   return (
     <SettingsScreenScaffold title="General">
-      <Pressable
-        style={[styles.rowCard, { backgroundColor: colors.card }]}
+      <SettingsLinkRow
+        title="Default Campus"
+        subtitle={getCampusLabel(defaultCampus)}
         onPress={() => {
           Alert.alert("Default Campus", "Choose your default campus", [
             {
@@ -47,112 +51,16 @@ export default function SettingsGeneral() {
             { text: "Cancel", style: "cancel" },
           ]);
         }}
-      >
-        <View>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>
-            Default Campus
-          </Text>
-          <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
-            {getCampusLabel(defaultCampus)}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-      </Pressable>
+      />
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+      <SettingsCard>
+        <SettingsSectionLabel style={{ marginTop: 8 }}>
           Storage
-        </Text>
-        <View style={styles.storageRow}>
-          <Text style={[styles.storageLabel, { color: colors.textMuted }]}>
-            Cache Size
-          </Text>
-          <Text style={[styles.storageValue, { color: colors.text }]}>
-            {cacheSize}
-          </Text>
-        </View>
-        <View style={styles.storageRow}>
-          <Text style={[styles.storageLabel, { color: colors.textMuted }]}>
-            Offline Maps
-          </Text>
-          <Text style={[styles.storageValue, { color: colors.text }]}>
-            {offlineMapsSize}
-          </Text>
-        </View>
-
-        <Pressable
-          style={[styles.clearButton, { backgroundColor: colors.primary }]}
-          onPress={onClearCache}
-        >
-          <Text style={styles.clearButtonText}>Clear Cache</Text>
-        </Pressable>
-      </View>
+        </SettingsSectionLabel>
+        <SettingsKeyValueRow label="Cache Size" value={cacheSize} />
+        <SettingsKeyValueRow label="Offline Maps" value={offlineMapsSize} />
+        <SettingsPrimaryButton label="Clear Cache" onPress={onClearCache} />
+      </SettingsCard>
     </SettingsScreenScaffold>
   );
 }
-
-const styles = StyleSheet.create({
-  rowCard: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  rowSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  card: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  storageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  storageLabel: {
-    fontSize: 14,
-  },
-  storageValue: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  clearButton: {
-    marginTop: 18,
-    borderRadius: 999,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  clearButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});

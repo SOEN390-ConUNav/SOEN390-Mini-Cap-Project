@@ -1,19 +1,45 @@
 #!/usr/bin/env sh
+# Husky runs hooks as: sh -e <hook>  → set -e is ON.
+# Pipelines where grep exits 1 (no match) or xargs behaves oddly will abort the
+# whole hook with a misleading exit code. Turn errexit off; check status explicitly.
+set +e
 
 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
 
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
+cd "$REPO_ROOT" || exit 1
+
 FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-# Only file types Prettier can parse
 MOBILE_FILES=$(
   printf "%s\n" "$FILES" |
     sed -n '/^mobile\//p' |
     grep -E '\.(tsx?|jsx?|json|cjs|mjs|md|ya?ml)$' || true
 )
 
-if [ -n "$MOBILE_FILES" ]; then
-  echo "📱 Formatting mobile files..."
-  # One path per Prettier run — avoids sh word-splitting bugs with newlines / (parens) in paths
-  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs -n 1 npx prettier --write || exit 1
-  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs -n 1 git add || exit 1
+if [ -z "$MOBILE_FILES" ]; then
+  exit 0
 fi
+
+echo "📱 Formatting mobile files..."
+
+PRETTIER_BIN="$REPO_ROOT/mobile/node_modules/.bin/prettier"
+if [ -x "$PRETTIER_BIN" ]; then
+  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs "$PRETTIER_BIN" --write
+else
+  printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs npx prettier --write
+fi
+prettier_status=$?
+if [ "$prettier_status" -ne 0 ]; then
+  echo "pre-commit: Prettier failed (exit $prettier_status)" >&2
+  exit "$prettier_status"
+fi
+
+printf "%s\n" "$MOBILE_FILES" | grep -v '^$' | xargs git add
+add_status=$?
+if [ "$add_status" -ne 0 ]; then
+  echo "pre-commit: git add failed (exit $add_status)" >&2
+  exit "$add_status"
+fi
+
+exit 0

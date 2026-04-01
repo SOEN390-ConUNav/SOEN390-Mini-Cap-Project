@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text, View, Switch } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Slider from "@react-native-community/slider";
 import {
   useDisplaySettings,
@@ -7,6 +7,11 @@ import {
 } from "../../hooks/useDisplaySettings";
 import { useTheme } from "../../hooks/useTheme";
 import { SettingsScreenScaffold } from "../../components/settings/SettingsScreenScaffold";
+import {
+  SettingsCard,
+  SettingsRowHeader,
+  SettingsSwitchRow,
+} from "../../components/settings";
 
 export default function SettingsDisplay() {
   const { isDark, colors } = useTheme();
@@ -31,15 +36,11 @@ export default function SettingsDisplay() {
 
   return (
     <SettingsScreenScaffold title="Display & Brightness">
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={styles.rowHeader}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>
-            Brightness
-          </Text>
-          <Text style={[styles.emphasisLabel, { color: colors.primary }]}>
-            {getBrightnessLabel(brightness)}
-          </Text>
-        </View>
+      <SettingsCard>
+        <SettingsRowHeader
+          title="Brightness"
+          valueLabel={getBrightnessLabel(brightness)}
+        />
         <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
           Adjust screen brightness level.
         </Text>
@@ -54,55 +55,37 @@ export default function SettingsDisplay() {
           value={brightness}
           onValueChange={setBrightness}
         />
-      </View>
+      </SettingsCard>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={styles.rowHeader}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>
-            Auto-Brightness
-          </Text>
-          <Switch
-            value={autoBrightness}
-            onValueChange={setAutoBrightness}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-        <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
-          Adjust brightness based on ambient light.
-        </Text>
-      </View>
+      <SettingsCard>
+        <SettingsSwitchRow
+          title="Auto-Brightness"
+          subtitle="Adjust brightness based on ambient light."
+          value={autoBrightness}
+          onValueChange={setAutoBrightness}
+          subtitleBelow
+        />
+      </SettingsCard>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <SettingsCard>
         <Text style={[styles.rowTitle, { color: colors.text }]}>
           Appearance
         </Text>
-
-        <View style={[styles.rowHeader, { marginTop: 10 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>
-              Dark Mode
-            </Text>
-            <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
-              Switch to a darker color scheme.
-            </Text>
-          </View>
-          <Switch
+        <View style={{ marginTop: 10 }}>
+          <SettingsSwitchRow
+            title="Dark Mode"
+            subtitle="Switch to a darker color scheme."
             value={darkMode}
             onValueChange={setDarkMode}
-            trackColor={{ false: colors.border, true: colors.primary }}
           />
         </View>
-      </View>
+      </SettingsCard>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={styles.rowHeader}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>
-            Color Intensity
-          </Text>
-          <Text style={[styles.emphasisLabel, { color: colors.primary }]}>
-            {colorIntensityLabel}
-          </Text>
-        </View>
+      <SettingsCard>
+        <SettingsRowHeader
+          title="Color Intensity"
+          valueLabel={colorIntensityLabel}
+        />
         <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
           Adjust vibrancy of colors throughout the app.
         </Text>
@@ -117,28 +100,12 @@ export default function SettingsDisplay() {
           value={colorIntensity}
           onValueChange={setColorIntensity}
         />
-      </View>
+      </SettingsCard>
     </SettingsScreenScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  rowHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   rowTitle: {
     fontSize: 15,
     fontWeight: "600",
@@ -147,10 +114,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     marginBottom: 8,
-  },
-  emphasisLabel: {
-    fontSize: 14,
-    fontWeight: "600",
   },
   slider: {
     marginTop: 4,
