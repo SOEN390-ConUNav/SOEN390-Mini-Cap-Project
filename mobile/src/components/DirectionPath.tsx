@@ -27,7 +27,7 @@ interface DirectionPathProps {
   readonly destination: Coordinate | null;
 }
 
-function EndPin() {
+export function EndPin() {
   return (
     <View style={styles.endPin}>
       <Ionicons name="location" size={28} color={BURGUNDY} />

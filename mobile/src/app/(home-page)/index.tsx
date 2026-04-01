@@ -36,7 +36,7 @@ import { NAVIGATION_STATE } from "../../const";
 import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
 import { useTabBarStyle } from "../../components/BottomNav";
 import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
-import DirectionPath from "../../components/DirectionPath";
+import DirectionPath, { EndPin } from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { getAllOutdoorDirectionsInfo, getNearbyPlaces, searchLocations } from "../../api";
@@ -1451,9 +1451,11 @@ export default function HomePageIndex() {
               key={`map-poi-${poi.id}-${index}`}
               coordinate={poi.location!}
               title={poi.name}
-              pinColor={colors.primary}
               onPress={() => handleMapMarkerPress(poi)}
-            />
+              tracksViewChanges={!freezeMarkers}
+            >
+              <EndPin />
+            </Marker>
           ))}
 
         {outdoorPoiMarkers.map((poi) => (
@@ -1461,9 +1463,11 @@ export default function HomePageIndex() {
             key={`poi-${poi.id}`}
             coordinate={poi.location}
             title={poi.name}
-            pinColor={colors.primary}
             onPress={() => handleMapMarkerPress(poi as any)}
-          />
+            tracksViewChanges={!freezeMarkers}
+          >
+            <EndPin />
+          </Marker>
         ))}
 
         {BUILDINGS.map((b) => (
