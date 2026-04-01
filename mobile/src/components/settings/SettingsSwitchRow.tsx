@@ -55,7 +55,7 @@ export function SettingsSwitchRow({
         {subtitle ? (
           <Text
             style={[
-              styles.rowSubtitleBelow,
+              styles.rowSubtitle,
               { color: colors.textMuted },
               subtitleStyle,
             ]}
@@ -76,7 +76,7 @@ export function SettingsSwitchRow({
         {subtitle ? (
           <Text
             style={[
-              styles.rowSubtitleInline,
+              styles.rowSubtitle,
               { color: colors.textMuted },
               subtitleStyle,
             ]}
@@ -104,12 +104,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-  rowSubtitleBelow: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  rowSubtitleInline: {
+  rowSubtitle: {
     fontSize: 13,
     marginTop: 4,
     marginBottom: 8,
