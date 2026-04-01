@@ -1614,7 +1614,9 @@ export default function HomePageIndex() {
           styles.homeFiltersWrapper,
           (isConfiguring || showNavigatingUi || showCancellingUi) && styles.overlayHidden,
         ]}
-        pointerEvents={showNavigatingUi || showCancellingUi ? "none" : "auto"}
+        pointerEvents={
+          isConfiguring || showNavigatingUi || showCancellingUi ? "none" : "auto"
+        }
       >
         <ScrollView
           horizontal
