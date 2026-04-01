@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getNearbyPlaces, searchLocations } from "../api";
+import type { NearbyPlace } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { getOpenStatusText, calculateDistance } from "../utils/location";
 import { useDistanceFilter } from "../hooks/useDistanceFilter";
@@ -37,6 +38,16 @@ const PLACE_TYPES = [
   { label: "Subway", value: "subway_station" },
 ];
 
+type OutdoorPoi = {
+  id: string;
+  name: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  address?: string;
+};
+
 type SearchPanelProps = {
   readonly visible: boolean;
   readonly onClose: () => void;
@@ -45,19 +56,21 @@ type SearchPanelProps = {
     longitude: number;
     name?: string;
   }) => void;
+  readonly onOutdoorPointsChange?: (points: OutdoorPoi[]) => void;
 };
 
 export default function SearchPanel({
   visible,
   onClose,
   onSelectLocation,
+  onOutdoorPointsChange,
 }: SearchPanelProps) {
   const { colors } = useTheme();
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>("restaurant");
-  const [nearby, setNearby] = useState<any[]>([]);
+  const [nearby, setNearby] = useState<NearbyPlace[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
   const { distance, location, hours } = useDistanceFilter();
@@ -93,6 +106,30 @@ export default function SearchPanel({
       fetchNearbyPlaces(activeFilter);
     }
   }, [activeFilter, hasLocationPermission, locationCacheKeyPart]);
+
+  useEffect(() => {
+    if (!onOutdoorPointsChange) return;
+
+    if (!visible) {
+      onOutdoorPointsChange([]);
+      return;
+    }
+
+    const source = query.trim().length > 0 ? searchResults : nearby;
+    const points = source
+      .filter(
+        (item): item is OutdoorPoi & { address?: string } =>
+          item?.location?.latitude != null && item.location.longitude != null,
+      )
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        location: item.location,
+        address: item.address,
+      }));
+
+    onOutdoorPointsChange(points);
+  }, [visible, query, searchResults, nearby, onOutdoorPointsChange]);
 
   async function fetchNearbyPlaces(placeType: string) {
     if (!hasLocationPermission) {
@@ -619,6 +656,7 @@ export default function SearchPanel({
             <View style={{ flex: 1 }}>
               <FlatList
                 data={nearby.filter((item) => {
+                  if (!item.location) return !currentLocation;
                   if (!currentLocation) return true;
 
                   const distanceValue = calculateDistance(
