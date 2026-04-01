@@ -1434,18 +1434,19 @@ export default function HomePageIndex() {
           />
         )}
 
-        {mapPoiMarkers
-          .filter((poi) => poi.location)
-          .map((poi, index) => (
-            <Marker
-              key={`map-poi-${poi.id}-${index}`}
-              coordinate={poi.location!}
-              title={poi.name}
-              pinColor={colors.primary}
-              onPress={() => handleMapMarkerPress(poi)}
-              tracksViewChanges={!freezeMarkers}
-            />
-          ))}
+        {!(isNavigating || isConfiguring || showCancellingUi) &&
+          mapPoiMarkers
+            .filter((poi) => poi.location)
+            .map((poi, index) => (
+              <Marker
+                key={`map-poi-${poi.id}-${index}`}
+                coordinate={poi.location!}
+                title={poi.name}
+                pinColor={colors.primary}
+                onPress={() => handleMapMarkerPress(poi)}
+                tracksViewChanges={!freezeMarkers}
+              />
+            ))}
 
         {BUILDINGS.map((b) => (
           <Marker
