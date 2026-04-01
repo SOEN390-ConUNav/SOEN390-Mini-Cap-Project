@@ -64,7 +64,11 @@ export default function PoiDetailsModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable
+        testID="details-modal-backdrop"
+        style={styles.backdrop}
+        onPress={onClose}
+      />
       <View style={styles.detailModal}>
         <View style={styles.detailModalHeader}>
           <Pressable
