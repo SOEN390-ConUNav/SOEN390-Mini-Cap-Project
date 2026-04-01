@@ -209,6 +209,7 @@ export default function HomePageIndex() {
     (state) => state.userSkippedPermission,
   );
   const currentLocation = useLocationStore((state) => state.currentLocation);
+  const currentHeading = useLocationStore((state) => state.currentHeading);
   const nearestBuilding = useLocationStore((state) => state.nearestBuilding);
   const nearestBuildingDistance = useLocationStore(
     (state) => state.nearestBuildingDistance,
@@ -423,16 +424,23 @@ export default function HomePageIndex() {
       .catch(() => {});
   }, [isNavigating]);
 
-  // Keep user centered on map during active navigation
+  // Keep user centered on map and follow orientation during active navigation
   useEffect(() => {
     if (isNavigating && currentLocation && mapReady) {
-      animateToRegion({
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        ...NAVIGATION_ZOOM,
-      });
+      mapRef.current?.animateCamera(
+        {
+          center: {
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+          },
+          heading: currentHeading ?? 0,
+          pitch: 45,
+          zoom: 18,
+        },
+        { duration: 1000 },
+      );
     }
-  }, [currentLocation, isNavigating, mapReady]);
+  }, [currentLocation, currentHeading, isNavigating, mapReady]);
 
   useEffect(() => {
     if (
