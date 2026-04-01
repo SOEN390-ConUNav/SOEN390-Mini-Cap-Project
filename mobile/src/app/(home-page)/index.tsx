@@ -112,16 +112,6 @@ type OutdoorResumeEndpoint = {
   buildingId?: BuildingId;
 };
 
-type OutdoorPoiMarker = {
-  id: string;
-  name: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  address?: string;
-};
-
 const getIndoorExitTarget = (
   buildingId: BuildingId,
 ): IndoorExitTarget | null => {
@@ -267,12 +257,11 @@ export default function HomePageIndex() {
     ...CAMPUS_REGION_DELTA,
   });
 
-  const [mapPoiFilter, setMapPoiFilter] = useState<string>("restaurant");
+  const [mapPoiFilter, setMapPoiFilter] = useState<string | null>(null);
   const [mapPoiLoading, setMapPoiLoading] = useState(false);
   const [mapPoiMarkers, setMapPoiMarkers] = useState<NearbyPlace[]>([]);
   const [selectedPoi, setSelectedPoi] = useState<any>(null);
   const [poiDetailsVisible, setPoiDetailsVisible] = useState(false);
-  const [outdoorPoiMarkers, setOutdoorPoiMarkers] = useState<OutdoorPoiMarker[]>([]);
 
   const [shuttleStop, setShuttleStop] = useState<{
     campus: "SGW" | "LOYOLA";
@@ -292,12 +281,6 @@ export default function HomePageIndex() {
   const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const handleSearchPanelOutdoorPointsChange = useCallback(
-    (points: OutdoorPoiMarker[]) => {
-      setOutdoorPoiMarkers(points);
-    },
-    [],
-  );
   const [pendingDestination, setPendingDestination] = useState<{
     latitude: number;
     longitude: number;
@@ -321,6 +304,13 @@ export default function HomePageIndex() {
 
   const handleFilterPress = useCallback(
     async (filter: string) => {
+      if (mapPoiFilter === filter) {
+        setMapPoiFilter(null);
+        setMapPoiMarkers([]);
+        setMapPoiLoading(false);
+        return;
+      }
+
       setMapPoiFilter(filter);
       setMapPoiLoading(true);
 
@@ -347,7 +337,7 @@ export default function HomePageIndex() {
         setMapPoiLoading(false);
       }
     },
-    [campus, currentLocation, getCurrentPosition],
+    [campus, currentLocation, getCurrentPosition, mapPoiFilter],
   );
 
   const handleMapMarkerPress = useCallback(
@@ -1451,24 +1441,11 @@ export default function HomePageIndex() {
               key={`map-poi-${poi.id}-${index}`}
               coordinate={poi.location!}
               title={poi.name}
+              pinColor={colors.primary}
               onPress={() => handleMapMarkerPress(poi)}
               tracksViewChanges={!freezeMarkers}
-            >
-              <EndPin />
-            </Marker>
+            />
           ))}
-
-        {outdoorPoiMarkers.map((poi) => (
-          <Marker
-            key={`poi-${poi.id}`}
-            coordinate={poi.location}
-            title={poi.name}
-            onPress={() => handleMapMarkerPress(poi as any)}
-            tracksViewChanges={!freezeMarkers}
-          >
-            <EndPin />
-          </Marker>
-        ))}
 
         {BUILDINGS.map((b) => (
           <Marker
@@ -1635,7 +1612,7 @@ export default function HomePageIndex() {
       <View
         style={[
           styles.homeFiltersWrapper,
-          (showNavigatingUi || showCancellingUi) && styles.overlayHidden,
+          (isConfiguring || showNavigatingUi || showCancellingUi) && styles.overlayHidden,
         ]}
         pointerEvents={showNavigatingUi || showCancellingUi ? "none" : "auto"}
       >
@@ -1650,16 +1627,17 @@ export default function HomePageIndex() {
               onPress={() => handleFilterPress(item.value)}
               style={[
                 styles.homeFilterChip,
-                { backgroundColor: colors.surface },
-                mapPoiFilter === item.value && {
-                  backgroundColor: colors.primary,
+                {
+                  backgroundColor:
+                    mapPoiFilter === item.value ? colors.primary : "#d9d9db",
                 },
+                mapPoiFilter === item.value && styles.homeFilterChipActive,
               ]}
             >
               <Text
                 style={[
                   styles.homeFilterText,
-                  mapPoiFilter === item.value && { color: "#fff" },
+                  { color: mapPoiFilter === item.value ? "#fff" : colors.text },
                 ]}
               >
                 {item.label}
@@ -1680,7 +1658,6 @@ export default function HomePageIndex() {
         visible={isSearching}
         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
         onSelectLocation={handleSelectLocation}
-        onOutdoorPointsChange={handleSearchPanelOutdoorPointsChange}
       />
       <NavigationConfigView
         durations={allOutdoorRoutes}
@@ -1791,7 +1768,7 @@ const styles = StyleSheet.create({
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
   homeFiltersWrapper: {
     position: "absolute",
-    top: 120,
+    top: 104,
     left: 16,
     right: 16,
     zIndex: 20,
@@ -1803,11 +1780,18 @@ const styles = StyleSheet.create({
   },
   homeFilterChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.08)",
+    minWidth: 90,
+    alignItems: "center",
+    backgroundColor: "#f0f0f2",
+  },
+  homeFilterChipActive: {
+    borderColor: "transparent",
+    backgroundColor: "#800020",
   },
   homeFilterText: {
     fontSize: 13,

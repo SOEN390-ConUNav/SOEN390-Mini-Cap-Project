@@ -108,12 +108,7 @@ export default function SearchPanel({
   }, [activeFilter, hasLocationPermission, locationCacheKeyPart]);
 
   useEffect(() => {
-    if (!onOutdoorPointsChange) return;
-
-    if (!visible) {
-      onOutdoorPointsChange([]);
-      return;
-    }
+    if (!onOutdoorPointsChange || !visible) return;
 
     const source = query.trim().length > 0 ? searchResults : nearby;
     const points = source
