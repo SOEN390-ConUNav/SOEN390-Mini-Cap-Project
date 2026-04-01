@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../hooks/useTheme";
 import { getOpenStatusText } from "../utils/location";
 import type { Coordinate } from "../type";
 
@@ -36,14 +35,17 @@ type Props = Readonly<{
   }) => void;
 }>;
 
+const BURGUNDY = "#800020";
+
 export default function PoiDetailsModal({
   visible,
   poi,
   onClose,
   onGetDirections,
 }: Props) {
-  const { colors } = useTheme();
   const [showHours, setShowHours] = useState(false);
+  const todayIndexJS = new Date().getDay();
+  const todayIndex = todayIndexJS === 0 ? 6 : todayIndexJS - 1;
 
   const statusText = useMemo(
     () => getOpenStatusText(poi?.openingHours),
@@ -63,25 +65,36 @@ export default function PoiDetailsModal({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.modal, { backgroundColor: colors.background }]}> 
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>POI details</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={[styles.closeText, { color: colors.primary }]}>Close</Text>
-          </TouchableOpacity>
+      <View style={styles.detailModal}>
+        <View style={styles.detailModalHeader}>
+          <Pressable
+            testID="close-details-button"
+            onPress={onClose}
+            style={styles.closeDetailsBtn}
+          >
+            <Ionicons name="close" size={24} color={BURGUNDY} />
+          </Pressable>
         </View>
 
-        <ScrollView>
-          <Text style={[styles.poiName, { color: colors.text }]}>{poi.name}</Text>
+        <ScrollView
+          style={styles.detailModalContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.detailTitle}>{poi.name}</Text>
+
           {poi.address ? (
-            <Text style={[styles.poiAddress, { color: colors.textMuted }]}> 
-              {poi.address}
-            </Text>
+            <View style={styles.detailSection}>
+              <Ionicons name="location" size={18} color={BURGUNDY} />
+              <View style={styles.detailSectionContent}>
+                <Text style={styles.detailLabel}>Address</Text>
+                <Text style={styles.detailValue}>{poi.address}</Text>
+              </View>
+            </View>
           ) : null}
 
           {poi.distanceKm ? (
             <View style={styles.detailSection}>
-              <Ionicons name="location-outline" size={18} color="#800020" />
+              <Ionicons name="navigate-circle" size={18} color={BURGUNDY} />
               <View style={styles.detailSectionContent}>
                 <Text style={styles.detailLabel}>Distance</Text>
                 <Text style={styles.detailValue}>{poi.distanceKm} km away</Text>
@@ -91,7 +104,7 @@ export default function PoiDetailsModal({
 
           {poi.rating != null ? (
             <View style={styles.detailSection}>
-              <Ionicons name="star" size={18} color="#800020" />
+              <Ionicons name="star" size={18} color={BURGUNDY} />
               <View style={styles.detailSectionContent}>
                 <Text style={styles.detailLabel}>Rating</Text>
                 <Text style={styles.detailValue}>{poi.rating.toFixed(1)} / 5.0</Text>
@@ -100,7 +113,7 @@ export default function PoiDetailsModal({
           ) : null}
 
           <View style={styles.detailSection}>
-            <Ionicons name="time" size={18} color="#800020" />
+            <Ionicons name="time" size={18} color={BURGUNDY} />
             <View style={styles.detailSectionContent}>
               <Text style={styles.detailLabel}>Opening Hours</Text>
               <TouchableOpacity
@@ -132,11 +145,11 @@ export default function PoiDetailsModal({
                     >
                       {poi.openingHours.openNow ? "Open" : "Closed"}
                     </Text>
-                    {statusText ? (
+                    {statusText !== "" && (
                       <Text style={styles.closingText}>
                         {"  ·  " + statusText}
                       </Text>
-                    ) : null}
+                    )}
                   </View>
                 )}
                 <Ionicons
@@ -148,7 +161,13 @@ export default function PoiDetailsModal({
               {showHours &&
                 poi.openingHours?.weekdayDescriptions?.map(
                   (day: string, index: number) => (
-                    <Text key={`${day}-${index}`} style={styles.hoursRow}>
+                    <Text
+                      key={`${day}-${index}`}
+                      style={[
+                        styles.hoursRow,
+                        index === todayIndex && styles.todayHoursRow,
+                      ]}
+                    >
                       {day}
                     </Text>
                   ),
@@ -158,7 +177,7 @@ export default function PoiDetailsModal({
 
           {poi.phoneNumber ? (
             <View style={styles.detailSection}>
-              <Ionicons name="call" size={18} color="#800020" />
+              <Ionicons name="call" size={18} color={BURGUNDY} />
               <View style={styles.detailSectionContent}>
                 <Text style={styles.detailLabel}>Phone Number</Text>
                 <Text style={styles.detailValue}>{poi.phoneNumber}</Text>
@@ -167,7 +186,7 @@ export default function PoiDetailsModal({
           ) : null}
 
           <TouchableOpacity
-            style={[styles.detailNavigateButton, { backgroundColor: colors.primary }]}
+            style={styles.detailNavigateButton}
             onPress={() => {
               onGetDirections({
                 latitude: poi.location.latitude,
@@ -188,71 +207,90 @@ export default function PoiDetailsModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
-  modal: {
+  detailModal: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    top: 110,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 16,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "85%",
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 15,
   },
-  modalHeader: {
+  closeDetailsBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  detailModalHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
-  modalTitle: {
-    fontSize: 18,
+  detailModalContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  detailTitle: {
+    fontSize: 24,
     fontWeight: "700",
-  },
-  closeText: {
-    fontWeight: "700",
-  },
-  poiName: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  poiAddress: {
-    fontSize: 14,
-    marginBottom: 16,
+    color: "#333",
+    marginBottom: 20,
   },
   detailSection: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 16,
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
   },
   detailSectionContent: {
-    marginLeft: 10,
+    marginLeft: 12,
     flex: 1,
   },
   detailLabel: {
     fontSize: 12,
-    color: "#666",
+    color: "#888",
+    fontWeight: "600",
+    textTransform: "uppercase",
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 15,
-    lineHeight: 22,
+    color: "#333",
+    fontWeight: "500",
   },
-  hoursHeader: {
+  detailNavigateButton: {
+    backgroundColor: BURGUNDY,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  detailNavigateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
   openStatusContainer: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
+    marginBottom: 16,
   },
   statusDot: {
     width: 8,
@@ -261,30 +299,26 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   openStatusText: {
-    fontSize: 14,
     fontWeight: "600",
+    fontSize: 14,
+  },
+  hoursHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  hoursRow: {
+    fontSize: 14,
+    color: "#444",
+    marginTop: 4,
+  },
+  todayHoursRow: {
+    fontWeight: "700",
+    color: BURGUNDY,
   },
   closingText: {
     fontSize: 14,
-    color: "#777",
-  },
-  hoursRow: {
-    marginTop: 6,
-    color: "#444",
-  },
-  detailNavigateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 24,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginTop: 16,
-  },
-  detailNavigateButtonText: {
-    marginLeft: 10,
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
+    color: "#555",
+    fontWeight: "500",
   },
 });
