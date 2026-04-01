@@ -199,6 +199,103 @@ describe("SearchPanel", () => {
     });
   });
 
+  it("clears the pending debounce timer when typing again before it fires", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledTimes(1);
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("uses current location when no stored location exists", async () => {
+    jest.useFakeTimers();
+    storeState.currentLocation = null;
+    getCurrentPosition.mockResolvedValue({ latitude: 45.61, longitude: -73.71 });
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.61, -73.71);
+    });
+  });
+
+  it("uses the current query when submit event has no nativeEvent text", async () => {
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+    fireEvent(input, "submitEditing", {});
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("logs an error when searchLocations rejects", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockSearchLocations.mockRejectedValueOnce(new Error("network failure"));
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(errorSpy).toHaveBeenCalled();
+    });
+
+    errorSpy.mockRestore();
+  });
+
   it("cancels pending debounce when submit is pressed during typing", async () => {
     jest.useFakeTimers();
 
