@@ -1,10 +1,14 @@
 import React from "react";
-import { StyleSheet, Text, View, Pressable } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import { useTheme } from "../../hooks/useTheme";
 import { SettingsScreenScaffold } from "../../components/settings/SettingsScreenScaffold";
+import {
+  SettingsOutlinedButton,
+  SettingsPrimaryButton,
+  SettingsStepCard,
+} from "../../components/settings";
 
 export default function LocationPermissionTutorial() {
   const router = useRouter();
@@ -24,43 +28,21 @@ export default function LocationPermissionTutorial() {
       backLabel="Location & Privacy"
       titleStyle={styles.titleOverride}
     >
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={styles.stepHeaderRow}>
-          <View
-            style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="settings-outline" size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
-              Step 1
-            </Text>
-            <Text style={[styles.stepTitle, { color: colors.text }]}>
-              Open your device Settings
-            </Text>
-          </View>
-        </View>
+      <SettingsStepCard
+        stepLabel="Step 1"
+        title="Open your device Settings"
+        icon="settings-outline"
+      >
         <Text style={[styles.stepBody, { color: colors.textMuted }]}>
           Tap the Settings app on your home screen.
         </Text>
-      </View>
+      </SettingsStepCard>
 
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={styles.stepHeaderRow}>
-          <View
-            style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="shield-outline" size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
-              Step 2
-            </Text>
-            <Text style={[styles.stepTitle, { color: colors.text }]}>
-              Go to Privacy & Location
-            </Text>
-          </View>
-        </View>
+      <SettingsStepCard
+        stepLabel="Step 2"
+        title="Go to Privacy & Location"
+        icon="shield-outline"
+      >
         <Text style={[styles.stepBody, { color: colors.textMuted }]}>
           Find and select{" "}
           <Text style={[styles.bold, { color: colors.text }]}>Privacy</Text>,
@@ -70,47 +52,25 @@ export default function LocationPermissionTutorial() {
           </Text>
           .
         </Text>
-      </View>
+      </SettingsStepCard>
 
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={styles.stepHeaderRow}>
-          <View
-            style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="apps-outline" size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
-              Step 3
-            </Text>
-            <Text style={[styles.stepTitle, { color: colors.text }]}>
-              Select the campus navigation app
-            </Text>
-          </View>
-        </View>
+      <SettingsStepCard
+        stepLabel="Step 3"
+        title="Select the campus navigation app"
+        icon="apps-outline"
+      >
         <Text style={[styles.stepBody, { color: colors.textMuted }]}>
           Scroll through the list and select{" "}
           <Text style={[styles.bold, { color: colors.text }]}>ConUNav</Text>{" "}
           (campus navigation app).
         </Text>
-      </View>
+      </SettingsStepCard>
 
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={styles.stepHeaderRow}>
-          <View
-            style={[styles.stepIconCircle, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.stepLabel, { color: colors.textMuted }]}>
-              Step 4
-            </Text>
-            <Text style={[styles.stepTitle, { color: colors.text }]}>
-              Choose &quot;Allow While Using the App&quot;
-            </Text>
-          </View>
-        </View>
+      <SettingsStepCard
+        stepLabel="Step 4"
+        title='Choose "Allow While Using the App"'
+        icon="checkmark-circle-outline"
+      >
         <Text style={[styles.stepBody, { color: colors.textMuted }]}>
           Under{" "}
           <Text style={[styles.bold, { color: colors.text }]}>
@@ -123,28 +83,19 @@ export default function LocationPermissionTutorial() {
           so ConUNav can determine your position only when you&apos;re actively
           using it.
         </Text>
-      </View>
+      </SettingsStepCard>
 
       <View style={styles.buttonRow}>
-        <Pressable
-          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+        <SettingsPrimaryButton
+          label="Open Device Settings"
           onPress={() => {
             void openSettings();
           }}
-        >
-          <Text style={styles.primaryButtonText}>Open Device Settings</Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.secondaryButton, { borderColor: colors.border }]}
+        />
+        <SettingsOutlinedButton
+          label="Skip for Now"
           onPress={() => router.back()}
-        >
-          <Text
-            style={[styles.secondaryButtonText, { color: colors.textMuted }]}
-          >
-            Skip for Now
-          </Text>
-        </Pressable>
+        />
       </View>
     </SettingsScreenScaffold>
   );
@@ -156,38 +107,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 16,
   },
-  stepCard: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  stepHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  stepIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  stepLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  stepTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
   stepBody: {
     fontSize: 13,
     lineHeight: 20,
@@ -198,25 +117,5 @@ const styles = StyleSheet.create({
   buttonRow: {
     marginTop: 20,
     gap: 10,
-  },
-  primaryButton: {
-    borderRadius: 999,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    borderRadius: 999,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
   },
 });

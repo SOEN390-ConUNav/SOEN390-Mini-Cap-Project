@@ -1,13 +1,22 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, Pressable, Switch } from "react-native";
+import { Pressable, StyleSheet, Text, View, Switch } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../hooks/useTheme";
 import { SettingsScreenScaffold } from "../../components/settings/SettingsScreenScaffold";
+import {
+  SettingsCard,
+  SettingsIconCircle,
+  SettingsLinkRow,
+  SettingsSectionLabel,
+  SettingsSwitchRow,
+} from "../../components/settings";
+import { useSettingsSwitchTrackColor } from "../../components/settings/useSettingsSwitchColors";
 
 export default function SettingsLocationPrivacy() {
   const router = useRouter();
   const { colors } = useTheme();
+  const trackColor = useSettingsSwitchTrackColor();
 
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [backgroundLocation, setBackgroundLocation] = useState(false);
@@ -17,14 +26,10 @@ export default function SettingsLocationPrivacy() {
       title="Location & Privacy"
       titleStyle={styles.titleSpacing}
     >
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <SettingsCard marginBottom={14}>
         <View style={styles.cardHeaderRow}>
-          <View
-            style={[styles.iconCircle, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="location-outline" size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
+          <SettingsIconCircle name="location-outline" />
+          <View style={styles.flex1}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
               Location Services
             </Text>
@@ -35,51 +40,33 @@ export default function SettingsLocationPrivacy() {
           <Switch
             value={locationEnabled}
             onValueChange={setLocationEnabled}
-            trackColor={{ false: colors.border, true: colors.primary }}
+            trackColor={trackColor}
           />
         </View>
         <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
           Allow the app to access your location to provide accurate navigation
           and directions.
         </Text>
-      </View>
+      </SettingsCard>
 
-      <Pressable
-        style={[styles.rowCard, { backgroundColor: colors.card }]}
+      <SettingsLinkRow
+        title="Location Permission Tutorial"
+        subtitle="How to enable location access"
         onPress={() => router.push("/settings/location-permission-tutorial")}
-      >
-        <View>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>
-            Location Permission Tutorial
-          </Text>
-          <Text style={[styles.rowSubtitle, { color: colors.textMuted }]}>
-            How to enable location access
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-      </Pressable>
+        style={{ marginBottom: 18 }}
+      />
 
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-        Privacy Settings
-      </Text>
+      <SettingsSectionLabel>Privacy Settings</SettingsSectionLabel>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={styles.cardHeaderRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Background Location Access
-            </Text>
-            <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-              Allow location access even when the app is in the background.
-            </Text>
-          </View>
-          <Switch
-            value={backgroundLocation}
-            onValueChange={setBackgroundLocation}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-      </View>
+      <SettingsCard marginBottom={14}>
+        <SettingsSwitchRow
+          title="Background Location Access"
+          subtitle="Allow location access even when the app is in the background."
+          value={backgroundLocation}
+          onValueChange={setBackgroundLocation}
+          titleStyle={styles.backgroundRowTitle}
+        />
+      </SettingsCard>
 
       <Pressable
         style={styles.privacyLinkRow}
@@ -98,29 +85,13 @@ const styles = StyleSheet.create({
   titleSpacing: {
     marginBottom: 18,
   },
-  card: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
   cardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
+  flex1: {
+    flex: 1,
   },
   cardTitle: {
     fontSize: 16,
@@ -133,32 +104,9 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 13,
   },
-  rowCard: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  rowTitle: {
-    fontSize: 15,
+  backgroundRowTitle: {
+    fontSize: 16,
     fontWeight: "600",
-  },
-  rowSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 10,
   },
   privacyLinkRow: {
     marginTop: 10,
