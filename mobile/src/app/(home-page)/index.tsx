@@ -209,6 +209,7 @@ export default function HomePageIndex() {
     (state) => state.userSkippedPermission,
   );
   const currentLocation = useLocationStore((state) => state.currentLocation);
+  const currentHeading = useLocationStore((state) => state.currentHeading);
   const nearestBuilding = useLocationStore((state) => state.nearestBuilding);
   const nearestBuildingDistance = useLocationStore(
     (state) => state.nearestBuildingDistance,
@@ -418,10 +419,29 @@ export default function HomePageIndex() {
     setShowBuildingPopup(false);
     setSelectedBuildingId(null);
     setOutlineMode(false);
-    getOneFix()
-      .then((fix) => animateToRegion({ ...fix, ...NAVIGATION_ZOOM }))
-      .catch(() => {});
+    getOneFix().catch(() => {});
   }, [isNavigating]);
+
+  const PITCH = 45;
+  const ZOOM = 18;
+
+  // Keep user centered on map and follow orientation during active navigation
+  useEffect(() => {
+    if (isNavigating && currentLocation && mapReady) {
+      mapRef.current?.animateCamera(
+        {
+          center: {
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+          },
+          heading: currentHeading ?? 0,
+          pitch: PITCH,
+          zoom: ZOOM,
+        },
+        { duration: 1000 },
+      );
+    }
+  }, [currentLocation, currentHeading, isNavigating, mapReady]);
 
   useEffect(() => {
     if (

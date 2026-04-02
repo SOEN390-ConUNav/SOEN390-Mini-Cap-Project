@@ -1,3 +1,7 @@
+#!/usr/bin/env sh
+# Husky runs: sh -e <hook> — avoid errexit surprises with grep in conditions.
+set +e
+
 # Get the current branch name
 branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
 
