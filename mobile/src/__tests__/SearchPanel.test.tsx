@@ -63,6 +63,7 @@ const mockGetOpenStatusText = getOpenStatusText as jest.MockedFunction<
 describe("SearchPanel", () => {
   const onSelectLocation = jest.fn();
   const onClose = jest.fn();
+  const onOutdoorPointsChange = jest.fn();
   const getCurrentPosition = jest.fn();
   const openSettings = jest.fn();
   const requestPermission = jest.fn();
@@ -205,6 +206,7 @@ describe("SearchPanel", () => {
         visible
         onSelectLocation={onSelectLocation}
         onClose={onClose}
+        onOutdoorPointsChange={onOutdoorPointsChange}
       />,
     );
 
@@ -241,6 +243,43 @@ describe("SearchPanel", () => {
     await waitFor(() => {
       expect(getCurrentPosition).toHaveBeenCalled();
       expect(getNearbyPlaces).toHaveBeenCalledWith(45.61, -73.71, "restaurant");
+    });
+  });
+
+  it("report outdoor points to parent for nearby and search results", async () => {
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+        onOutdoorPointsChange={onOutdoorPointsChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onOutdoorPointsChange).toHaveBeenCalledWith([
+        {
+          id: "n1",
+          name: "Cafe Nearby",
+          location: { latitude: 45.5001, longitude: -73.6001 },
+          address: "123 Main St",
+        },
+      ]);
+    });
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+    fireEvent(input, "submitEditing", { nativeEvent: { text: "Place A" } });
+
+    await waitFor(() => {
+      expect(onOutdoorPointsChange).toHaveBeenLastCalledWith([
+        {
+          id: "1",
+          name: "Place A",
+          location: { latitude: 1, longitude: 2 },
+          address: "Addr",
+        },
+      ]);
     });
   });
 
