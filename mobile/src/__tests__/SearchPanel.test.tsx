@@ -398,8 +398,14 @@ describe("SearchPanel", () => {
       />,
     );
 
-    expect(mockGetNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
-    expect(getNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledWith(
+        45.5,
+        -73.6,
+        "restaurant",
+      );
+      expect(getNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
+    });
 
     fireEvent.press(getByText("Parking"));
     await waitFor(() => {
@@ -679,7 +685,9 @@ describe("SearchPanel", () => {
     );
 
     // Initial render triggers one fetch
-    expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(1);
+    });
 
     fireEvent.press(getByText("Parking"));
     await waitFor(() => {
