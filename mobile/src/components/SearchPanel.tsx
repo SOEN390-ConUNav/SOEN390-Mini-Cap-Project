@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getNearbyPlaces, searchLocations } from "../api";
+import type { Coordinate } from "../type";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { getOpenStatusText, calculateDistance } from "../utils/location";
 import { useDistanceFilter } from "../hooks/useDistanceFilter";
@@ -36,6 +37,25 @@ const PLACE_TYPES = [
   { label: "Gyms", value: "gym" },
   { label: "Subway", value: "subway_station" },
 ];
+
+async function resolveCoordinates(
+  currentLocation: Coordinate | null,
+  hasLocationPermission: boolean,
+  getCurrentPosition: () => Promise<Coordinate | null>,
+  fallback?: Coordinate,
+): Promise<Coordinate | null> {
+  let coords = currentLocation;
+
+  if (!coords && hasLocationPermission) {
+    coords = await getCurrentPosition();
+  }
+
+  if (!coords && fallback) {
+    coords = fallback;
+  }
+
+  return coords;
+}
 
 type SearchPanelProps = {
   readonly visible: boolean;
@@ -141,8 +161,11 @@ export default function SearchPanel({
     }
 
     try {
-      let coords = currentLocation;
-      coords ??= await getCurrentPosition();
+      const coords = await resolveCoordinates(
+        currentLocation,
+        hasLocationPermission,
+        getCurrentPosition,
+      );
       if (!coords) {
         setNearby([]);
         return;
@@ -194,11 +217,13 @@ export default function SearchPanel({
     setSearchResults([]);
 
     try {
-      let coords = currentLocation;
-      if (!coords && hasLocationPermission) {
-        coords = await getCurrentPosition();
-      }
-      coords ??= FALLBACK_COORDS;
+      const coords = await resolveCoordinates(
+        currentLocation,
+        hasLocationPermission,
+        getCurrentPosition,
+        FALLBACK_COORDS,
+      );
+      if (!coords) return;
 
       const results = await searchLocations(
         queryToUse,
@@ -252,11 +277,13 @@ export default function SearchPanel({
       await addSearchHistory(queryToUse);
       loadSearchHistory();
 
-      let coords = currentLocation;
-      if (!coords && hasLocationPermission) {
-        coords = await getCurrentPosition();
-      }
-      coords ??= FALLBACK_COORDS;
+      const coords = await resolveCoordinates(
+        currentLocation,
+        hasLocationPermission,
+        getCurrentPosition,
+        FALLBACK_COORDS,
+      );
+      if (!coords) return;
 
       const results = await searchLocations(
         queryToUse,
