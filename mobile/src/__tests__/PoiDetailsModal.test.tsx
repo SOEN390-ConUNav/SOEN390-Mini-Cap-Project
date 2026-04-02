@@ -42,7 +42,12 @@ describe("PoiDetailsModal", () => {
 
   it("does not render when poi is null", () => {
     const { queryByText } = render(
-      <PoiDetailsModal visible poi={null} onClose={jest.fn()} onGetDirections={jest.fn()} />,
+      <PoiDetailsModal
+        visible
+        poi={null}
+        onClose={jest.fn()}
+        onGetDirections={jest.fn()}
+      />,
     );
 
     expect(queryByText("Test Cafe")).toBeNull();
@@ -53,7 +58,12 @@ describe("PoiDetailsModal", () => {
     const onClose = jest.fn();
 
     const { getByTestId } = render(
-      <PoiDetailsModal visible poi={poi} onClose={onClose} onGetDirections={jest.fn()} />,
+      <PoiDetailsModal
+        visible
+        poi={poi}
+        onClose={onClose}
+        onGetDirections={jest.fn()}
+      />,
     );
 
     fireEvent.press(getByTestId("details-modal-backdrop"));
@@ -64,7 +74,12 @@ describe("PoiDetailsModal", () => {
     const onGetDirections = jest.fn();
 
     const { getByText } = render(
-      <PoiDetailsModal visible poi={poi} onClose={jest.fn()} onGetDirections={onGetDirections} />,
+      <PoiDetailsModal
+        visible
+        poi={poi}
+        onClose={jest.fn()}
+        onGetDirections={onGetDirections}
+      />,
     );
 
     fireEvent.press(getByText("Get Directions"));
@@ -78,7 +93,12 @@ describe("PoiDetailsModal", () => {
 
   it("toggles opening hours details when the toggle is pressed", () => {
     const { getByTestId, queryByText } = render(
-      <PoiDetailsModal visible poi={poi} onClose={jest.fn()} onGetDirections={jest.fn()} />,
+      <PoiDetailsModal
+        visible
+        poi={poi}
+        onClose={jest.fn()}
+        onGetDirections={jest.fn()}
+      />,
     );
 
     expect(queryByText("Mon: 9am - 5pm")).toBeNull();

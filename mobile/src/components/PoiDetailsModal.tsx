@@ -111,7 +111,9 @@ export default function PoiDetailsModal({
               <Ionicons name="star" size={18} color={BURGUNDY} />
               <View style={styles.detailSectionContent}>
                 <Text style={styles.detailLabel}>Rating</Text>
-                <Text style={styles.detailValue}>{poi.rating.toFixed(1)} / 5.0</Text>
+                <Text style={styles.detailValue}>
+                  {poi.rating.toFixed(1)} / 5.0
+                </Text>
               </View>
             </View>
           )}

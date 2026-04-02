@@ -5,7 +5,15 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useNavigation, useLocalSearchParams, useRouter } from "expo-router";
 import { hasIndoorMaps, getDefaultFloor } from "../../utils/buildingIndoorMaps";
 import polyline from "@mapbox/polyline";
@@ -39,7 +47,11 @@ import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
 import DirectionPath, { EndPin } from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
-import { getAllOutdoorDirectionsInfo, getNearbyPlaces, searchLocations } from "../../api";
+import {
+  getAllOutdoorDirectionsInfo,
+  getNearbyPlaces,
+  searchLocations,
+} from "../../api";
 import type { NearbyPlace } from "../../api";
 import {
   NamedCoordinate,
@@ -1623,10 +1635,13 @@ export default function HomePageIndex() {
       <View
         style={[
           styles.homeFiltersWrapper,
-          (isConfiguring || showNavigatingUi || showCancellingUi) && styles.overlayHidden,
+          (isConfiguring || showNavigatingUi || showCancellingUi) &&
+            styles.overlayHidden,
         ]}
         pointerEvents={
-          isConfiguring || showNavigatingUi || showCancellingUi ? "none" : "auto"
+          isConfiguring || showNavigatingUi || showCancellingUi
+            ? "none"
+            : "auto"
         }
       >
         <ScrollView

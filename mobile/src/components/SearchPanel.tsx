@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getNearbyPlaces, searchLocations } from "../api";
+import type { Coordinate } from "../type";
 import type { NearbyPlace } from "../api";
 import { addSearchHistory, getSearchHistory } from "../utils/searchHistory";
 import { calculateDistance } from "../utils/location";
@@ -38,6 +39,25 @@ type OutdoorPoi = {
   };
   address?: string;
 };
+
+async function resolveCoordinates(
+  currentLocation: Coordinate | null,
+  hasLocationPermission: boolean,
+  getCurrentPosition: () => Promise<Coordinate | null>,
+  fallback?: Coordinate,
+): Promise<Coordinate | null> {
+  let coords = currentLocation;
+
+  if (!coords && hasLocationPermission) {
+    coords = await getCurrentPosition();
+  }
+
+  if (!coords && fallback) {
+    coords = fallback;
+  }
+
+  return coords;
+}
 
 type SearchPanelProps = {
   readonly visible: boolean;
@@ -71,6 +91,10 @@ export default function SearchPanel({
 
   const { getCurrentPosition } = useLocationService();
 
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextDebounceRef = useRef(false);
+  const queryVersionRef = useRef(0);
+
   const hasLocationPermission = permissionStatus === "granted";
   const locationCacheKeyPart = currentLocation
     ? `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}`
@@ -84,6 +108,42 @@ export default function SearchPanel({
       loadSearchHistory();
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (skipNextDebounceRef.current) {
+      skipNextDebounceRef.current = false;
+      return;
+    }
+
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery) {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const debounceVersion = ++queryVersionRef.current;
+    searchTimeoutRef.current = setTimeout(() => {
+      if (queryVersionRef.current !== debounceVersion) return;
+      performSearch(trimmedQuery);
+    }, 400);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+    };
+  }, [query]);
 
   useEffect(() => {
     setNearby([]);
@@ -118,8 +178,11 @@ export default function SearchPanel({
     }
 
     try {
-      let coords = currentLocation;
-      coords ??= await getCurrentPosition();
+      const coords = await resolveCoordinates(
+        currentLocation,
+        hasLocationPermission,
+        getCurrentPosition,
+      );
       if (!coords) {
         setNearby([]);
         return;
@@ -158,6 +221,46 @@ export default function SearchPanel({
     setRecentSearches(list);
   }
 
+  async function performSearch(searchQuery: string) {
+    const queryToUse = String(searchQuery).trim();
+    if (!queryToUse) return;
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    setSearching(true);
+    setSearchResults([]);
+
+    try {
+      const coords = await resolveCoordinates(
+        currentLocation,
+        hasLocationPermission,
+        getCurrentPosition,
+        FALLBACK_COORDS,
+      );
+      if (!coords) return;
+
+      const results = await searchLocations(
+        queryToUse,
+        coords.latitude,
+        coords.longitude,
+      );
+
+      setSearchResults(results);
+    } catch (e) {
+      if (
+        !(e instanceof Error) ||
+        !e.message.toLowerCase().includes("location permission not granted")
+      ) {
+        console.error(e);
+      }
+    } finally {
+      setSearching(false);
+    }
+  }
+
   type SearchEvent = { nativeEvent: { text: string } };
 
   async function handleSearch(searchQuery?: string | SearchEvent) {
@@ -176,6 +279,13 @@ export default function SearchPanel({
 
     if (!queryToUse) return;
 
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    queryVersionRef.current += 1;
+    skipNextDebounceRef.current = true;
     setQuery(queryToUse);
     setSearching(true);
     setSearchResults([]);
@@ -184,11 +294,13 @@ export default function SearchPanel({
       await addSearchHistory(queryToUse);
       loadSearchHistory();
 
-      let coords = currentLocation;
-      if (!coords && hasLocationPermission) {
-        coords = await getCurrentPosition();
-      }
-      coords ??= FALLBACK_COORDS;
+      const coords = await resolveCoordinates(
+        currentLocation,
+        hasLocationPermission,
+        getCurrentPosition,
+        FALLBACK_COORDS,
+      );
+      if (!coords) return;
 
       const results = await searchLocations(
         queryToUse,

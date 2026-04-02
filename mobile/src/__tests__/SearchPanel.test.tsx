@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
 import SearchPanel from "../components/SearchPanel";
 import cacheService from "../services/cacheService";
 import { searchLocations, getNearbyPlaces } from "../api";
@@ -128,6 +128,10 @@ describe("SearchPanel", () => {
     mockCalculateDistance.mockReturnValue(0);
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders recent searches when visible", async () => {
     mockGetSearchHistory.mockResolvedValue([
       { query: "Library", timestamp: 1_700_000_000_000 },
@@ -172,6 +176,190 @@ describe("SearchPanel", () => {
     });
   });
 
+  it("performs live search after typing with debounce", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("clears the pending debounce timer when typing again before it fires", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledTimes(1);
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("uses current location when no stored location exists", async () => {
+    jest.useFakeTimers();
+    storeState.currentLocation = null;
+    getCurrentPosition.mockResolvedValue({
+      latitude: 45.61,
+      longitude: -73.71,
+    });
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledWith(
+        "Place A",
+        45.61,
+        -73.71,
+      );
+    });
+  });
+
+  it("uses the current query when submit event has no nativeEvent text", async () => {
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+    fireEvent(input, "submitEditing", {});
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("logs an error when searchLocations rejects", async () => {
+    jest.useFakeTimers();
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockSearchLocations.mockRejectedValueOnce(new Error("network failure"));
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(errorSpy).toHaveBeenCalled();
+    });
+
+    errorSpy.mockRestore();
+  });
+
+  it("cancels pending debounce when submit is pressed during typing", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place");
+    fireEvent(input, "submitEditing", { nativeEvent: { text: "Place A" } });
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSearchLocations).toHaveBeenCalledTimes(1);
+      expect(mockSearchLocations).toHaveBeenCalledWith("Place A", 45.5, -73.6);
+    });
+  });
+
+  it("does not perform search when query is cleared before the debounce timer fires", async () => {
+    jest.useFakeTimers();
+
+    const { getByPlaceholderText } = render(
+      <SearchPanel
+        visible
+        onSelectLocation={onSelectLocation}
+        onClose={onClose}
+      />,
+    );
+
+    const input = getByPlaceholderText("Search");
+    fireEvent.changeText(input, "Place A");
+
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(input, "   ");
+
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+      await Promise.resolve();
+    });
+
+    expect(mockSearchLocations).not.toHaveBeenCalled();
+  });
+
   it("runs search and selects a result", async () => {
     const { getByPlaceholderText, findByText } = render(
       <SearchPanel
@@ -210,8 +398,14 @@ describe("SearchPanel", () => {
       />,
     );
 
-    expect(mockGetNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
-    expect(getNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledWith(
+        45.5,
+        -73.6,
+        "restaurant",
+      );
+      expect(getNearbyPlaces).toHaveBeenCalledWith(45.5, -73.6, "restaurant");
+    });
 
     fireEvent.press(getByText("Parking"));
     await waitFor(() => {
@@ -491,7 +685,9 @@ describe("SearchPanel", () => {
     );
 
     // Initial render triggers one fetch
-    expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockGetNearbyPlaces).toHaveBeenCalledTimes(1);
+    });
 
     fireEvent.press(getByText("Parking"));
     await waitFor(() => {
