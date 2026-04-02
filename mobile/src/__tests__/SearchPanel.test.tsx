@@ -270,6 +270,7 @@ describe("SearchPanel", () => {
   });
 
   it("logs an error when searchLocations rejects", async () => {
+    jest.useFakeTimers();
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     mockSearchLocations.mockRejectedValueOnce(new Error("network failure"));
 
