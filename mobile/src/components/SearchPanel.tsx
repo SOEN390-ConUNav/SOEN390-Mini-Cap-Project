@@ -24,20 +24,10 @@ import useLocationService from "../hooks/useLocationService";
 import cacheService from "../services/cacheService";
 import { useTheme } from "../hooks/useTheme";
 import ModalHeader from "./ModalHeader";
+import { PLACE_TYPES } from "../constants/placeTypes";
 
 const BURGUNDY = "#800020";
 const FALLBACK_COORDS = { latitude: 45.4973, longitude: -73.579 };
-
-const PLACE_TYPES = [
-  { label: "Restaurants", value: "restaurant" },
-  { label: "Parking", value: "parking" },
-  { label: "Libraries", value: "library" },
-  { label: "Parks", value: "park" },
-  { label: "Food Stores", value: "food_store" },
-  { label: "Banks", value: "bank" },
-  { label: "Gyms", value: "gym" },
-  { label: "Subway", value: "subway_station" },
-];
 
 type OutdoorPoi = {
   id: string;

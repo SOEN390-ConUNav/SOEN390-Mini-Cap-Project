@@ -67,6 +67,7 @@ import LocationPromptModal from "../../components/LocationPromptModal";
 import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
 import { useTheme } from "../../hooks/useTheme";
 import { DARK_MAP_STYLE } from "../../constants/mapStyles";
+import { PLACE_TYPES } from "../../constants/placeTypes";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -84,17 +85,6 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
   latitudeDelta: 0.0028,
   longitudeDelta: 0.0028,
 };
-
-const PLACE_TYPES = [
-  { label: "Restaurants", value: "restaurant" },
-  { label: "Parking", value: "parking" },
-  { label: "Libraries", value: "library" },
-  { label: "Parks", value: "park" },
-  { label: "Food Stores", value: "food_store" },
-  { label: "Banks", value: "bank" },
-  { label: "Gyms", value: "gym" },
-  { label: "Subway", value: "subway_station" },
-];
 
 const FREEZE_MARKERS_AFTER_MS = 800;
 const EVENT_INDOOR_HANDOFF_DISTANCE_METERS = 10;
