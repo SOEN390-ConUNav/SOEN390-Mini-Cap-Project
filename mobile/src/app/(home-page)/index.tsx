@@ -5,7 +5,15 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useNavigation, useLocalSearchParams, useRouter } from "expo-router";
 import { hasIndoorMaps, getDefaultFloor } from "../../utils/buildingIndoorMaps";
 import polyline from "@mapbox/polyline";
@@ -17,6 +25,7 @@ import MapView, {
 } from "react-native-maps";
 import SearchBar from "../../components/search-bar/SearchBar";
 import SearchPanel from "../../components/SearchPanel";
+import PoiDetailsModal from "../../components/PoiDetailsModal";
 import FloatingActionButton from "../../components/FloatingActionButton";
 import CampusSwitcher from "../../components/CampusSwitcher";
 import {
@@ -35,16 +44,22 @@ import { NAVIGATION_STATE } from "../../const";
 import NavigationConfigView from "../../components/navigation-config/NavigationConfigView";
 import { useTabBarStyle } from "../../components/BottomNav";
 import useNavigationEndpoints from "../../hooks/useNavigationEndpoints";
-import DirectionPath from "../../components/DirectionPath";
+import DirectionPath, { EndPin } from "../../components/DirectionPath";
 import useNavigationConfig from "../../hooks/useNavigationConfig";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
-import { getAllOutdoorDirectionsInfo, searchLocations } from "../../api";
+import {
+  getAllOutdoorDirectionsInfo,
+  getNearbyPlaces,
+  searchLocations,
+} from "../../api";
+import type { NearbyPlace } from "../../api";
 import {
   NamedCoordinate,
   TRANSPORT_MODE_API_MAP,
   ManeuverTypeApi,
 } from "../../type";
 import { reverseGeocode } from "../../services/handleGeocode";
+import { calculateDistance } from "../../utils/location";
 import { findBuildingFromLocationText } from "../../utils/eventLocationBuildingMatcher";
 import { haversineDistance } from "../../utils/locationUtils";
 import {
@@ -64,6 +79,7 @@ import LocationPromptModal from "../../components/LocationPromptModal";
 import { useGeneralSettingsStore } from "../../hooks/useGeneralSettings";
 import { useTheme } from "../../hooks/useTheme";
 import { DARK_MAP_STYLE } from "../../constants/mapStyles";
+import { PLACE_TYPES } from "../../constants/placeTypes";
 
 const SGW_CENTER = { latitude: 45.4973, longitude: -73.579 };
 const LOYOLA_CENTER = { latitude: 45.4582, longitude: -73.6405 };
@@ -81,6 +97,7 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
   latitudeDelta: 0.0028,
   longitudeDelta: 0.0028,
 };
+
 const FREEZE_MARKERS_AFTER_MS = 800;
 const EVENT_INDOOR_HANDOFF_DISTANCE_METERS = 10;
 
@@ -243,6 +260,12 @@ export default function HomePageIndex() {
     ...CAMPUS_REGION_DELTA,
   });
 
+  const [mapPoiFilter, setMapPoiFilter] = useState<string | null>(null);
+  const [mapPoiLoading, setMapPoiLoading] = useState(false);
+  const [mapPoiMarkers, setMapPoiMarkers] = useState<NearbyPlace[]>([]);
+  const [selectedPoi, setSelectedPoi] = useState<any>(null);
+  const [poiDetailsVisible, setPoiDetailsVisible] = useState(false);
+
   const [shuttleStop, setShuttleStop] = useState<{
     campus: "SGW" | "LOYOLA";
     coordinate: { latitude: number; longitude: number };
@@ -281,6 +304,65 @@ export default function HomePageIndex() {
     (s) => s.clearPendingIndoorTarget,
   );
   const indoorHandoffInFlightRef = useRef(false);
+
+  const handleFilterPress = useCallback(
+    async (filter: string) => {
+      if (mapPoiFilter === filter) {
+        setMapPoiFilter(null);
+        setMapPoiMarkers([]);
+        setMapPoiLoading(false);
+        return;
+      }
+
+      setMapPoiFilter(filter);
+      setMapPoiLoading(true);
+
+      try {
+        let anchor = currentLocation;
+        if (!anchor) {
+          anchor = await getCurrentPosition();
+        }
+
+        const searchAnchor =
+          anchor ?? (campus === "SGW" ? SGW_CENTER : LOYOLA_CENTER);
+
+        const results = await getNearbyPlaces(
+          searchAnchor.latitude,
+          searchAnchor.longitude,
+          filter,
+        );
+
+        setMapPoiMarkers(results);
+      } catch (error) {
+        console.error("Error fetching outdoor POIs:", error);
+        setMapPoiMarkers([]);
+      } finally {
+        setMapPoiLoading(false);
+      }
+    },
+    [campus, currentLocation, getCurrentPosition, mapPoiFilter],
+  );
+
+  const handleMapMarkerPress = useCallback(
+    (poi: NearbyPlace) => {
+      const enrichedPoi = { ...poi } as any;
+
+      if (currentLocation && poi.location) {
+        const distanceMeters = calculateDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          poi.location.latitude,
+          poi.location.longitude,
+        );
+        enrichedPoi.distance = distanceMeters;
+        enrichedPoi.distanceKm = (distanceMeters / 1000).toFixed(1);
+      }
+
+      setSelectedPoi(enrichedPoi);
+      setPoiDetailsVisible(true);
+    },
+    [currentLocation],
+  );
 
   const mapRef = useRef<MapView>(null);
 
@@ -1033,6 +1115,16 @@ export default function HomePageIndex() {
     }
   };
 
+  const handlePoiModalGetDirections = (poiLocation: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+  }) => {
+    setPoiDetailsVisible(false);
+    setSelectedPoi(null);
+    void handleSelectLocation(poiLocation);
+  };
+
   const handleSwap = async () => {
     if (!origin || !destination) return;
 
@@ -1364,6 +1456,20 @@ export default function HomePageIndex() {
           />
         )}
 
+        {!(isNavigating || isConfiguring || showCancellingUi) &&
+          mapPoiMarkers
+            .filter((poi) => poi.location)
+            .map((poi, index) => (
+              <Marker
+                key={`map-poi-${poi.id}-${index}`}
+                coordinate={poi.location!}
+                title={poi.name}
+                pinColor={colors.primary}
+                onPress={() => handleMapMarkerPress(poi)}
+                tracksViewChanges={!freezeMarkers}
+              />
+            ))}
+
         {BUILDINGS.map((b) => (
           <Marker
             key={b.id}
@@ -1526,6 +1632,56 @@ export default function HomePageIndex() {
         />
       </View>
 
+      <View
+        style={[
+          styles.homeFiltersWrapper,
+          (isConfiguring || showNavigatingUi || showCancellingUi) &&
+            styles.overlayHidden,
+        ]}
+        pointerEvents={
+          isConfiguring || showNavigatingUi || showCancellingUi
+            ? "none"
+            : "auto"
+        }
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.homeFilters}
+        >
+          {PLACE_TYPES.map((item) => (
+            <TouchableOpacity
+              key={item.value}
+              onPress={() => handleFilterPress(item.value)}
+              style={[
+                styles.homeFilterChip,
+                {
+                  backgroundColor:
+                    mapPoiFilter === item.value ? colors.primary : "#d9d9db",
+                },
+                mapPoiFilter === item.value && styles.homeFilterChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.homeFilterText,
+                  { color: mapPoiFilter === item.value ? "#fff" : colors.text },
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <PoiDetailsModal
+        visible={poiDetailsVisible}
+        poi={selectedPoi}
+        onClose={() => setPoiDetailsVisible(false)}
+        onGetDirections={handlePoiModalGetDirections}
+      />
+
       <SearchPanel
         visible={isSearching}
         onClose={() => setNavigationState(NAVIGATION_STATE.IDLE)}
@@ -1638,6 +1794,37 @@ const styles = StyleSheet.create({
   enableLocationSkip: { paddingVertical: 14, alignItems: "center" },
   enableLocationSkipText: { color: "#777", fontWeight: "600" },
   searchWrapper: { position: "absolute", top: 50, left: 16, right: 16 },
+  homeFiltersWrapper: {
+    position: "absolute",
+    top: 104,
+    left: 16,
+    right: 16,
+    zIndex: 20,
+  },
+  homeFilters: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  homeFilterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    minWidth: 90,
+    alignItems: "center",
+    backgroundColor: "#f0f0f2",
+  },
+  homeFilterChipActive: {
+    borderColor: "transparent",
+    backgroundColor: "#800020",
+  },
+  homeFilterText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   upcomingEventWrapper: {
     position: "absolute",
     bottom: 144,
