@@ -101,7 +101,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -151,7 +151,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -183,7 +183,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -193,7 +193,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -238,7 +238,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -248,7 +248,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -284,7 +284,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -434,7 +434,7 @@ describe("UpcomingEventButton branch coverage", () => {
     render(<UpcomingEventButton onOpenEventDetails={onOpenEventDetails} />);
     await waitFor(() => {
       expect(
-        screen.getByText("Upcoming event: Has Location Event"),
+        screen.getByText("Upcoming Event: Has Location Event"),
       ).toBeTruthy();
     });
     fireEvent.press(screen.getByText("Upcoming Event: Has Location Event"));
