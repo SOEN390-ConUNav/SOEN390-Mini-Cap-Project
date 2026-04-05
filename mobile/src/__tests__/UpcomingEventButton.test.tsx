@@ -55,7 +55,7 @@ describe("UpcomingEventButton", () => {
           selectedCalendar: null,
           calendarSelected: false,
           nextEvent: null,
-          nextEventDetailsText: "No upcoming event",
+          nextEventDetailsText: "No upcoming Event",
         }),
       )
       .mockResolvedValueOnce(
@@ -63,7 +63,7 @@ describe("UpcomingEventButton", () => {
           selectedCalendar: null,
           calendarSelected: false,
           nextEvent: null,
-          nextEventDetailsText: "No upcoming event",
+          nextEventDetailsText: "No upcoming Event",
         }),
       )
       .mockResolvedValueOnce(
@@ -71,7 +71,7 @@ describe("UpcomingEventButton", () => {
           selectedCalendar: { id: "cal-1", summary: "School", primary: true },
           calendarSelected: true,
           nextEvent: null,
-          nextEventDetailsText: "No upcoming event",
+          nextEventDetailsText: "No upcoming Event",
         }),
       );
 

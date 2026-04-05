@@ -346,7 +346,7 @@ describe("UpcomingEventButton branch coverage", () => {
       expect(screen.getByText("Upcoming Event: SOEN 390")).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByText("Upcoming event: SOEN 390"));
+    fireEvent.press(screen.getByText("Upcoming Event: SOEN 390"));
     expect(onOpenEventDetails).toHaveBeenCalledTimes(1);
 
     const payload = onOpenEventDetails.mock.calls[0][0];
@@ -421,7 +421,7 @@ describe("UpcomingEventButton branch coverage", () => {
         screen.getByText("Upcoming Event: No Location Event"),
       ).toBeTruthy();
     });
-    fireEvent.press(screen.getByText("Upcoming event: No Location Event"));
+    fireEvent.press(screen.getByText("Upcoming Event: No Location Event"));
     expect(onOpenEventDetails.mock.calls[0][0].showDirections).toBe(true);
     expect(onOpenEventDetails.mock.calls[0][0].accessibility).toBeUndefined();
     onOpenEventDetails.mock.calls[0][0].onDirections();
@@ -437,7 +437,7 @@ describe("UpcomingEventButton branch coverage", () => {
         screen.getByText("Upcoming event: Has Location Event"),
       ).toBeTruthy();
     });
-    fireEvent.press(screen.getByText("Upcoming event: Has Location Event"));
+    fireEvent.press(screen.getByText("Upcoming Event: Has Location Event"));
     expect(onOpenEventDetails.mock.calls[1][0].showDirections).toBe(true);
     expect(onOpenEventDetails.mock.calls[1][0].accessibility).toEqual({
       hasElevator: true,
@@ -459,7 +459,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -469,7 +469,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -479,7 +479,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -524,7 +524,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -534,7 +534,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -587,7 +587,7 @@ describe("UpcomingEventButton branch coverage", () => {
           selectedCalendar: { id: "cal-1", summary: "School", primary: true },
           calendarSelected: true,
           nextEvent: null,
-          nextEventDetailsText: "No upcoming event",
+          nextEventDetailsText: "No upcoming Event",
         },
       }),
     );
