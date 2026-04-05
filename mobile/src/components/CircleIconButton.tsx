@@ -20,7 +20,7 @@ export default function CircleIconButton({
   icon,
   size = 20,
   iconColor = BURGUNDY,
-  backgroundColor = "#FFFFFF",
+  backgroundColor = "rgba(128,0,32,0.10)",
   style,
   hitSlop = 8,
 }: CircleIconButtonProps) {

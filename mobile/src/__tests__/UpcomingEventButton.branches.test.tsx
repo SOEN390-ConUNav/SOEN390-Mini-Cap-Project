@@ -343,7 +343,7 @@ describe("UpcomingEventButton branch coverage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Upcoming event: SOEN 390")).toBeTruthy();
+      expect(screen.getByText("Upcoming Event: SOEN 390")).toBeTruthy();
     });
 
     fireEvent.press(screen.getByText("Upcoming event: SOEN 390"));
@@ -418,7 +418,7 @@ describe("UpcomingEventButton branch coverage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Upcoming event: No Location Event"),
+        screen.getByText("Upcoming Event: No Location Event"),
       ).toBeTruthy();
     });
     fireEvent.press(screen.getByText("Upcoming event: No Location Event"));
