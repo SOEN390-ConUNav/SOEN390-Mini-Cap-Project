@@ -1,6 +1,8 @@
 {
   "devDependencies": {
-    "husky": "^9.1.7"
+    "@types/react": "~19.1.10",
+    "husky": "^9.1.7",
+    "typescript": "~5.9.2"
   },
   "scripts": {
     "prepare": "husky",
