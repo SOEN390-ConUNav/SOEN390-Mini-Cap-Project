@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -99,7 +100,7 @@ const OUTLINE_ENTER_REGION: Pick<Region, "latitudeDelta" | "longitudeDelta"> = {
 };
 
 const FREEZE_MARKERS_AFTER_MS = 800;
-const EVENT_INDOOR_HANDOFF_DISTANCE_METERS = 10;
+const EVENT_INDOOR_HANDOFF_DISTANCE_METERS = 5;
 
 type IndoorExitTarget = {
   buildingId: BuildingId;
@@ -206,6 +207,8 @@ export default function HomePageIndex() {
     "maximize" | "minimize"
   >("minimize");
   const [navigationUiDismissed, setNavigationUiDismissed] = useState(false);
+  const [showArrivalPopup, setShowArrivalPopup] = useState(false);
+  const [hasShownArrivalPopup, setHasShownArrivalPopup] = useState(false);
 
   const {
     requestPermission,
@@ -493,6 +496,21 @@ export default function HomePageIndex() {
     : "I Have Arrived";
   const showNavigatingUi = isNavigating && !navigationUiDismissed;
   const showCancellingUi = isCancellingNavigation && !navigationUiDismissed;
+  useEffect(() => {
+    if (
+      showNavigatingUi &&
+      hasReachedOutdoorDestination &&
+      !hasShownArrivalPopup
+    ) {
+      setShowArrivalPopup(true);
+      setHasShownArrivalPopup(true);
+    }
+
+    if (!showNavigatingUi) {
+      setShowArrivalPopup(false);
+      setHasShownArrivalPopup(false);
+    }
+  }, [showNavigatingUi, hasReachedOutdoorDestination, hasShownArrivalPopup]);
   // ───────────────────────────────────────────────────────────────────────
 
   // When navigation starts, clear UI clutter + zoom to user ──────
@@ -1215,6 +1233,8 @@ export default function HomePageIndex() {
     navigatingRef.current = false;
     setIsLoading(false);
     setNavigationUiDismissed(true);
+    setShowArrivalPopup(false);
+    setHasShownArrivalPopup(false);
     setNavigationState(NAVIGATION_STATE.IDLE);
     setToggleNavigationInfoState("minimize");
     setToggleNavigationHUDState("minimize");
@@ -1306,6 +1326,8 @@ export default function HomePageIndex() {
   }, [isNavigating, navigationUiDismissed]);
 
   const handleOutdoorArrivalAction = useCallback(() => {
+    setShowArrivalPopup(false);
+
     if (activeEventIndoorTarget) {
       triggerIndoorHandoff(activeEventIndoorTarget);
       return;
@@ -1711,25 +1733,43 @@ export default function HomePageIndex() {
           <Text style={styles.reroutingText}>Recalculating route...</Text>
         </View>
       )}
-      {showNavigatingUi && hasReachedOutdoorDestination && (
-        <View style={styles.arrivalActionContainer} pointerEvents="box-none">
-          <Pressable
-            testID="outdoor-arrival-action"
-            style={[
-              styles.arrivalActionButton,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.primary,
-              },
-            ]}
-            onPress={handleOutdoorArrivalAction}
+
+      <Modal
+        visible={showArrivalPopup}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowArrivalPopup(false)}
+      >
+        <View style={styles.arrivalModalOverlay}>
+          <View
+            style={[styles.arrivalModalCard, { backgroundColor: colors.card }]}
           >
-            <Text style={[styles.arrivalActionText, { color: colors.primary }]}>
-              {outdoorArrivalActionLabel}
+            <Text style={[styles.arrivalModalTitle, { color: colors.text }]}>
+              Arrived at destination
             </Text>
-          </Pressable>
+
+            <Text
+              style={[styles.arrivalModalSubtitle, { color: colors.textMuted }]}
+            >
+              You have reached your destination.
+            </Text>
+
+            <Pressable
+              testID="outdoor-arrival-action"
+              style={[
+                styles.arrivalModalButton,
+                { backgroundColor: colors.primary },
+              ]}
+              onPress={handleOutdoorArrivalAction}
+            >
+              <Text style={styles.arrivalModalButtonText}>
+                {outdoorArrivalActionLabel}
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      )}
+      </Modal>
+
       <NavigationDirectionHUDBottom
         visible={showNavigatingUi}
         steps={hudSteps}
@@ -1869,28 +1909,48 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-  arrivalActionContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 160,
+  arrivalModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.28)",
+    justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 24,
   },
-  arrivalActionButton: {
-    minWidth: 220,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
+  arrivalModalCard: {
+    width: "100%",
+    maxWidth: 320,
+    borderRadius: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  arrivalModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  arrivalModalSubtitle: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  arrivalModalButton: {
+    marginTop: 20,
+    minWidth: 200,
+    borderRadius: 999,
+    paddingVertical: 12,
     paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
   },
-  arrivalActionText: {
+  arrivalModalButtonText: {
+    color: "#fff",
     fontWeight: "700",
     fontSize: 16,
     textAlign: "center",
