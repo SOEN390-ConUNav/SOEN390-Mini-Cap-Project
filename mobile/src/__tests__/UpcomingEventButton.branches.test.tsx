@@ -451,6 +451,41 @@ describe("UpcomingEventButton branch coverage", () => {
     );
   });
 
+  it.each([
+    ["SOEN 357 LEC", "Upcoming Lecture: SOEN 357 LEC"],
+    ["SOEN 341 TUT", "Upcoming Tutorial: SOEN 341 TUT"],
+    ["SOEN 390 LAB", "Upcoming Lab: SOEN 390 LAB"],
+    ["SOEN 390", "Upcoming Event: SOEN 390"],
+  ])(
+    "renders the correct upcoming label for %s",
+    async (eventSummary, expectedLabel) => {
+      (requestGoogleState as jest.Mock).mockResolvedValue(
+        response({
+          json: {
+            selectedCalendar: {
+              id: "cal-1",
+              summary: "School",
+              primary: true,
+            },
+            calendarSelected: true,
+            nextEvent: {
+              summary: eventSummary,
+              location: "H-937",
+            },
+            nextEventDetailsText:
+              "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
+          },
+        }),
+      );
+
+      render(<UpcomingEventButton />);
+
+      await waitFor(() => {
+        expect(screen.getByText(expectedLabel)).toBeTruthy();
+      });
+    },
+  );
+
   it("retries selected-calendar save after unauthorized", async () => {
     (requestGoogleState as jest.Mock)
       .mockResolvedValueOnce(
