@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { useTheme } from "../hooks/useTheme";
 
 interface SearchBarProps {
   readonly startRoom: string;
@@ -34,12 +35,15 @@ export default function SearchBar({
   onClearEnd,
   onSwap,
 }: SearchBarProps) {
+  const { colors, isDark } = useTheme();
+  const headerBg = isDark ? colors.surface : "#424242";
+
   return (
     <View style={[styles.searchContainer, { top: statusBarHeight + 16 }]}>
       {/* Building and Floor Label */}
       {(buildingName || floor) && (
         <View style={styles.buildingInfo}>
-          <Text style={styles.buildingInfoText}>
+          <Text style={[styles.buildingInfoText, { color: colors.textMuted }]}>
             {buildingName || "Hall Building"}
             {floor ? ` - Floor ${floor}` : " - Floor 8"}
           </Text>
@@ -47,10 +51,10 @@ export default function SearchBar({
       )}
 
       {/* Card Container */}
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
         {/* Dark Gray Header Section */}
         <TouchableOpacity
-          style={styles.headerSection}
+          style={[styles.headerSection, { backgroundColor: headerBg }]}
           onPress={onStartPress}
           activeOpacity={0.7}
         >
@@ -69,23 +73,28 @@ export default function SearchBar({
                 onClearStart();
               }}
             >
-              <Text style={styles.clearButtonText}>✕</Text>
+              <Text style={[styles.clearButtonText, { color: "#fff" }]}>✕</Text>
             </TouchableOpacity>
           ) : null}
         </TouchableOpacity>
 
         {/* Divider */}
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
         {/* White Body Section */}
-        <View style={styles.bodySection}>
+        <View style={[styles.bodySection, { backgroundColor: colors.card }]}>
           <TouchableOpacity
             style={styles.bodyContent}
             onPress={onEndPress}
             activeOpacity={0.7}
           >
-            <Text style={styles.bodyLabel}>To</Text>
-            <Text style={styles.bodyValue} numberOfLines={1}>
+            <Text style={[styles.bodyLabel, { color: colors.textMuted }]}>
+              To
+            </Text>
+            <Text
+              style={[styles.bodyValue, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {endRoom || "Choose destination"}
             </Text>
           </TouchableOpacity>
@@ -94,7 +103,11 @@ export default function SearchBar({
           <TouchableOpacity
             style={[
               styles.swapButton,
-              (!startRoom || !endRoom) && styles.swapButtonDisabled,
+              { backgroundColor: colors.primary },
+              (!startRoom || !endRoom) && [
+                styles.swapButtonDisabled,
+                { backgroundColor: colors.border },
+              ],
             ]}
             onPress={onSwap}
             disabled={!startRoom || !endRoom}
@@ -102,7 +115,11 @@ export default function SearchBar({
             <Text
               style={[
                 styles.swapIcon,
-                (!startRoom || !endRoom) && styles.swapIconDisabled,
+                { color: "#FFFFFF" },
+                (!startRoom || !endRoom) && [
+                  styles.swapIconDisabled,
+                  { color: colors.textMuted },
+                ],
               ]}
             >
               ⇄
@@ -111,22 +128,39 @@ export default function SearchBar({
 
           {endRoom ? (
             <TouchableOpacity
-              style={styles.bodyClearButton}
+              style={[
+                styles.bodyClearButton,
+                { backgroundColor: colors.border },
+              ]}
               onPress={(e) => {
                 e.stopPropagation();
                 onClearEnd();
               }}
             >
-              <Text style={styles.clearButtonText}>✕</Text>
+              <Text
+                style={[styles.clearButtonText, { color: colors.textMuted }]}
+              >
+                ✕
+              </Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
         {/* Loading indicator */}
         {isLoadingRoute && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#8B1538" />
-            <Text style={styles.loadingText}>Finding route...</Text>
+          <View
+            style={[
+              styles.loadingContainer,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+              Finding route...
+            </Text>
           </View>
         )}
       </View>
@@ -147,11 +181,9 @@ const styles = StyleSheet.create({
   },
   buildingInfoText: {
     fontSize: 13,
-    color: "#424242",
     fontWeight: "500",
   },
   card: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     overflow: "hidden",
     shadowColor: "#000",
@@ -161,7 +193,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   headerSection: {
-    backgroundColor: "#424242",
     paddingVertical: 16,
     paddingHorizontal: 16,
     flexDirection: "row",
@@ -205,10 +236,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#E0E0E0",
   },
   bodySection: {
-    backgroundColor: "#FFFFFF",
     paddingVertical: 16,
     paddingHorizontal: 16,
     flexDirection: "row",
@@ -221,7 +250,6 @@ const styles = StyleSheet.create({
   },
   bodyLabel: {
     fontSize: 14,
-    color: "#424242",
     fontWeight: "500",
     marginRight: 12,
     minWidth: 40,
@@ -229,41 +257,32 @@ const styles = StyleSheet.create({
   bodyValue: {
     flex: 1,
     fontSize: 16,
-    color: "#212121",
     fontWeight: "600",
   },
   swapButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#8B1538",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 12,
     marginRight: 8,
   },
-  swapButtonDisabled: {
-    backgroundColor: "#E0E0E0",
-  },
+  swapButtonDisabled: {},
   swapIcon: {
     fontSize: 18,
-    color: "#FFFFFF",
     fontWeight: "bold",
   },
-  swapIconDisabled: {
-    color: "#9E9E9E",
-  },
+  swapIconDisabled: {},
   bodyClearButton: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#E0E0E0",
     alignItems: "center",
     justifyContent: "center",
   },
   clearButtonText: {
     fontSize: 14,
-    color: "#757575",
     fontWeight: "600",
   },
   loadingContainer: {
@@ -272,13 +291,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#F5F5F5",
     borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
   },
   loadingText: {
     marginLeft: 8,
     fontSize: 14,
-    color: "#757575",
   },
 });

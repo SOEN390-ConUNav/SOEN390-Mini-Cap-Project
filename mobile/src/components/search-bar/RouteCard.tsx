@@ -6,8 +6,7 @@ import SwapButton from "../SwapButton";
 import CircleIconButton from "../CircleIconButton";
 import useNavigationInfo from "../../hooks/useNavigationInfo";
 import { useAccessibleTypography } from "../../hooks/useAccessibilitySettings";
-
-const BURGUNDY = "#800020";
+import { useTheme } from "../../hooks/useTheme";
 
 interface RouteCardProps {
   readonly originLabel: string;
@@ -22,6 +21,7 @@ export default function RouteCard({
   onBack,
   onSwap,
 }: RouteCardProps) {
+  const { colors } = useTheme();
   const isLoading = useNavigationInfo((s) => s.isLoading);
   const setIsLoading = useNavigationInfo((s) => s.setIsLoading);
   const { textStyle } = useAccessibleTypography();
@@ -30,7 +30,7 @@ export default function RouteCard({
   const destDragProgress = useSharedValue(0);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.card }]}>
       {/* Always rendered - user can cancel even while route is calculating */}
       <CircleIconButton
         icon="arrow-back"
@@ -43,8 +43,14 @@ export default function RouteCard({
       <View style={styles.rows}>
         {isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={BURGUNDY} />
-            <Text style={[styles.loadingText, textStyle(14)]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text
+              style={[
+                styles.loadingText,
+                textStyle(14),
+                { color: colors.textMuted },
+              ]}
+            >
               Calculating route…
             </Text>
           </View>
@@ -58,7 +64,9 @@ export default function RouteCard({
               siblingDragProgress={destDragProgress}
             />
             <View style={styles.dividerRow}>
-              <View style={styles.divider} />
+              <View
+                style={[styles.divider, { backgroundColor: colors.border }]}
+              />
               <SwapButton onPress={onSwap} />
             </View>
             <RouteRow
@@ -78,7 +86,6 @@ export default function RouteCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.97)",
     paddingVertical: 10,
     paddingHorizontal: 12,
     flexDirection: "row",
@@ -103,7 +110,6 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "#e0e0e0",
   },
   loadingRow: {
     flexDirection: "row",
@@ -113,7 +119,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: "#999",
     fontStyle: "italic",
   },
 });

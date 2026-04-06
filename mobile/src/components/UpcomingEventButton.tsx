@@ -414,7 +414,15 @@ export default function UpcomingEventButton({
 
       <Modal visible={showCalendarPicker} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { borderColor: colors.primary }]}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                borderColor: colors.primary,
+                backgroundColor: colors.card,
+              },
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: colors.primary }]}>
               Select a calendar
             </Text>
@@ -449,7 +457,10 @@ export default function UpcomingEventButton({
                     <TouchableOpacity
                       style={[
                         styles.calendarRow,
-                        { borderColor: colors.primary },
+                        {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.surface,
+                        },
                         isActive && [
                           styles.calendarRowActive,
                           { backgroundColor: `${colors.primary}14` },
@@ -463,7 +474,7 @@ export default function UpcomingEventButton({
                       <Text
                         style={[
                           styles.calendarName,
-                          { color: colors.primary },
+                          { color: isActive ? colors.primary : colors.text },
                           isActive && styles.calendarNameActive,
                         ]}
                       >
@@ -473,7 +484,7 @@ export default function UpcomingEventButton({
                         <Text
                           style={[
                             styles.calendarMeta,
-                            { color: colors.primary },
+                            { color: colors.textMuted },
                           ]}
                         >
                           Primary
@@ -540,7 +551,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   modalCard: {
-    backgroundColor: "white",
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
@@ -568,7 +578,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderWidth: 1,
     borderRadius: 16,
-    backgroundColor: "white",
     marginBottom: 10,
   },
   calendarRowActive: {},

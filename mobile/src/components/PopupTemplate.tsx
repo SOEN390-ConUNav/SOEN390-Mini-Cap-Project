@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Foundation from "@expo/vector-icons/Foundation";
+import { useTheme } from "../hooks/useTheme";
 
 export const BURGUNDY = "#800020";
 
@@ -22,20 +23,26 @@ interface PopupTemplateProps {
   readonly renderButtons: () => React.ReactNode;
 }
 
-function AccessibilityIcons({ acc }: { readonly acc: AccessibilityInfo }) {
+function AccessibilityIcons({
+  acc,
+  primaryColor,
+}: {
+  readonly acc: AccessibilityInfo;
+  readonly primaryColor: string;
+}) {
   if (!acc.hasParking && !acc.hasElevator && !acc.isAccessible) return null;
   return (
     <View style={styles.iconsRow}>
       {acc.hasParking && (
-        <View style={styles.badge}>
+        <View style={[styles.badge, { backgroundColor: primaryColor }]}>
           <Text style={styles.badgeText}>P</Text>
         </View>
       )}
       {acc.hasElevator && (
-        <Foundation name="elevator" size={20} color={BURGUNDY} />
+        <Foundation name="elevator" size={20} color={primaryColor} />
       )}
       {acc.isAccessible && (
-        <FontAwesome name="wheelchair" size={20} color={BURGUNDY} />
+        <FontAwesome name="wheelchair" size={20} color={primaryColor} />
       )}
     </View>
   );
@@ -57,17 +64,21 @@ export default function PopupTemplate({
   renderButtons,
 }: PopupTemplateProps) {
   const acc = accessibility ?? defaultAccessibility;
+  const { colors } = useTheme();
 
   const card = (
-    <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+    <Pressable
+      style={[styles.card, { backgroundColor: colors.card }]}
+      onPress={(e) => e.stopPropagation()}
+    >
       {renderTopContent?.()}
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           <View style={styles.headerRight}>
-            <AccessibilityIcons acc={acc} />
+            <AccessibilityIcons acc={acc} primaryColor={colors.primary} />
             <Pressable style={styles.closeBtn} onPress={onClose}>
-              <Ionicons name="close" size={20} color="#111" />
+              <Ionicons name="close" size={20} color={colors.text} />
             </Pressable>
           </View>
         </View>
@@ -98,7 +109,6 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 520,
-    backgroundColor: "rgba(255,255,255,0.98)",
     borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
@@ -135,7 +145,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   badge: {
-    backgroundColor: BURGUNDY,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
