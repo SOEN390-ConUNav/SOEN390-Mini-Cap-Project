@@ -314,12 +314,31 @@ export default function UpcomingEventButton({
     }
   };
 
+  const getUpcomingEventPrefix = (title: string) => {
+    const normalizedTitle = title.toUpperCase();
+
+    if (/\bTUT\b/.test(normalizedTitle)) {
+      return "Upcoming Tutorial";
+    }
+
+    if (/\bLAB\b/.test(normalizedTitle)) {
+      return "Upcoming Lab";
+    }
+
+    if (/\bLEC\b/.test(normalizedTitle)) {
+      return "Upcoming Lecture";
+    }
+
+    return "Upcoming Event";
+  };
+
   const showRedEventButton = !!selectedCalendar;
   const upcomingTitle = nextEvent
     ? (nextEvent?.summary ?? "").trim() || "Upcoming event"
     : "No upcoming event";
+  const upcomingPrefix = nextEvent ? getUpcomingEventPrefix(upcomingTitle) : "";
   const upcomingButtonLabel = nextEvent
-    ? `Upcoming event: ${upcomingTitle}`
+    ? `${upcomingPrefix}: ${upcomingTitle}`
     : upcomingTitle;
   const upcomingLocation =
     typeof nextEvent?.location === "string" ? nextEvent.location.trim() : "";

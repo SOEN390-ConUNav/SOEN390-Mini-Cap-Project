@@ -33,7 +33,11 @@ const NavigationBar = ({
     <View style={styles.container}>
       {!isCancellingNavigation && (
         <View style={styles.circleButtonWrapper}>
-          <CircleIconButton icon="arrow-back" onPress={onPress} />
+          <CircleIconButton
+            icon="arrow-back"
+            onPress={onPress}
+            backgroundColor="#FFFFFF"
+          />
         </View>
       )}
 

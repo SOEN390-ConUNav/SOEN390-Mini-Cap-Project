@@ -101,7 +101,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -151,7 +151,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -183,7 +183,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -193,7 +193,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -238,7 +238,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -248,7 +248,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -284,7 +284,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -343,10 +343,10 @@ describe("UpcomingEventButton branch coverage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Upcoming event: SOEN 390")).toBeTruthy();
+      expect(screen.getByText("Upcoming Event: SOEN 390")).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByText("Upcoming event: SOEN 390"));
+    fireEvent.press(screen.getByText("Upcoming Event: SOEN 390"));
     expect(onOpenEventDetails).toHaveBeenCalledTimes(1);
 
     const payload = onOpenEventDetails.mock.calls[0][0];
@@ -418,10 +418,10 @@ describe("UpcomingEventButton branch coverage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Upcoming event: No Location Event"),
+        screen.getByText("Upcoming Event: No Location Event"),
       ).toBeTruthy();
     });
-    fireEvent.press(screen.getByText("Upcoming event: No Location Event"));
+    fireEvent.press(screen.getByText("Upcoming Event: No Location Event"));
     expect(onOpenEventDetails.mock.calls[0][0].showDirections).toBe(true);
     expect(onOpenEventDetails.mock.calls[0][0].accessibility).toBeUndefined();
     onOpenEventDetails.mock.calls[0][0].onDirections();
@@ -434,10 +434,10 @@ describe("UpcomingEventButton branch coverage", () => {
     render(<UpcomingEventButton onOpenEventDetails={onOpenEventDetails} />);
     await waitFor(() => {
       expect(
-        screen.getByText("Upcoming event: Has Location Event"),
+        screen.getByText("Upcoming Event: Has Location Event"),
       ).toBeTruthy();
     });
-    fireEvent.press(screen.getByText("Upcoming event: Has Location Event"));
+    fireEvent.press(screen.getByText("Upcoming Event: Has Location Event"));
     expect(onOpenEventDetails.mock.calls[1][0].showDirections).toBe(true);
     expect(onOpenEventDetails.mock.calls[1][0].accessibility).toEqual({
       hasElevator: true,
@@ -451,6 +451,41 @@ describe("UpcomingEventButton branch coverage", () => {
     );
   });
 
+  it.each([
+    ["SOEN 357 LEC", "Upcoming Lecture: SOEN 357 LEC"],
+    ["SOEN 341 TUT", "Upcoming Tutorial: SOEN 341 TUT"],
+    ["SOEN 390 LAB", "Upcoming Lab: SOEN 390 LAB"],
+    ["SOEN 390", "Upcoming Event: SOEN 390"],
+  ])(
+    "renders the correct upcoming label for %s",
+    async (eventSummary, expectedLabel) => {
+      (requestGoogleState as jest.Mock).mockResolvedValue(
+        response({
+          json: {
+            selectedCalendar: {
+              id: "cal-1",
+              summary: "School",
+              primary: true,
+            },
+            calendarSelected: true,
+            nextEvent: {
+              summary: eventSummary,
+              location: "H-937",
+            },
+            nextEventDetailsText:
+              "SGW\nHall\nClassroom: H-937\nThu, 10:00 - 11:15",
+          },
+        }),
+      );
+
+      render(<UpcomingEventButton />);
+
+      await waitFor(() => {
+        expect(screen.getByText(expectedLabel)).toBeTruthy();
+      });
+    },
+  );
+
   it("retries selected-calendar save after unauthorized", async () => {
     (requestGoogleState as jest.Mock)
       .mockResolvedValueOnce(
@@ -459,7 +494,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -469,7 +504,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -479,7 +514,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -524,7 +559,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       )
@@ -534,7 +569,7 @@ describe("UpcomingEventButton branch coverage", () => {
             selectedCalendar: null,
             calendarSelected: false,
             nextEvent: null,
-            nextEventDetailsText: "No upcoming event",
+            nextEventDetailsText: "No upcoming Event",
           },
         }),
       );
@@ -587,7 +622,7 @@ describe("UpcomingEventButton branch coverage", () => {
           selectedCalendar: { id: "cal-1", summary: "School", primary: true },
           calendarSelected: true,
           nextEvent: null,
-          nextEventDetailsText: "No upcoming event",
+          nextEventDetailsText: "No upcoming Event",
         },
       }),
     );

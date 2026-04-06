@@ -91,12 +91,12 @@ describe("UpcomingEventButton logout catch coverage", () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText("Upcoming event: SOEN 390")).toBeTruthy();
+        expect(screen.getByText("Upcoming Event: SOEN 390")).toBeTruthy();
       },
       { timeout: 15_000 },
     );
 
-    fireEvent.press(screen.getByText("Upcoming event: SOEN 390"));
+    fireEvent.press(screen.getByText("Upcoming Event: SOEN 390"));
 
     mockShouldThrowOnArrayClear = true;
     await act(async () => {
