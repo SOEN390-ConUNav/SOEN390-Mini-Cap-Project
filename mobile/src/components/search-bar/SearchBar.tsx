@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import RouteCard from "./RouteCard";
 import NavigationBar from "../navigation-bar/NavigationBar";
 import { Step } from "../../api/outdoorDirectionsApi";
+import { useTheme } from "../../hooks/useTheme";
 
 interface SearchBarProps {
   readonly placeholder: string;
@@ -34,6 +35,7 @@ export default function SearchBar({
   navigationHUDToggleState,
   navigationHUDStep,
 }: SearchBarProps) {
+  const { colors } = useTheme();
   const lastPressTsRef = useRef(0);
 
   const handlePress = () => {
@@ -70,12 +72,18 @@ export default function SearchBar({
   return (
     <Pressable
       onPress={handlePress}
-      style={({ pressed }) => [styles.container, pressed && { opacity: 0.85 }]}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: colors.card },
+        pressed && { opacity: 0.85 },
+      ]}
     >
-      <Ionicons name="search" size={18} color="#555" />
-      <Text style={styles.text}>{placeholder}</Text>
+      <Ionicons name="search" size={18} color={colors.iconDefault} />
+      <Text style={[styles.text, { color: colors.textMuted }]}>
+        {placeholder}
+      </Text>
       <View style={styles.spacer} />
-      <Ionicons name="mic" size={18} color="#555" />
+      <Ionicons name="mic" size={18} color={colors.iconDefault} />
     </Pressable>
   );
 }
@@ -84,7 +92,6 @@ const styles = StyleSheet.create({
   container: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -96,7 +103,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   text: {
-    opacity: 0.65,
     fontSize: 15,
   },
   spacer: {

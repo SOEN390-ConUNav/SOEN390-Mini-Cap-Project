@@ -1,11 +1,30 @@
-import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
-import IndoorSearchBar from '../components/IndoorSearchBar';
+import React from "react";
+import { fireEvent, render } from "@testing-library/react-native";
+import IndoorSearchBar from "../components/IndoorSearchBar";
 
-describe('IndoorSearchBar', () => {
+jest.mock("../hooks/useTheme", () => ({
+  useTheme: () => ({
+    isDark: false,
+    colors: {
+      background: "#ffffff",
+      surface: "#f5f5f5",
+      card: "#ffffff",
+      text: "#1a1a1a",
+      textMuted: "#666666",
+      border: "#E0E0E0",
+      primary: "#800020",
+      primaryBorder: "#a03040",
+      tabBarBackground: "rgba(255,255,255,0.98)",
+      iconDefault: "#333",
+      textSecondary: "#2d2d2d",
+    },
+  }),
+}));
+
+describe("IndoorSearchBar", () => {
   const baseProps = {
-    startRoom: '',
-    endRoom: '',
+    startRoom: "",
+    endRoom: "",
     isLoadingRoute: false,
     statusBarHeight: 0,
     onStartPress: jest.fn(),
@@ -19,30 +38,24 @@ describe('IndoorSearchBar', () => {
     jest.clearAllMocks();
   });
 
-  it('renders building and floor info when floor is provided', () => {
-    const { getByText } = render(
-      <IndoorSearchBar {...baseProps} floor="8" />,
-    );
-    expect(getByText('Hall Building - Floor 8')).toBeTruthy();
+  it("renders building and floor info when floor is provided", () => {
+    const { getByText } = render(<IndoorSearchBar {...baseProps} floor="8" />);
+    expect(getByText("Hall Building - Floor 8")).toBeTruthy();
   });
 
-  it('calls start and end handlers when main sections are pressed', () => {
+  it("calls start and end handlers when main sections are pressed", () => {
     const { getByText } = render(
-      <IndoorSearchBar
-        {...baseProps}
-        buildingName="Hall Building"
-        floor="9"
-      />,
+      <IndoorSearchBar {...baseProps} buildingName="Hall Building" floor="9" />,
     );
 
-    fireEvent.press(getByText('From'));
-    fireEvent.press(getByText('To'));
+    fireEvent.press(getByText("From"));
+    fireEvent.press(getByText("To"));
 
     expect(baseProps.onStartPress).toHaveBeenCalledTimes(1);
     expect(baseProps.onEndPress).toHaveBeenCalledTimes(1);
   });
 
-  it('calls clear handlers when room values exist', () => {
+  it("calls clear handlers when room values exist", () => {
     const { getAllByText } = render(
       <IndoorSearchBar
         {...baseProps}
@@ -53,28 +66,24 @@ describe('IndoorSearchBar', () => {
       />,
     );
 
-    const clearButtons = getAllByText('✕');
-    fireEvent(clearButtons[0], 'press', { stopPropagation: jest.fn() });
-    fireEvent(clearButtons[1], 'press', { stopPropagation: jest.fn() });
+    const clearButtons = getAllByText("✕");
+    fireEvent(clearButtons[0], "press", { stopPropagation: jest.fn() });
+    fireEvent(clearButtons[1], "press", { stopPropagation: jest.fn() });
 
     expect(baseProps.onClearStart).toHaveBeenCalledTimes(1);
     expect(baseProps.onClearEnd).toHaveBeenCalledTimes(1);
   });
 
-  it('does not swap when one endpoint is missing', () => {
+  it("does not swap when one endpoint is missing", () => {
     const { getByText } = render(
-      <IndoorSearchBar
-        {...baseProps}
-        startRoom="H-801"
-        endRoom=""
-      />,
+      <IndoorSearchBar {...baseProps} startRoom="H-801" endRoom="" />,
     );
 
-    fireEvent.press(getByText('⇄'));
+    fireEvent.press(getByText("⇄"));
     expect(baseProps.onSwap).not.toHaveBeenCalled();
   });
 
-  it('swaps and shows loading indicator when route search is active', () => {
+  it("swaps and shows loading indicator when route search is active", () => {
     const { getByText } = render(
       <IndoorSearchBar
         {...baseProps}
@@ -84,8 +93,8 @@ describe('IndoorSearchBar', () => {
       />,
     );
 
-    fireEvent.press(getByText('⇄'));
+    fireEvent.press(getByText("⇄"));
     expect(baseProps.onSwap).toHaveBeenCalledTimes(1);
-    expect(getByText('Finding route...')).toBeTruthy();
+    expect(getByText("Finding route...")).toBeTruthy();
   });
 });

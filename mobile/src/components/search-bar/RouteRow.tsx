@@ -9,6 +9,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../hooks/useTheme";
 
 const SWAP_THRESHOLD = 42;
 
@@ -38,6 +39,7 @@ export default function RouteRow({
   dragProgress,
   siblingDragProgress,
 }: RouteRowProps) {
+  const { colors } = useTheme();
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
 
@@ -86,12 +88,17 @@ export default function RouteRow({
           <Ionicons
             name="reorder-two-outline"
             size={16}
-            color="#ccc"
+            color={colors.border}
             style={styles.handle}
           />
           <View style={styles.textGroup}>
-            <Text style={styles.label}>{label}</Text>
-            <Text style={styles.value} numberOfLines={1}>
+            <Text style={[styles.label, { color: colors.textMuted }]}>
+              {label}
+            </Text>
+            <Text
+              style={[styles.value, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {value}
             </Text>
           </View>
@@ -99,7 +106,7 @@ export default function RouteRow({
             <Ionicons
               name={trailingIcon}
               size={18}
-              color="#777"
+              color={colors.textMuted}
               style={styles.trailingIcon}
             />
           ) : null}
@@ -129,13 +136,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: "#999",
     fontWeight: "500",
     marginBottom: 1,
   },
   value: {
     fontSize: 15,
-    color: "#222",
   },
   trailingIcon: {
     marginLeft: 6,

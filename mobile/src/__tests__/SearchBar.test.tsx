@@ -2,6 +2,25 @@ import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import SearchBar from "../components/search-bar/SearchBar";
 
+jest.mock("../hooks/useTheme", () => ({
+  useTheme: () => ({
+    isDark: false,
+    colors: {
+      background: "#ffffff",
+      surface: "#f5f5f5",
+      card: "#ffffff",
+      text: "#1a1a1a",
+      textMuted: "#666666",
+      border: "#E0E0E0",
+      primary: "#800020",
+      primaryBorder: "#a03040",
+      tabBarBackground: "rgba(255,255,255,0.98)",
+      iconDefault: "#333",
+      textSecondary: "#2d2d2d",
+    },
+  }),
+}));
+
 jest.mock("../components/search-bar/RouteCard", () => {
   const { View, Text } = require("react-native");
   return ({
